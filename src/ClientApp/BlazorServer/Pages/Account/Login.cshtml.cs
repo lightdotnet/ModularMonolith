@@ -69,7 +69,13 @@ public class LoginModel : PageModel
 
         var getUserProfiles = await userProfileService.GetAsync();
 
-        if (getUserProfiles.Succeeded)
+        if (getUserProfiles.Succeeded is false)
+        {
+            ModelState.AddModelError("", "Cannot get user profiles");
+
+            //return Page();
+        }
+        else
         {
             userClaims.AddRange(getUserProfiles.Data.BuildClaims());
         }

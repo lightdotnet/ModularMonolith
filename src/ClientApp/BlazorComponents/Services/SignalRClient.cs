@@ -1,13 +1,19 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Monolith.HttpApi.Common.Interfaces;
 using Monolith.Notifications;
 
 namespace Monolith.Blazor.Services;
 
-public class SignalRClient(ITokenProvider tokenService) : IAsyncDisposable
+public class SignalRClient(
+    ITokenProvider tokenService,
+    IConfiguration configuration) : IAsyncDisposable
 {
     private HubConnection? _hubConnection;
+
+    private string SignalRHubUrl => configuration["ApiUrls:SignalR_Hub"]
+        ?? throw new InvalidOperationException("SignalR Hub URL is not configured.");
 
     //public event Action? OnMessageReceived;
 
@@ -15,12 +21,10 @@ public class SignalRClient(ITokenProvider tokenService) : IAsyncDisposable
     {
         if (_hubConnection != null) return true;
 
-        var hubUrl = "http://localhost:8080/signalr-hub";
-
         Task<string?> AccessTokenProvider() => tokenService.GetAccessTokenAsync();
 
         _hubConnection = new HubConnectionBuilder()
-            .WithUrl(hubUrl, options =>
+            .WithUrl(SignalRHubUrl, options =>
             {
                 options.AccessTokenProvider = AccessTokenProvider; // Provide the access token
                 options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets;
