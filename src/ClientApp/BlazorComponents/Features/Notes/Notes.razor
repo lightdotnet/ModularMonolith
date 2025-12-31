@@ -4,20 +4,31 @@
 
 <PageHeader Title="Notes" />
 
-<div class="d-flex justify-content-end mb-3">
-    <Button Label="Save" OnClick="() => Save()" />
-    <Button Label="Clear" OnClick="() => noteService.RemoveAsync()" Class="ml-2" />
-</div>
+@if (!string.IsNullOrEmpty(currentUserId))
+{
+    <div class="d-flex justify-content-end mb-3">
+        <Button Label="Save" OnClick="() => Save()" />
+        <Button Label="Clear" OnClick="() => noteService.RemoveAsync(currentUserId)" Class="ml-2" />
+    </div>
 
-<Card>
-    <Input @bind-Value="Text" Lines="5" AutoGrow />
-</Card>
+    <Card>
+        <Input @bind-Value="Text" Lines="5" AutoGrow />
+    </Card>
+}
+else
+{
+    <alert Severity="Severity.Warning">
+        No user selected.
+    </alert>
+}
 
 @code {
     [Inject]
     NoteMemoryStorage noteService { get; set; } = default!;
 
     private string? Text = "";
+
+    private string? currentUserId => CurrentUser.UserId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -28,14 +39,20 @@
 
     private async Task Reload()
     {
-        Text = await noteService.GetAsync();
+        if (!string.IsNullOrEmpty(currentUserId))
+        {
+            Text = await noteService.GetAsync(currentUserId);
+        }
     }
 
-    private Task Save()
+    private async Task Save()
     {
-        return CallGuarded.ExecuteAsync(
-            () => noteService.SaveAsync(Text ?? ""),
-            "Note updated",
-            Reload);
+        if (!string.IsNullOrEmpty(currentUserId))
+        {
+            await CallGuarded.ExecuteAsync(
+                () => noteService.SaveAsync(currentUserId, Text ?? ""),
+                "Note updated",
+                Reload);
+        }
     }
 }

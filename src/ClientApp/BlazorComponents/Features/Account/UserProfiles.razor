@@ -19,8 +19,27 @@
 
     if (isFullControl)
     {
-        <button @onclick="RequestPermission">Request Permission</button>
-        <button @onclick="ShowNotification">Show Notification</button>
+        <table class="table table-bordered">
+            <tbody>
+                <tr>
+                    <td>
+                        <button @onclick="JSRuntime.PlayNotiSound">Play</button>
+                    </td>
+                    <td>
+                        <button @onclick="JSRuntime.PauseNotiSound">Pause</button>
+                    </td>
+                    <td>
+                        <button @onclick="JSRuntime.RequestPermission">Request Permission</button>
+                    </td>
+                    <td>
+                        <button @onclick="ShowNotification">Show Notification</button>
+                    </td>
+                    <td>
+                        <button @onclick="JSRuntime.SetAppBadge">Set badge</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
     }
 }
 else
