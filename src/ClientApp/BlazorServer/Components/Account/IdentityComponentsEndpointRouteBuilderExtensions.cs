@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using Monolith.Blazor.Services;
 using Monolith.Blazor.Services.Token;
 
 namespace Monolith.Blazor.Components.Account;
@@ -15,9 +16,12 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
 
         accountGroup.MapGet("/logout", async (
             HttpContext httpContext,
+            TokenStorage tokenStorage,
             [FromQuery] string? returnUrl) =>
         {
             await httpContext.SignOutAsync();
+
+            await httpContext.RequestServices.GetRequiredService<TokenStorage>().ClearAsync();
 
             HttpContextEntensions.ClearCookies(httpContext);
 

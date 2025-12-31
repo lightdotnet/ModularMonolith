@@ -26,15 +26,19 @@ public class LoginModel : PageModel
     [BindProperty]
     public bool RememberMe { get; set; }
 
-    public IActionResult OnGet()
+    public string? ReturnUrl { get; set; }
+
+    public async Task<IActionResult> OnGet(string? returnUrl)
     {
+        returnUrl = returnUrl switch
+        {
+            "/" or null or "" => "~/",
+            _ => $"~/{returnUrl}"
+        };
+
         if (HttpContext.User.Identity?.IsAuthenticated is true)
         {
-            return LocalRedirect("/");
-        }
-        else
-        {
-            HttpContext.Response.Cookies.Delete(Constants.TokenCookieName);
+            return LocalRedirect(returnUrl);
         }
 
         return Page();
@@ -57,10 +61,10 @@ public class LoginModel : PageModel
         // var id = Guid.NewGuid().ToString("N");
         // tokenMemory.Save()
 
-        var tokenStorage = HttpContext.RequestServices.GetRequiredService<TokenStorage>();
-
         var tokenData = new TokenModel(getToken.Data.AccessToken, getToken.Data.ExpiresIn, getToken.Data.RefreshToken);
 
+        // save token before getting user profile
+        var tokenStorage = HttpContext.RequestServices.GetRequiredService<TokenStorage>();
         await tokenStorage.SaveAsync(tokenData);
 
         var userClaims = JwtExtensions.ReadClaims(getToken.Data.AccessToken);
@@ -73,7 +77,7 @@ public class LoginModel : PageModel
         {
             ModelState.AddModelError("", "Cannot get user profiles");
 
-            //return Page();
+            return Page();
         }
         else
         {

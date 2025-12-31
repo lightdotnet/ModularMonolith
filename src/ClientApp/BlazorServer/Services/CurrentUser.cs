@@ -9,9 +9,3 @@ public class HttpContextCurrentUser(IHttpContextAccessor httpContextAccessor) : 
     public override ClaimsPrincipal? User => httpContextAccessor.HttpContext?.User;
 }
 
-public class AuthenticationStateCurrentUser(AuthenticationStateProvider authenticationStateProvider) : CurrentUserBase, IClientCurrentUser
-{
-    public override ClaimsPrincipal? User =>
-        (authenticationStateProvider as JwtAuthenticationStateProviderServer)?.CurrentUser;
-}
-
