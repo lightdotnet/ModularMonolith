@@ -26,8 +26,6 @@ public class LoginModel : PageModel
     [BindProperty]
     public bool RememberMe { get; set; }
 
-    public string? ReturnUrl { get; set; }
-
     public async Task<IActionResult> OnGet(string? returnUrl)
     {
         returnUrl = returnUrl switch

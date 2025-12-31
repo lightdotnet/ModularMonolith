@@ -1,0 +1,41 @@
+﻿@page "/user/notes"
+
+@attribute [MustHavePermission(Permissions.System.Manager)]
+
+<PageHeader Title="Notes" />
+
+<div class="d-flex justify-content-end mb-3">
+    <Button Label="Save" OnClick="() => Save()" />
+    <Button Label="Clear" OnClick="() => noteService.RemoveAsync()" Class="ml-2" />
+</div>
+
+<Card>
+    <Input @bind-Value="Text" Lines="5" AutoGrow />
+</Card>
+
+@code {
+    [Inject]
+    NoteMemoryStorage noteService { get; set; } = default!;
+
+    private string? Text = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        Text = await noteService.GetAsync();
+    }
+
+    private Task Save()
+    {
+        return CallGuarded.ExecuteAsync(
+            () => noteService.SaveAsync(Text ?? ""),
+            "Note updated",
+            Reload);
+    }
+}

@@ -52,6 +52,9 @@ public static class DependencyInjection
         services.AddPermissionPolicies();
         services.AddPermissionAuthorization();
 
+        // Components
+        services.AddFeatures();
+
         return services;
     }
 

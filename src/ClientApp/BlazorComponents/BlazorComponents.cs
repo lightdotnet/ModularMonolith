@@ -1,3 +1,13 @@
-﻿namespace Monolith.Blazor;
+﻿using Microsoft.Extensions.DependencyInjection;
 
-public sealed class BlazorComponents;
+namespace Monolith.Blazor;
+
+public static class BlazorComponents
+{
+    public static IServiceCollection AddFeatures(this IServiceCollection services)
+    {
+        services.AddSingleton<Features.Notes.NoteMemoryStorage>();
+
+        return services;
+    }
+}
