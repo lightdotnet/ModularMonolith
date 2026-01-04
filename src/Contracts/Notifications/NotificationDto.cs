@@ -18,5 +18,7 @@ public class NotificationDto
 
     public bool ReadStatus { get; set; }
 
+    public bool RemindRead { get; set; }
+
     public DateTimeOffset Created { get; set; }
 }
