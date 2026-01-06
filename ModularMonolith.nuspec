@@ -12,7 +12,7 @@
     <license type="expression">MIT</license>
     <projectUrl>https://github.com/lightdotnet/dotnet-starter-template</projectUrl>
     <releaseNotes>
-      * Update BlazorServer & Migrations
+      * Update BlazorServer, Migrations
     </releaseNotes>
     <packageTypes>
       <packageType name="Template" />
