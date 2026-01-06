@@ -4,7 +4,7 @@ public class Shop : AuditableEntity
 {
     public string Name { get; set; } = null!;
 
-    public Status Status { get; set; } = new(Status.ActiveStatus.active);
+    public Status Status { get; set; } = new(Status.ActiveStatus.unactive);
 
     public static Shop Create(string name)
     {

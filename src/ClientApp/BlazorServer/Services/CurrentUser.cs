@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Components.Authorization;
-using Monolith.Authorization;
+﻿using Monolith.Authorization;
 using System.Security.Claims;
 
 namespace Monolith.Blazor.Services;
@@ -7,11 +6,5 @@ namespace Monolith.Blazor.Services;
 public class HttpContextCurrentUser(IHttpContextAccessor httpContextAccessor) : CurrentUserBase, IClientCurrentUser
 {
     public override ClaimsPrincipal? User => httpContextAccessor.HttpContext?.User;
-}
-
-public class AuthenticationStateCurrentUser(AuthenticationStateProvider authenticationStateProvider) : CurrentUserBase, IClientCurrentUser
-{
-    public override ClaimsPrincipal? User =>
-        (authenticationStateProvider as JwtAuthenticationStateProviderServer)?.CurrentUser;
 }
 

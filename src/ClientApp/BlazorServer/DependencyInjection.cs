@@ -1,6 +1,5 @@
 ﻿using Light.Extensions.DependencyInjection;
 using Light.MudBlazor;
-using Microsoft.AspNetCore.Components.Authorization;
 using Monolith.Authorization;
 using Monolith.Blazor.Components.Account;
 using Monolith.Blazor.Services;
@@ -21,16 +20,13 @@ public static class DependencyInjection
         services.AddHttpClients(configuration);
         services.AddHttpClientServices(typeof(HttpApiClientModule).Assembly);
 
-        services.AddCascadingAuthenticationState();
-
         services.AddScoped<LayoutService>();
         services.AddScoped<SignalRClient>();
-
-        services.AddHttpContextAccessor();
 
         // WebServer
         services.AddSingleton<TokenMemoryStorage>();
         services.AddScoped<TokenStorage, TokenCookieStorage>();
+        services.AddScoped<ITokenProvider, TokenProvider>();
 
         services
             .AddAuthentication(Constants.JwtAuthScheme)
@@ -46,14 +42,17 @@ public static class DependencyInjection
                 options.AccessDeniedPath = "/access-denied";
             });
 
-        services.AddScoped<IClientCurrentUser, AuthenticationStateCurrentUser>();
+        services.AddHttpContextAccessor();
+        services.AddScoped<IClientCurrentUser, HttpContextCurrentUser>();
 
-        services.AddCascadingAuthenticationState();
-        services.AddScoped<AuthenticationStateProvider, JwtAuthenticationStateProviderServer>();
-        services.AddScoped(sp => (ITokenProvider)sp.GetRequiredService<AuthenticationStateProvider>());
+        //services.AddCascadingAuthenticationState();
+        //services.AddScoped<AuthenticationStateProvider, JwtServerAuthenticationStateProvider>();
 
         services.AddPermissionPolicies();
         services.AddPermissionAuthorization();
+
+        // Components
+        services.AddFeatures();
 
         return services;
     }

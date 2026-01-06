@@ -1,0 +1,103 @@
+﻿@page "/shops"
+
+<PageHeader Title="Shops" />
+
+<div class="d-flex justify-content-end mb-3">
+    <Button_Create OnClick="() => OpenUpdateDialogAsync(null)" />
+</div>
+
+<Remote_Table State="state">
+    <SearchContent>
+        <div class="mb-3">
+            <Input @bind-value="lookup.Search" Placeholder="search..." />
+        </div>
+    </SearchContent>
+    <HeadContent>
+        <th>Name</th>
+        <th>Status</th>
+    </HeadContent>
+    <RowTemplate>
+        <td>
+            <input @bind-value="@context.Name" @bind-value:after="() => UpdateAsync(context)" />
+        </td>
+        <td class="text-center">
+            <BadgeStatus Value="context.Status" IsSuccess="context.Status == Status.ActiveStatus.active" />
+        </td>
+        <td>
+            <MudButtonGroup Color="Color.Default" Variant="Variant.Text" Size="Size.Small">
+                <MudMenu Icon="@Icons.Material.Filled.Edit">
+                    <MudMenuItem OnClick="() => UpdateAsync(context)">Save</MudMenuItem>
+                    @if (context.Status is Status.ActiveStatus.active)
+                    {
+                        <MudMenuItem OnClick="() => ToggleStatusAsync(context, Status.ActiveStatus.locked)">Lock</MudMenuItem>
+                    }
+                    else if (context.Status is Status.ActiveStatus.locked)
+                    {
+                        <MudMenuItem OnClick="() => ToggleStatusAsync(context, Status.ActiveStatus.active)">Unlock</MudMenuItem>
+                    }
+                    else if (context.Status is Status.ActiveStatus.unactive)
+                    {
+                        <MudMenuItem OnClick="() => ToggleStatusAsync(context, Status.ActiveStatus.active)">Active</MudMenuItem>
+                        <MudMenuItem OnClick="() => DeleteAsync(context)">Delete</MudMenuItem>
+                    }
+
+                </MudMenu>
+            </MudButtonGroup>
+        </td>
+    </RowTemplate>
+</Remote_Table>
+
+@code {
+    private RemoteTable<ShopDto, ShopLookup> state = null!;
+
+    private ShopLookup lookup => state.Lookup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        state = new(ShopService.SearchAsync);
+
+        await state.ReloadAsync();
+    }
+
+    private async Task OpenUpdateDialogAsync(string? mainCategoryId)
+    {
+        var parameters = new DialogParameters<Upsert_Dialog>();
+
+        var dialog = await DialogService.ShowAsync<Upsert_Dialog>($"Shop", parameters, WebConstants.DEFAULT_DIALOG_OPTIONS);
+
+        var result = await CallGuarded.GetDialogResultAsync(dialog);
+
+        if (result.Succeeded)
+        {
+            await state.ReloadAsync();
+        }
+    }
+
+    private async Task UpdateAsync(ShopDto shop)
+    {
+        await CallGuarded.ExecuteIfConfirmAsync(
+            () => ShopService.UpdateAsync(shop),
+            $"Are you sure save this changes for {shop.Name}?",
+            $"Shop {shop.Name} updated",
+            state.ReloadAsync);
+    }
+
+    private async Task ToggleStatusAsync(ShopDto shop, Status.ActiveStatus newStatus)
+    {
+        shop.Status = newStatus;
+
+        await CallGuarded.ExecuteAsync(
+            () => ShopService.UpdateAsync(shop),
+            $"Shop {shop.Name} {newStatus}",
+            state.ReloadAsync);
+    }
+
+    private async Task DeleteAsync(ShopDto shop)
+    {
+        await CallGuarded.ExecuteIfConfirmAsync(
+            () => ShopService.DeleteAsync(shop.Id),
+            $"Are you sure delete {shop.Name}?",
+            $"Shop {shop.Name} deleted",
+            state.ReloadAsync);
+    }
+}

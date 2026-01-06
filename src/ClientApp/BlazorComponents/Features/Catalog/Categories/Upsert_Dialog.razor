@@ -1,0 +1,34 @@
+﻿<MudDialog Style="position: relative">
+    <DialogContent>
+
+        <Input @bind-Value="Model.Name" />
+
+    </DialogContent>
+
+    <DialogActions>
+        <IconActionButtons IconAction="IconActionButtons.Action.Save" OnClick="UpsertHandle" />
+
+        <MudOverlay Visible="processing" DarkBackground="true" Absolute="true">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        </MudOverlay>
+    </DialogActions>
+
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance dialog { get; set; } = default!;
+
+    [Parameter]
+    public CreateCategoryRequest Model { get; set; } = default!;
+
+    private bool processing = false;
+
+    private async Task UpsertHandle()
+    {
+        await CallGuarded.ExecuteAsync(
+            () => CategoryService.CreateAsync(Model),
+            $"Category {Model.Name} created",
+            dialog);
+    }
+}

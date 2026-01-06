@@ -27,8 +27,8 @@
     <PackageVersion Include="Lightsoft.EventBus.MassTransit.RabbitMQ" Version="0.0.1" />
     <PackageVersion Include="Lightsoft.FluentBlazor" Version="0.0.0.1-beta2" />
     <PackageVersion Include="Lightsoft.FileGenerator" Version="1.10.0.1" />
-    <PackageVersion Include="Lightsoft.Identity" Version="10.0.0" />
-    <PackageVersion Include="Lightsoft.Identity.EntityFrameworkCore" Version="10.0.0.2" />
+    <PackageVersion Include="Lightsoft.Identity" Version="10.0.1.1" />
+    <PackageVersion Include="Lightsoft.Identity.EntityFrameworkCore" Version="10.0.1.1" />
     <PackageVersion Include="Lightsoft.Mail.Contracts" Version="1.0.0" />
     <PackageVersion Include="Lightsoft.Result" Version="1.0.0.1" />
     <PackageVersion Include="Lightsoft.Serilog" Version="1.0.0.2" />

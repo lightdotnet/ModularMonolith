@@ -87,7 +87,7 @@
         {
             await LoadUserNotificationsAsync();
 
-            //await JSRuntime.PlayNoti();
+            await JSRuntime.PlayNotiSound();
         });
 
         SignalR.On<ForceLogoutMessage>(async (message) =>

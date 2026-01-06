@@ -1,0 +1,134 @@
+﻿@page "/categories"
+
+<PageHeader Title="Categories" />
+
+<div class="d-flex justify-content-end mb-3">
+    <Button_Create OnClick="() => OpenUpdateDialogAsync(null)" />
+</div>
+
+<div class="accordion accordion-flush" id="accordionFlushExample">
+
+    @foreach (var category in categories)
+    {
+        var accordionHeaderId = $"flush-heading-{category.Id}";
+        var accordionBodyId = $"flush-collapse-{category.Id}";
+
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="@accordionHeaderId">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="@($"#{accordionBodyId}")" aria-expanded="false" aria-controls="@accordionBodyId">
+                    @category.Name
+                </button>
+            </h2>
+            <div id="@accordionBodyId" class="accordion-collapse collapse" aria-labelledby="@accordionHeaderId" data-bs-parent="#accordionFlushExample">
+                <div class="accordion-body">
+
+                    <IconActionButtons 
+                        OnClick="() => OpenUpdateDialogAsync(category.Id)"
+                        CustomIcon="@Icon.AddCircle" />
+
+                    <IconActionButtons
+                        OnClick="() => DeleteAsync(category)"
+                        IconAction="IconActionButtons.Action.Delete" />
+                    
+                        <table class="table table-bordered mt-3">
+                        <tbody>
+                            @foreach (var subCategory in category.SubCategories)
+                            {
+                                var status = !subCategory.Disable;
+
+                                <tr>
+                                    <td>
+                                        <input @bind-value="@subCategory.Name" />
+                                    </td>
+                                    <td>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" checked="@status" type="checkbox" role="switch" @onchange="() => ToggleStatusAsync(subCategory)" />
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <IconActionButtons OnClick="() => UpdateAsync(subCategory)" IconAction="IconActionButtons.Action.Update" />
+                                        <IconActionButtons OnClick="() => DeleteAsync(category, subCategory)" IconAction="IconActionButtons.Action.Delete" />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    
+                </div>
+            </div>
+        </div>
+    }
+
+</div>
+
+@code {
+    private IEnumerable<CategoryVm> categories = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        var getCategories = await CategoryService.GetAsync();
+        if (getCategories.Succeeded)
+        {
+            categories = getCategories.Data;
+        }
+    }
+
+    private async Task OpenUpdateDialogAsync(string? mainCategoryId)
+    {
+        var parameters = new DialogParameters<Upsert_Dialog>
+        {
+            { x => x.Model, new CreateCategoryRequest
+                {
+                    SubOfId = mainCategoryId
+                }
+            }
+        };
+
+        var dialog = await DialogService.ShowAsync<Upsert_Dialog>($"Category", parameters, WebConstants.DEFAULT_DIALOG_OPTIONS);
+
+        var result = await CallGuarded.GetDialogResultAsync(dialog);
+
+        if (result.Succeeded)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task UpdateAsync(CategoryDto category)
+    {
+        await CallGuarded.ExecuteAsync(
+            () => CategoryService.UpdateAsync(category),
+            $"Category {category.Name} updated",
+            LoadAsync);
+    }
+
+    private async Task DeleteAsync(CategoryVm mainCategory, CategoryDto? subCategory = null)
+    {
+        var id = subCategory is null ? mainCategory.Id : subCategory.Id;
+
+        var message = subCategory is null
+            ? $"Are you sure delete {mainCategory.Name}?"
+            : $"Are you sure delete {subCategory.Name} in {mainCategory.Name}?";
+
+        await CallGuarded.ExecuteIfConfirmAsync(
+            () => CategoryService.DeleteAsync(id),
+            message,
+            $"Category deleted",
+            LoadAsync);
+    }
+
+    private async Task ToggleStatusAsync(CategoryDto category)
+    {
+        category.Disable = !category.Disable;
+
+        await CallGuarded.ExecuteAsync(
+            () => CategoryService.UpdateAsync(category),
+            $"Category {category.Name} status updated",
+            LoadAsync);
+    }
+}

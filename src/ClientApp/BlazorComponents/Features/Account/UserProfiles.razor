@@ -1,20 +1,45 @@
-﻿@page "/profiles"
-@using QRCoder
+﻿@using QRCoder
+@using System.Collections
+
+@page "/profiles"
 
 <PageHeader Title="User Profiles" />
 
-@if (identityData is not null)
+@if (userClaims is not null)
 {
     <div class="d-flex justify-content-center mb-5">
         <img width="300" src="@GenerateQRCode(CurrentUser.UserId)" alt="QR Code" />
     </div>
 
-    <ObjectViewer Model="identityData" />
+    <ObjectViewer Model="userToken" />
+
+    <div class="mt-3 mb-3">
+        <ObjectViewer Model="userClaims" />
+    </div>
 
     if (isFullControl)
     {
-        <button @onclick="RequestPermission">Request Permission</button>
-        <button @onclick="ShowNotification">Show Notification</button>
+        <table class="table table-bordered">
+            <tbody>
+                <tr>
+                    <td>
+                        <button @onclick="JSRuntime.PlayNotiSound">Play</button>
+                    </td>
+                    <td>
+                        <button @onclick="JSRuntime.PauseNotiSound">Pause</button>
+                    </td>
+                    <td>
+                        <button @onclick="JSRuntime.RequestPermission">Request Permission</button>
+                    </td>
+                    <td>
+                        <button @onclick="ShowNotification">Show Notification</button>
+                    </td>
+                    <td>
+                        <button @onclick="JSRuntime.SetAppBadge">Set badge</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
     }
 }
 else
@@ -23,13 +48,23 @@ else
 }
 
 @code {
-    private IEnumerable<System.Security.Claims.Claim>? identityData;
+    [Inject]
+    AuthenticationStateProvider AuthenticationState { get; set; } = default!;
+
+    [Inject]
+    TokenStorage TokenStorage { get; set; } = default!;
+
+    private object? userToken;
+
+    private object? userClaims;
 
     private bool isFullControl => CurrentUser.IsFullControl();
 
     protected override async Task OnInitializedAsync()
     {
-        identityData = CurrentUser.User?.Claims;
+        userToken = await TokenStorage.GetAsync();
+
+        userClaims = (await AuthenticationState.GetAuthenticationStateAsync()).User.Claims.ToList();
     }
 
     private string GenerateQRCode(string? qrText)

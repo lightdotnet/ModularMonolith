@@ -2,8 +2,7 @@
 
 namespace Monolith.HttpApi.Catalogs;
 
-public class CategoryHttpService(IHttpClientFactory httpClientFactory)
-    : TryHttpClient(httpClientFactory)
+public class CategoryHttpService(IHttpClientFactory httpClientFactory) : TryHttpClient(httpClientFactory)
 {
     public const string BasePath = "category";
 

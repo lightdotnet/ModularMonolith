@@ -15,4 +15,6 @@ public class Notification : AuditableEntity
     public string? Url { get; set; }
 
     public bool ReadStatus { get; set; }
+
+    public bool RemindRead { get; set; }
 }

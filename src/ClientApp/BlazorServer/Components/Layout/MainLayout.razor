@@ -1,5 +1,4 @@
-﻿@using Monolith.Blazor.Components.Account
-@inherits LayoutComponentBase
+﻿@inherits LayoutComponentBase
 
 <MudThemeProvider Theme="mudTheme" IsDarkMode="@LayoutService.IsDarkMode" IsDarkModeChanged="@LayoutService.SetDarkMode" />
 <MudPopoverProvider />
@@ -7,6 +6,10 @@
 <MudSnackbarProvider />
 
 <Spinner />
+
+<audio id="notiPlayer" controls="controls" class="d-none">
+    <source src="sounds/noti.mp3" />
+</audio>
 
 <AuthorizeView>
     <Authorized>
@@ -36,7 +39,7 @@
         }
         else
         {
-            <Monolith.Blazor.Components.Account.Login />
+            NavigationManager.RedirectToLogout();
         }
     </NotAuthorized>
 </AuthorizeView>

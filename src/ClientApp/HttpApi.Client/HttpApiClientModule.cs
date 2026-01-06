@@ -1,4 +1,4 @@
 ﻿namespace Monolith.HttpApi;
 
-public class HttpApiClientModule
+public sealed class HttpApiClientModule
 { }

@@ -1,0 +1,58 @@
+﻿@page "/user/notes"
+
+@attribute [MustHavePermission(Permissions.System.Manager)]
+
+<PageHeader Title="Notes" />
+
+@if (!string.IsNullOrEmpty(currentUserId))
+{
+    <div class="d-flex justify-content-end mb-3">
+        <Button Label="Save" OnClick="() => Save()" />
+        <Button Label="Clear" OnClick="() => noteService.RemoveAsync(currentUserId)" Class="ml-2" />
+    </div>
+
+    <Card>
+        <Input @bind-Value="Text" Lines="5" AutoGrow />
+    </Card>
+}
+else
+{
+    <alert Severity="Severity.Warning">
+        No user selected.
+    </alert>
+}
+
+@code {
+    [Inject]
+    NoteMemoryStorage noteService { get; set; } = default!;
+
+    private string? Text = "";
+
+    private string? currentUserId => CurrentUser.UserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        if (!string.IsNullOrEmpty(currentUserId))
+        {
+            Text = await noteService.GetAsync(currentUserId);
+        }
+    }
+
+    private async Task Save()
+    {
+        if (!string.IsNullOrEmpty(currentUserId))
+        {
+            await CallGuarded.ExecuteAsync(
+                () => noteService.SaveAsync(currentUserId, Text ?? ""),
+                "Note updated",
+                Reload);
+        }
+    }
+}

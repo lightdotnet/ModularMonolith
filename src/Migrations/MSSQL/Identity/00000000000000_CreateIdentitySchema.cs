@@ -31,6 +31,7 @@ namespace MSSQL.Identity
                     Message = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Url = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ReadStatus = table.Column<bool>(nullable: false),
+                    RemindRead = table.Column<bool>(nullable: false),
                     Created = table.Column<DateTimeOffset>(nullable: false),
                     CreatedBy = table.Column<string>(maxLength: 450, nullable: true),
                     LastModified = table.Column<DateTimeOffset>(nullable: true),

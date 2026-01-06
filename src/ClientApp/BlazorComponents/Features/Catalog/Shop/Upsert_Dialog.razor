@@ -1,0 +1,34 @@
+﻿<MudDialog Style="position: relative">
+    <DialogContent>
+
+        <FormLabel Title="Name" Required />
+        <Input @bind-Value="Model.Name" />
+
+    </DialogContent>
+
+    <DialogActions>
+        <IconActionButtons IconAction="IconActionButtons.Action.Save" OnClick="UpsertHandle" />
+
+        <MudOverlay Visible="processing" DarkBackground="true" Absolute="true">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        </MudOverlay>
+    </DialogActions>
+
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance dialog { get; set; } = default!;
+
+    private CreateShopRequest Model { get; set; } = new();
+
+    private bool processing = false;
+
+    private async Task UpsertHandle()
+    {
+        await CallGuarded.ExecuteAsync(
+            () => ShopService.CreateAsync(Model),
+            $"Shop {Model.Name} created",
+            dialog);
+    }
+}

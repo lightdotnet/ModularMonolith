@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-	<PackageReference Include="Lightsoft.MudBlazor" Version="0.0.0.2-beta3" />
+	<PackageReference Include="Lightsoft.MudBlazor" Version="0.0.0.2-beta4" />
 	<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="$(AspnetVersion)" />
 	<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="$(AspnetVersion)" />
 	<PackageReference Include="MudBlazor" Version="8.15.0" />

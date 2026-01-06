@@ -12,11 +12,7 @@ using System.Security.Claims;
 namespace Monolith.Blazor.Pages.Account;
 
 [AllowAnonymous]
-public class LoginModel(
-    TokenHttpService tokenService,
-    UserProfileHttpService userProfileService,
-    //TokenMemoryStorage tokenStorage,
-    TokenStorage tokenStorage) : PageModel
+public class LoginModel : PageModel
 {
     [BindProperty]
     [Required]
@@ -30,11 +26,17 @@ public class LoginModel(
     [BindProperty]
     public bool RememberMe { get; set; }
 
-    public IActionResult OnGet()
+    public async Task<IActionResult> OnGet(string? returnUrl)
     {
+        returnUrl = returnUrl switch
+        {
+            "/" or null or "" => "~/",
+            _ => $"~/{returnUrl}"
+        };
+
         if (HttpContext.User.Identity?.IsAuthenticated is true)
         {
-            return LocalRedirect("/");
+            return LocalRedirect(returnUrl);
         }
 
         return Page();
@@ -42,6 +44,8 @@ public class LoginModel(
 
     public async Task<IActionResult> OnPost(string? returnUrl)
     {
+        var tokenService = HttpContext.RequestServices.GetRequiredService<TokenHttpService>();
+
         var getToken = await tokenService.GetTokenAsync(UserName, Password);
 
         if (getToken.Succeeded is false)
@@ -57,15 +61,25 @@ public class LoginModel(
 
         var tokenData = new TokenModel(getToken.Data.AccessToken, getToken.Data.ExpiresIn, getToken.Data.RefreshToken);
 
+        // save token before getting user profile
+        var tokenStorage = HttpContext.RequestServices.GetRequiredService<TokenStorage>();
         await tokenStorage.SaveAsync(tokenData);
 
         var userClaims = JwtExtensions.ReadClaims(getToken.Data.AccessToken);
 
+        var userProfileService = HttpContext.RequestServices.GetRequiredService<UserProfileHttpService>();
+
         var getUserProfiles = await userProfileService.GetAsync();
 
-        if (getUserProfiles.Succeeded)
+        if (getUserProfiles.Succeeded is false)
         {
-            userClaims.AddRange(getUserProfiles.Data.Get());
+            ModelState.AddModelError("", "Cannot get user profiles");
+
+            return Page();
+        }
+        else
+        {
+            userClaims.AddRange(getUserProfiles.Data.BuildClaims());
         }
 
         var claimsIdentity = new ClaimsIdentity(userClaims, Constants.JwtAuthScheme);
