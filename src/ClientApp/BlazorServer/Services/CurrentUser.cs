@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Components.Authorization;
-using Monolith.Authorization;
+﻿using Monolith.Authorization;
 using System.Security.Claims;
 
 namespace Monolith.Blazor.Services;

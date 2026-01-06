@@ -33,7 +33,7 @@ public class ShopController : ApiControllerBase
     public async Task<IActionResult> Create([FromBody] CreateShopRequest request)
     {
         var entity = Shop.Create(request.Name);
-        
+
         await Context.Set<Shop>().AddAsync(entity);
         await Context.SaveChangesAsync();
 

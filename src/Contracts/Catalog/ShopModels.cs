@@ -10,7 +10,7 @@ public record ShopLookup : Pagination
 public class ShopDto : BaseDto
 {
     public string Name { get; set; } = null!;
-    
+
     public Status.ActiveStatus Status { get; set; }
 }
 
