@@ -8,11 +8,11 @@
   <ItemGroup>
 	<PackageReference Include="FluentValidation" />
 	<PackageReference Include="Lightsoft.AspNetCore.Authorization" />
-	<PackageReference Include="Lightsoft.SharedKernel" />
 	<PackageReference Include="Lightsoft.EventBus" />
 	<PackageReference Include="Lightsoft.Extensions" />
 	<PackageReference Include="Lightsoft.Identity" />
 	<PackageReference Include="Lightsoft.Result" />
+	<PackageReference Include="Lightsoft.SharedKernel" />
 	<PackageReference Include="Mapster" />
   </ItemGroup>
 
