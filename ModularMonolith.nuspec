@@ -24,6 +24,6 @@
   <files>
     <file src="README.md" />
     <file src=".template.config\icon.png" />
-    <file src=".\**" target="content" exclude="**\bin\**;**\obj\**;**\.git\**;**\.github\**;**\*.user;**\.vs\**;**\.vscode\**;**\.gitignore;**\sample\**;**\logs\**;" />
+    <file src=".\**" target="content" exclude="**\bin\**;**\obj\**;**\.git\**;**\.github\**;**\*.user;**\.vs\**;**\.vscode\**;**\.gitignore;**\sample\**;**\logs\**;**\node_modules\**;" />
   </files>
 </package>
