@@ -31,6 +31,12 @@
   </ItemGroup>
 
   <ItemGroup>
+	<Content Update="@(Content)">
+		<Visible Condition="'%(NuGetItemType)' == 'Content'">false</Visible>
+	</Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\Catalog\Catalog.csproj" />
     <ProjectReference Include="..\..\Identity\Identity.csproj" />
   </ItemGroup>
