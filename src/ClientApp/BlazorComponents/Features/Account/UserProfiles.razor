@@ -5,7 +5,7 @@
 
 <PageHeader Title="User Profiles" />
 
-@if (userClaims is not null)
+@if (userToken is not null)
 {
     <div class="d-flex justify-content-center mb-5">
         <img width="300" src="@GenerateQRCode(CurrentUser.UserId)" alt="QR Code" />
@@ -13,12 +13,12 @@
 
     <ObjectViewer Model="userToken" />
 
-    <div class="mt-3 mb-3">
-        <ObjectViewer Model="userClaims" />
-    </div>
-
     if (isFullControl)
     {
+        <div class="mt-3 mb-3">
+            <ObjectViewer Model="userClaims" />
+        </div>
+        
         <table class="table table-bordered">
             <tbody>
                 <tr>
@@ -62,9 +62,22 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        userToken = await TokenStorage.GetAsync();
+        var token = await TokenStorage.GetAsync();
 
-        userClaims = (await AuthenticationState.GetAuthenticationStateAsync()).User.Claims.ToList();
+        if (isFullControl)
+        {
+            userToken = token;
+
+            userClaims = (await AuthenticationState.GetAuthenticationStateAsync()).User.Claims.ToList();
+        }
+        else
+        {
+            userToken = new
+            {
+                token?.ExpireOn,
+                token?.RefreshTokenExpireOn
+            };
+        }
     }
 
     private string GenerateQRCode(string? qrText)

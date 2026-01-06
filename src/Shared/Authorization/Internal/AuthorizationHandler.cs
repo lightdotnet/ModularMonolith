@@ -1,5 +1,4 @@
 using Light.AspNetCore.Authorization;
-using Light.Identity;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Monolith.Authorization.Internal;
@@ -10,11 +9,11 @@ internal class AuthorizationHandler : PermissionAuthorizationHandler
     {
         var user = context.User;
 
-        var isSuperUser = AppSecret.IsSuper(user.GetUserName());
+        var isFullControl = user.IsFullControl();
 
         var hasPermission = user.HasPermission(requirement.Permission);
 
-        if (isSuperUser || hasPermission)
+        if (isFullControl || hasPermission)
         {
             context.Succeed(requirement);
         }
