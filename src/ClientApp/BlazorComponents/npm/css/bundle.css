@@ -104,7 +104,8 @@
 
 .noti-list {
     width: 270px;
-    margin: 15px;
+    height: 500px;
+    margin: 15px 0px 15px 10px;
     overflow-y: auto;
 }
 
@@ -113,9 +114,9 @@
     cursor: pointer;
 }
 
-.noti-card:hover {
-    transform: translateY(-5px);
-}
+    .noti-card:hover {
+        transform: translateY(-5px);
+    }
 
 .form-check-input:focus {
     box-shadow: unset;
