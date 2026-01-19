@@ -1,5 +1,9 @@
 # Modular Monolith Solution Template for ASP.NET Core
 
+## Demo
+- [API](http://light-api.runasp.net/swagger/)
+- [BlazorServer](http://light-demo.tryasp.net/)
+
 ## Technologies
 
 * .NET 10
