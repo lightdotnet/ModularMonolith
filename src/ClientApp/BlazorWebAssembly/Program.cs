@@ -1,9 +1,6 @@
-using Blazored.LocalStorage;
-using Light.Blazor;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Monolith.Blazor;
-using Monolith.Blazor.Infrastructure.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -16,9 +13,6 @@ builder.Logging.AddFilter("Microsoft.AspNetCore.Components.WebAssembly.Http.WebA
 #endif
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
-
-builder.Services.AddBlazoredLocalStorageAsSingleton();
-builder.Services.AddSingleton<IStorageService, StorageService>();
 
 builder.Services.AddBlazorComponents(builder.Configuration);
 

@@ -7,6 +7,8 @@
 
         @foreach (var groupLv0 in menu.Groups)
         {
+            var renderMode = RendererInfo.Name;
+            
             if (!string.IsNullOrEmpty(groupLv0.Permission) && !hasPermission(groupLv0.Permission))
             {
                 continue;
@@ -19,7 +21,8 @@
                 {
                     foreach (var navLink in groupLv0.Links)
                     {
-                        if (!string.IsNullOrEmpty(navLink.Permission) && !hasPermission(navLink.Permission))
+                        if (!string.IsNullOrEmpty(navLink.Permission) && !hasPermission(navLink.Permission)
+                        || (!string.IsNullOrEmpty(navLink.RenderMode) && navLink.RenderMode != renderMode))
                         {
                             continue;
                         }
@@ -40,7 +43,8 @@
                         <MudNavGroup Title="@groupLv1.Title" Icon="@groupLv1.Icon" Expanded="@isActive(groupLv1.Hrefs)">
                             @foreach (var navLink in groupLv1.Links)
                             {
-                                if (!string.IsNullOrEmpty(navLink.Permission) && !hasPermission(navLink.Permission))
+                                if (!string.IsNullOrEmpty(navLink.Permission) && !hasPermission(navLink.Permission)
+                                || (!string.IsNullOrEmpty(navLink.RenderMode) && navLink.RenderMode != renderMode))
                                 {
                                     continue;
                                 }
@@ -77,7 +81,10 @@
                     new NavLink("Users", "/admin/users", Permissions.Users.View),
                     new NavLink("Roles", "/admin/roles", Permissions.Roles.View),
                     new NavLink("Notifications", "/admin/notifications", Permissions.System.Notification),
-                    new NavLink("Notes", "/user/notes", Permissions.System.Manager),
+                    new NavLink("Notes", "/user/notes", Permissions.System.Manager)
+                    {
+                        RenderMode = "Server" // only available in Server rendering
+                    },
                 }
             },
             new()
@@ -114,7 +121,10 @@
         public List<NavLink> Links { get; init; } = [];
     }
 
-    public record NavLink(string Name, string Href, string? Permission = "");
+    public record NavLink(string Name, string Href, string? Permission = "")
+    {
+        public string? RenderMode { get; init; }
+    }
 
     public class MainNavMenu
     {
