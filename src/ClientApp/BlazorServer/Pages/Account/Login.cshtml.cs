@@ -1,4 +1,3 @@
-using Light.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,7 +6,6 @@ using Monolith.Blazor.Extensions;
 using Monolith.Blazor.Services;
 using Monolith.HttpApi.Identity;
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 
 namespace Monolith.Blazor.Pages.Account;
 
@@ -24,19 +22,58 @@ public class LoginModel : PageModel
     public string Password { get; set; } = default!;
 
     [BindProperty]
-    public bool RememberMe { get; set; }
+    public bool RememberMe { get; set; } = true;
 
     public async Task<IActionResult> OnGet(string? returnUrl)
     {
-        returnUrl = returnUrl switch
+        returnUrl = BuildReturnUrl(returnUrl);
+
+        var tokenStorage = HttpContext.RequestServices.GetRequiredService<TokenStorage>();
+
+        var savedToken = await tokenStorage.GetAsync();
+
+        if (savedToken is not null && savedToken.IsNearlyExpired())
         {
-            "/" or null or "" => "~/",
-            _ => $"~/{returnUrl}"
-        };
+            if (string.IsNullOrEmpty(savedToken.RefreshToken))
+            {
+                ModelState.AddModelError("", "Your session has expired, please login again.");
+
+                return Page();
+            }
+
+            var tokenService = HttpContext.RequestServices.GetRequiredService<TokenHttpService>();
+
+            var refreshToken = await tokenService.RefreshTokenAsync(savedToken.Token, savedToken.RefreshToken);
+
+            if (refreshToken.Succeeded is false)
+            {
+                ModelState.AddModelError("", "Error when refresh your session.");
+
+                return Page();
+            }
+
+            var tokenData = new TokenModel(refreshToken.Data.AccessToken, refreshToken.Data.ExpiresIn, refreshToken.Data.RefreshToken);
+
+            await tokenStorage.SaveAsync(tokenData);
+
+            var refreshSession = await HttpContext.SignInAsync(refreshToken.Data, true);
+
+            if (refreshSession.Succeeded)
+            {
+                return LocalRedirect(returnUrl);
+            }
+        }
 
         if (HttpContext.User.Identity?.IsAuthenticated is true)
         {
-            return LocalRedirect(returnUrl);
+            var userProfileService = HttpContext.RequestServices.GetRequiredService<UserProfileHttpService>();
+
+            var getUserProfiles = await userProfileService.GetAsync();
+
+            if (getUserProfiles.Succeeded)
+            {
+                return LocalRedirect(returnUrl);
+            }
         }
 
         return Page();
@@ -55,55 +92,41 @@ public class LoginModel : PageModel
             return Page();
         }
 
-        // save token in Server
-        // var id = Guid.NewGuid().ToString("N");
-        // tokenMemory.Save()
-
         var tokenData = new TokenModel(getToken.Data.AccessToken, getToken.Data.ExpiresIn, getToken.Data.RefreshToken);
 
         // save token before getting user profile
         var tokenStorage = HttpContext.RequestServices.GetRequiredService<TokenStorage>();
         await tokenStorage.SaveAsync(tokenData);
 
-        var userClaims = JwtExtensions.ReadClaims(getToken.Data.AccessToken);
+        var login = await HttpContext.SignInAsync(getToken.Data, RememberMe);
 
-        var userProfileService = HttpContext.RequestServices.GetRequiredService<UserProfileHttpService>();
-
-        var getUserProfiles = await userProfileService.GetAsync();
-
-        if (getUserProfiles.Succeeded is false)
+        if (login.Succeeded is false)
         {
-            ModelState.AddModelError("", "Cannot get user profiles");
+            ModelState.AddModelError("", login.Message);
 
             return Page();
         }
-        else
-        {
-            userClaims.AddRange(getUserProfiles.Data.BuildClaims());
-        }
 
-        var claimsIdentity = new ClaimsIdentity(userClaims, Constants.JwtAuthScheme);
-
-        // Replace with new ClaimsPrincipal
-        var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
-
-        // Sign in using Identity's scheme
-        await HttpContext.SignInAsync(
-            Constants.JwtAuthScheme,
-            claimsPrincipal,
-            new AuthenticationProperties
-            {
-                IsPersistent = RememberMe,  // "Remember me"
-                ExpiresUtc = DateTimeOffset.UtcNow.AddSeconds(getToken.Data.ExpiresIn),
-                AllowRefresh = true
-            });
-
-        returnUrl = returnUrl switch
-        {
-            "/" or null or "" => "/",
-            _ => $"/{returnUrl}"
-        };
+        returnUrl = BuildReturnUrl(returnUrl);
 
         return LocalRedirect(returnUrl);
+    }
+
+    private string BuildReturnUrl(string? returnUrl)
+    {
+        /*
+        if (!Url.IsLocalUrl(returnUrl))
+        {
+            returnUrl = "~/";
+        }
+        */
+
+        //var query = HttpContext.Request.Query;
+
+        return returnUrl switch
+        {
+            null or "/" or "" => "~/",
+            _ => $"~/{Url.Content(returnUrl)}".Replace("//", "/").Replace("error?returnUrl=", "")
+        };
     }
 }
