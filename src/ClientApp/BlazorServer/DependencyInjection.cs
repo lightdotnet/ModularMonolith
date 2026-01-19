@@ -1,5 +1,6 @@
 ﻿using Light.Extensions.DependencyInjection;
 using Light.MudBlazor;
+using Microsoft.AspNetCore.Components.Authorization;
 using Monolith.Authorization;
 using Monolith.Blazor.Components.Account;
 using Monolith.Blazor.Services;
@@ -45,8 +46,8 @@ public static class DependencyInjection
         services.AddHttpContextAccessor();
         services.AddScoped<IClientCurrentUser, HttpContextCurrentUser>();
 
-        //services.AddCascadingAuthenticationState();
-        //services.AddScoped<AuthenticationStateProvider, JwtServerAuthenticationStateProvider>();
+        services.AddCascadingAuthenticationState();
+        services.AddScoped<AuthenticationStateProvider, JwtServerAuthenticationStateProvider>();
 
         services.AddPermissionPolicies();
         services.AddPermissionAuthorization();

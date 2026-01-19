@@ -25,7 +25,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="$(AspnetVersion)" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(AspnetVersion)" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(AspnetVersion)" />
-    <PackageReference Include="Lightsoft.Serilog" Version="1.*" />
+    <PackageReference Include="Lightsoft.Serilog" Version="1.0.0.3" />
   </ItemGroup>
 
   <ItemGroup>

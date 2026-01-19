@@ -1,6 +1,4 @@
-﻿using Monolith.Extensions;
-
-namespace Monolith.Authorization;
+﻿namespace Monolith.Authorization;
 
 public abstract class CurrentUserBase : ICurrentUser
 {

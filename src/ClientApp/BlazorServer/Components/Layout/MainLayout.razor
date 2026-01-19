@@ -33,14 +33,7 @@
         </MudLayout>
     </Authorized>
     <NotAuthorized>
-        @if (CurrentUser.IsAuthenticated)
-        {
-            <AccessDenied />
-        }
-        else
-        {
-            NavigationManager.RedirectToLogout();
-        }
+        <RedirectToLogin />
     </NotAuthorized>
 </AuthorizeView>
 
@@ -79,6 +72,16 @@
     protected override void OnInitialized()
     {
         LayoutService.MajorUpdateOccured += LayoutServiceOnMajorUpdateOccured;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // check user token expiration
+        var userToken = await TokenStorage.GetAsync();
+        if (userToken is not null && userToken.IsNearlyExpired())
+        {
+            NavigationManager.RedirectToLogin();
+        }
     }
 
     private void LayoutServiceOnMajorUpdateOccured(object? sender, EventArgs e)

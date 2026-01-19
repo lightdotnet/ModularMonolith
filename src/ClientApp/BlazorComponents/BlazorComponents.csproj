@@ -4,15 +4,20 @@
 	<RootNamespace>Monolith.Blazor</RootNamespace>
 	<AssemblyName>Monolith.BlazorComponents</AssemblyName>
 	<ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
-  </PropertyGroup>
 
+	<!-- *** IMPORTANT: JavaScript / CSS minification *** -->
+	<CssMinifyEnabled>true</CssMinifyEnabled>
+	<JavaScriptMinifyEnabled>true</JavaScriptMinifyEnabled>
+	<JavaScriptMinifier>Closure</JavaScriptMinifier>
+	<!-- or Node-based if installed -->
+  </PropertyGroup>
 
   <ItemGroup>
     <SupportedPlatform Include="browser" />
   </ItemGroup>
 
   <ItemGroup>
-	<PackageReference Include="Lightsoft.MudBlazor" Version="0.0.0.2-beta4" />
+	<PackageReference Include="Lightsoft.MudBlazor" Version="0.0.0.2-beta6" />
 	<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="$(AspnetVersion)" />
 	<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="$(AspnetVersion)" />
 	<PackageReference Include="MudBlazor" Version="8.15.0" />
@@ -23,5 +28,13 @@
   <ItemGroup>
     <ProjectReference Include="..\HttpApi.Client\HttpApi.Client.csproj" />
   </ItemGroup>
+
+  <Target Name="MinifyFirst" BeforeTargets="BeforeBuild" Condition="'$(Configuration)'=='Release'">
+	<!-- Delete old JS/CSS minified files -->
+	<Delete Files="$(ProjectDir)wwwroot\site.min.js" />
+	<Delete Files="$(ProjectDir)wwwroot\site.min.css" />
+	<!-- Compile and minify JS/CSS files -->
+	<Exec Command="powershell -ExecutionPolicy Bypass -File $(ProjectDir)MinifyInOne.ps1" LogStandardErrorAsError="true" />
+  </Target>
 
 </Project>
