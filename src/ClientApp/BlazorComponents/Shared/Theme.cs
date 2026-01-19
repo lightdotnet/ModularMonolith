@@ -7,7 +7,7 @@ namespace Monolith.Blazor.Shared;
 /// </summary>
 public class Theme
 {
-    private const string primaryColor = "#009f97";
+    private const string primaryColor = "#00b14f";
 
     /// <summary>
     /// Gets the application theme.
@@ -24,7 +24,7 @@ public class Theme
                 Secondary = "#9E9E9E", // Dark gray, secondary color
 
                 // **Background and Surface**
-                Background = "#F2F2F2", // Standard light background color
+                Background = "#FFF", // Standard light background color
                 Surface = "#FFFFFF", // Light gray, used for surfaces like cards
 
                 // **Text Colors**
@@ -55,9 +55,9 @@ public class Theme
                 OverlayLight = "rgba(255,255,255,0.5)", // Semi-transparent white, used for overlays
 
                 // **App Bar and Navigation**
-                AppbarBackground = "#F2F2F2", // Light surface
+                AppbarBackground = "rgba(255,255,255,0.9)", // Light surface
                 AppbarText = "#424242", // Dark gray, app bar text color
-                DrawerBackground = "#F2F2F2", // Light surface
+                DrawerBackground = "#FFF", // Light surface
                 DrawerText = "#424242", // Dark gray, drawer text color
 
                 // **Contrast Text for Primary Color**

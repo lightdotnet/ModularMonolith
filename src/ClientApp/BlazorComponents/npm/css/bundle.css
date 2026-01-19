@@ -69,6 +69,10 @@
         color: var(--mud-palette-text-primary);
     }
 
+    .table tbody > tr {
+        vertical-align: middle;
+    }
+
 .table-hover > tbody > tr:hover > * {
     --bs-table-color-state: var(--mud-palette-text-primary);
 }
@@ -205,6 +209,6 @@
     display: block;
 }
 
-tbody > tr {
-    vertical-align: middle;
+.accordion-button:focus {
+    box-shadow: unset;
 }

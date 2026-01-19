@@ -3,6 +3,9 @@ using Monolith.Blazor.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// modify the default antiforgery cookie name
+UnsafeAccessorClassAntiforgeryOptions.GetUnsafeStaticFieldDefaultCookiePrefix(new()) = ".anti-forgery.";
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
