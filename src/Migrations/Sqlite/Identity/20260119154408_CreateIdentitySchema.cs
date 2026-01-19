@@ -51,6 +51,7 @@ namespace Sqlite.Identity
                     Message = table.Column<string>(type: "TEXT", nullable: true),
                     Url = table.Column<string>(type: "TEXT", nullable: true),
                     ReadStatus = table.Column<bool>(type: "INTEGER", nullable: false),
+                    RemindRead = table.Column<bool>(type: "INTEGER", nullable: false),
                     Created = table.Column<long>(type: "INTEGER", nullable: false),
                     CreatedBy = table.Column<string>(type: "TEXT", nullable: true),
                     LastModified = table.Column<long>(type: "INTEGER", nullable: true),
