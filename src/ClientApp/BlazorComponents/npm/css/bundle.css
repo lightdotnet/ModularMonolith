@@ -209,6 +209,10 @@
     display: block;
 }
 
+.accordion {
+    --bs-accordion-bg: rgba(248,249,250,.5);
+}
+
 .accordion-button:focus {
     box-shadow: unset;
 }
