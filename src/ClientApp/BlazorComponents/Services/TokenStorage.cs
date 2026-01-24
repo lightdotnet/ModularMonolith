@@ -54,8 +54,15 @@ public class TokenModel
     {
         if (string.IsNullOrEmpty(base64EncodedData)) return null;
 
-        var base64EncodedBytes = Convert.FromBase64String(base64EncodedData);
-        var data = System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
-        return JsonSerializer.Deserialize<TokenModel>(data);
+        try
+        {
+            var base64EncodedBytes = Convert.FromBase64String(base64EncodedData);
+            var data = System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
+            return JsonSerializer.Deserialize<TokenModel>(data);
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

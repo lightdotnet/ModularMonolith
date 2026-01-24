@@ -114,19 +114,17 @@ public class LoginModel : PageModel
 
     private string BuildReturnUrl(string? returnUrl)
     {
-        /*
-        if (!Url.IsLocalUrl(returnUrl))
+        if (string.IsNullOrEmpty(returnUrl) ||
+            returnUrl.Contains("/Error", StringComparison.OrdinalIgnoreCase) ||
+            !Url.IsLocalUrl(returnUrl))
         {
-            returnUrl = "~/";
+            returnUrl = "/";
         }
-        */
-
-        //var query = HttpContext.Request.Query;
 
         return returnUrl switch
         {
             null or "/" or "" => "~/",
-            _ => $"~/{Url.Content(returnUrl)}".Replace("//", "/").Replace("error?returnUrl=", "")
+            _ => $"~/{Url.Content(returnUrl)}".Replace("//", "/")
         };
     }
 }
