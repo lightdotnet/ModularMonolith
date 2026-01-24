@@ -1,43 +1,23 @@
-﻿using Microsoft.AspNetCore.DataProtection;
+﻿namespace Monolith.Blazor.Services.Token;
 
-namespace Monolith.Blazor.Services.Token;
-
-public class TokenCookieStorage(
-    IHttpContextAccessor httpContextAccessor,
-    IDataProtectionProvider dataProtectionProvider) : TokenStorage
+public class TokenCookieStorage(IHttpContextAccessor httpContextAccessor) : TokenStorage
 {
-    private readonly IDataProtector _protector = dataProtectionProvider.CreateProtector("jwt");
-
-    private TokenModel? Unprotect(string tokenString)
-    {
-        try
-        {
-            var unprotectedData = _protector.Unprotect(tokenString);
-            return TokenModel.ReadFrom(unprotectedData);
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
     public override Task<TokenModel?> GetAsync()
     {
         if (httpContextAccessor.HttpContext is HttpContext httpContext)
         {
-            if (httpContext.Items.TryGetValue(Constants.TokenCookieName, out var cookieItemValue) && cookieItemValue is string token)
+            if (httpContext.Items.TryGetValue(Constants.TokenCookieName, out var tokenObj) && tokenObj is TokenModel token)
             {
-                return Task.FromResult(Unprotect(token));
+                return Task.FromResult<TokenModel?>(token);
             }
 
             var tokenCookieValue = httpContext.Request.Cookies[Constants.TokenCookieName];
 
-            if (!string.IsNullOrEmpty(tokenCookieValue))
-            {
-                Console.WriteLine("Token loaded from Cookies");
+            var tokenData = TokenModel.ReadFrom(tokenCookieValue);
 
-                return Task.FromResult(Unprotect(tokenCookieValue));
-            }
+            Console.WriteLine("Token loaded from Cookies");
+
+            return Task.FromResult(tokenData);
         }
 
         return Task.FromResult<TokenModel?>(default);
@@ -47,16 +27,14 @@ public class TokenCookieStorage(
     {
         if (httpContextAccessor.HttpContext is HttpContext httpContext)
         {
-            var protectedValue = _protector.Protect(token.ToString());
-
             // Cookies written with Response.Cookies.Append
             //      are NOT available in Request.Cookies during the same request.
             //      So we store it in HttpContext.Items for immediate access.
-            httpContext.Items[Constants.TokenCookieName] = protectedValue;
+            httpContext.Items[Constants.TokenCookieName] = token;
 
             httpContext.Response.Cookies.Append(
                 Constants.TokenCookieName,
-                protectedValue,
+                token.ToString(),
                 new CookieOptions
                 {
                     Expires = token.ExpireOn,
