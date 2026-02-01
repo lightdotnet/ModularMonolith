@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.Logging;
 using Monolith.Blazor.Extensions;
 using Monolith.Blazor.Services;
 using Monolith.HttpApi.Identity;
@@ -12,7 +11,7 @@ using System.ComponentModel.DataAnnotations;
 namespace Monolith.Blazor.Pages.Account;
 
 [AllowAnonymous]
-public class LoginModel : PageModel
+public class LoginModel(ILogger<LoginModel> logger) : PageModel
 {
     private static readonly SemaphoreSlim RefreshLock = new(1, 1);
 
