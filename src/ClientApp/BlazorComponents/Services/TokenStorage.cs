@@ -39,7 +39,14 @@ public class TokenModel
 
     public DateTimeOffset? RefreshTokenExpireOn { get; set; }
 
-    public bool IsNearlyExpired() => ExpireOn.AddMinutes(-5) <= DateTime.UtcNow;
+    public bool IsExpiringSoon()
+    {
+        var tokenExpirationBuffer = TimeSpan.FromMinutes(10);
+
+        var timeUntilExpiration = ExpireOn - DateTimeOffset.UtcNow;
+
+        return timeUntilExpiration <= tokenExpirationBuffer;
+    }
 
     public bool IsRefreshTokenExpired() => RefreshTokenExpireOn <= DateTime.UtcNow;
 

@@ -117,7 +117,7 @@ public class JwtAuthenticationStateProvider(
     {
         var userToken = await tokenStorage.GetAsync();
 
-        if (userToken is not null && userToken.IsNearlyExpired() && !string.IsNullOrEmpty(userToken.RefreshToken))
+        if (userToken is not null && userToken.IsExpiringSoon() && !string.IsNullOrEmpty(userToken.RefreshToken))
         {
             if (userToken.IsRefreshTokenExpired() is false)
             {

@@ -78,7 +78,7 @@
     {
         // check user token expiration
         var userToken = await TokenStorage.GetAsync();
-        if (userToken is not null && userToken.IsNearlyExpired())
+        if (userToken is not null && userToken.IsExpiringSoon())
         {
             NavigationManager.RedirectToLogin();
         }
