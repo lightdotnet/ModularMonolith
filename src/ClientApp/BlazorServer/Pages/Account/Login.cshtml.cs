@@ -1,4 +1,5 @@
 using Light.Contracts;
+using Light.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
