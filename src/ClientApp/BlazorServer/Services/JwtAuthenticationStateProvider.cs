@@ -27,6 +27,6 @@ public class JwtServerAuthenticationStateProvider(
         var expiresAt = DateTimeOffset.FromUnixTimeSeconds(expUnix);
 
         // check if the token is expired or about to expire in the next 5 minutes
-        return expiresAt.AddMinutes(-5) > DateTimeOffset.UtcNow;
+        return expiresAt.AddMinutes(-10) > DateTimeOffset.UtcNow;
     }
 }

@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace PostgreSQL.Identity
 {
     [DbContext(typeof(AppIdentityDbContext))]
-    [Migration("20250912010015_CreateIdentitySchema")]
+    [Migration("20260119155322_CreateIdentitySchema")]
     partial class CreateIdentitySchema
     {
         /// <inheritdoc />
@@ -20,7 +20,7 @@ namespace PostgreSQL.Identity
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.9")
+                .HasAnnotation("ProductVersion", "10.0.2")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -334,6 +334,9 @@ namespace PostgreSQL.Identity
                         .HasColumnType("text");
 
                     b.Property<bool>("ReadStatus")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RemindRead")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Title")

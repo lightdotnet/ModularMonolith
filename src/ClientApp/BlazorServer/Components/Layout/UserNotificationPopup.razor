@@ -2,22 +2,7 @@
 
 <MudMenu PositionAtCursor="false" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
     <ActivatorContent>
-        @if (unreadCount > 0)
-        {
-            <MudBadge Content="@unreadCount" Color="Color.Warning" Overlap="true" Bordered="true" Class="mx-6 my-4 mr-3">
-                <MudIconButton
-                    Icon="@Icons.Material.Filled.Notifications"
-                    Size="Size.Small" Color="Color.Inherit" DropShadow="false" Ripple="false"
-                    Class="@($"{animate}")" />
-            </MudBadge>
-        }
-        else
-        {
-            <MudIconButton
-                Icon="@Icons.Material.Filled.Notifications"
-                Size="Size.Small" Color="Color.Inherit" DropShadow="false" Ripple="false"
-                Class="@($"mx-6 my-4 mr-3 {animate}")" />
-        }
+        <UserNotificationIcon UnreadCount="@unreadCount" Context="context" />
     </ActivatorContent>
     <ChildContent>
         @if (notifications != null)

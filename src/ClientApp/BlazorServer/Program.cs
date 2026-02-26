@@ -38,6 +38,7 @@ app.MapStaticAssets();
 app.MapRazorPages();
 
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode()
+    .AddAdditionalAssemblies(typeof(BlazorComponents).Assembly);
 
 app.Run();

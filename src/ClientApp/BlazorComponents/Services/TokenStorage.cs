@@ -39,7 +39,14 @@ public class TokenModel
 
     public DateTimeOffset? RefreshTokenExpireOn { get; set; }
 
-    public bool IsNearlyExpired() => ExpireOn.AddMinutes(-5) <= DateTime.UtcNow;
+    public bool IsExpiringSoon()
+    {
+        var tokenExpirationBuffer = TimeSpan.FromMinutes(10);
+
+        var timeUntilExpiration = ExpireOn - DateTimeOffset.UtcNow;
+
+        return timeUntilExpiration <= tokenExpirationBuffer;
+    }
 
     public bool IsRefreshTokenExpired() => RefreshTokenExpireOn <= DateTime.UtcNow;
 
@@ -54,8 +61,15 @@ public class TokenModel
     {
         if (string.IsNullOrEmpty(base64EncodedData)) return null;
 
-        var base64EncodedBytes = Convert.FromBase64String(base64EncodedData);
-        var data = System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
-        return JsonSerializer.Deserialize<TokenModel>(data);
+        try
+        {
+            var base64EncodedBytes = Convert.FromBase64String(base64EncodedData);
+            var data = System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
+            return JsonSerializer.Deserialize<TokenModel>(data);
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

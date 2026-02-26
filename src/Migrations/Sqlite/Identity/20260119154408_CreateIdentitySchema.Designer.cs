@@ -10,14 +10,14 @@ using Monolith.Identity.Data;
 namespace Sqlite.Identity
 {
     [DbContext(typeof(AppIdentityDbContext))]
-    [Migration("20250912010113_CreateIdentitySchema")]
+    [Migration("20260119154408_CreateIdentitySchema")]
     partial class CreateIdentitySchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.2");
 
             modelBuilder.Entity("Light.Identity.Models.JwtToken", b =>
                 {
@@ -324,6 +324,9 @@ namespace Sqlite.Identity
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("ReadStatus")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RemindRead")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Title")

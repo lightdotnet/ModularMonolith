@@ -17,7 +17,7 @@ public class Theme
     {
         var theme = new MudTheme()
         {
-            PaletteLight = new()
+            PaletteLight = new PaletteLight()
             {
                 // **Primary Colors**
                 Primary = primaryColor, // Adjusted, used for highlights and key elements
@@ -64,7 +64,7 @@ public class Theme
                 PrimaryContrastText = "#FFFFFF", // White, text on primary color
             },
 
-            PaletteDark = new()
+            PaletteDark = new PaletteDark()
             {
                 // **Primary Colors**
                 Primary = primaryColor, // Deep blue, used for highlights and key elements

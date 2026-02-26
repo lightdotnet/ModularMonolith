@@ -1,3 +1,5 @@
+using Light.Contracts;
+using Light.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,8 +12,10 @@ using System.ComponentModel.DataAnnotations;
 namespace Monolith.Blazor.Pages.Account;
 
 [AllowAnonymous]
-public class LoginModel : PageModel
+public class LoginModel(ILogger<LoginModel> logger) : PageModel
 {
+    private static readonly SemaphoreSlim RefreshLock = new(1, 1);
+
     [BindProperty]
     [Required]
     public string UserName { get; set; } = default!;
@@ -32,7 +36,7 @@ public class LoginModel : PageModel
 
         var savedToken = await tokenStorage.GetAsync();
 
-        if (savedToken is not null && savedToken.IsNearlyExpired())
+        if (savedToken is not null && savedToken.IsExpiringSoon())
         {
             if (string.IsNullOrEmpty(savedToken.RefreshToken))
             {
@@ -41,34 +45,49 @@ public class LoginModel : PageModel
                 return Page();
             }
 
-            var tokenService = HttpContext.RequestServices.GetRequiredService<TokenHttpService>();
+            Result refreshSessionResult = Result.Error();
 
-            var refreshToken = await tokenService.RefreshTokenAsync(savedToken.Token, savedToken.RefreshToken);
+            // We make sure the access token is only refreshed by one thread at a time. The other ones have to wait.
+            await RefreshLock.WaitAsync();
 
-            if (refreshToken.Succeeded is false)
+            try
             {
-                ModelState.AddModelError("", "Error when refresh your session.");
+                var tokenService = HttpContext.RequestServices.GetRequiredService<TokenHttpService>();
 
-                return Page();
+                var refreshToken = await tokenService.RefreshTokenAsync(savedToken.Token, savedToken.RefreshToken);
+
+                if (refreshToken.Succeeded)
+                {
+                    var tokenData = new TokenModel(
+                        refreshToken.Data.AccessToken,
+                        refreshToken.Data.ExpiresIn,
+                        refreshToken.Data.RefreshToken);
+
+                    await tokenStorage.SaveAsync(tokenData);
+
+                    refreshSessionResult = await HttpContext.SignInAsync(refreshToken.Data, true);
+                }
+            }
+            finally
+            {
+                RefreshLock.Release();
             }
 
-            var tokenData = new TokenModel(refreshToken.Data.AccessToken, refreshToken.Data.ExpiresIn, refreshToken.Data.RefreshToken);
-
-            await tokenStorage.SaveAsync(tokenData);
-
-            var refreshSession = await HttpContext.SignInAsync(refreshToken.Data, true);
-
-            if (refreshSession.Succeeded)
+            if (refreshSessionResult.Succeeded)
             {
+                logger.LogDebug("Token refreshed and user {username} signed in via refresh token.", HttpContext.User?.GetUserName());
+
                 return LocalRedirect(returnUrl);
             }
+
+            ModelState.AddModelError("", "Error when refresh your session.");
+
+            return Page();
         }
 
         if (HttpContext.User.Identity?.IsAuthenticated is true)
         {
-            var userProfileService = HttpContext.RequestServices.GetRequiredService<UserProfileHttpService>();
-
-            var getUserProfiles = await userProfileService.GetAsync();
+            var getUserProfiles = await HttpContext.GetUserProfilesAsync();
 
             if (getUserProfiles.Succeeded)
             {
@@ -114,19 +133,19 @@ public class LoginModel : PageModel
 
     private string BuildReturnUrl(string? returnUrl)
     {
-        /*
-        if (!Url.IsLocalUrl(returnUrl))
+        returnUrl = returnUrl switch
+        {
+            null or "/" or "" => "~/",
+            _ => $"~/{Url.Content(returnUrl)}".Replace("//", "/")
+        };
+
+        if (string.IsNullOrEmpty(returnUrl)
+            || returnUrl.Contains("/Error", StringComparison.OrdinalIgnoreCase)
+            || !Url.IsLocalUrl(returnUrl))
         {
             returnUrl = "~/";
         }
-        */
 
-        //var query = HttpContext.Request.Query;
-
-        return returnUrl switch
-        {
-            null or "/" or "" => "~/",
-            _ => $"~/{Url.Content(returnUrl)}".Replace("//", "/").Replace("error?returnUrl=", "")
-        };
+        return returnUrl;
     }
 }

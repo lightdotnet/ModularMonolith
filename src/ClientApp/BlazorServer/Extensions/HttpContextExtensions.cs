@@ -13,9 +13,7 @@ public static class HttpContextExtensions
     {
         var userClaims = JwtExtensions.ReadClaims(token.AccessToken);
 
-        var userProfileService = httpContext.RequestServices.GetRequiredService<UserProfileHttpService>();
-
-        var getUserProfiles = await userProfileService.GetAsync();
+        var getUserProfiles = await httpContext.GetUserProfilesAsync();
 
         if (getUserProfiles.Succeeded is false)
         {
@@ -43,5 +41,12 @@ public static class HttpContextExtensions
             });
 
         return Result.Success();
+    }
+
+    public static Task<Result<UserDto>> GetUserProfilesAsync(this HttpContext httpContext)
+    {
+        var userProfileService = httpContext.RequestServices.GetRequiredService<UserProfileHttpService>();
+
+        return userProfileService.GetAsync();
     }
 }
