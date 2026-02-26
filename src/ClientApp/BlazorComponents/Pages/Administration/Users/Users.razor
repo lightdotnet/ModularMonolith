@@ -111,7 +111,7 @@
 
     private async Task DeleteAsync(string id, string? userName)
     {
-        bool? isConfirm = await DialogService.ShowMessageBox("Warning", $"Confirm delete user {userName}?");
+        bool? isConfirm = await DialogDisplay.ShowConfirmAsync($"Confirm delete user {userName}?");
 
         if (isConfirm == true)
         {

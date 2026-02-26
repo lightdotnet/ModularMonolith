@@ -1,0 +1,28 @@
+﻿@if (UnreadCount > 0)
+{
+    <MudBadge Content="@UnreadCount" Color="Color.Warning" Overlap="true" Bordered="true" Class="mx-6 my-4 mr-3">
+        <MudIconButton
+            Icon="@Icons.Material.Filled.Notifications"
+            Size="Size.Small" Color="Color.Inherit" DropShadow="false" Ripple="false"
+            Class="@($"{animate}")"
+            OnClick="Context.ToggleAsync" />
+    </MudBadge>
+}
+else
+{
+    <MudIconButton
+        Icon="@Icons.Material.Filled.Notifications"
+        Size="Size.Small" Color="Color.Inherit" DropShadow="false" Ripple="false"
+        Class="@($"mx-6 my-4 mr-3 {animate}")"
+        OnClick="Context.ToggleAsync" />
+}
+
+@code {
+    [Parameter]
+    public int UnreadCount { get; set; }
+
+    [Parameter]
+    public MenuContext Context { get; set; } = null!;
+
+    private string animate => UnreadCount > 0 ? "animated swing infinite" : "";
+}

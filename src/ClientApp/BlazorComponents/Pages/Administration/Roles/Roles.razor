@@ -49,7 +49,7 @@
 
     private async Task DeleteAsync(string id, string? name)
     {
-        bool? isConfirm = await DialogService.ShowMessageBox("Warning", $"Confirm delete role {name}?");
+        bool? isConfirm = await DialogDisplay.ShowConfirmAsync($"Confirm delete role {name}?");
 
         if (isConfirm == true)
         {
