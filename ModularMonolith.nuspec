@@ -3,14 +3,14 @@
   <metadata>
     <id>ModularMonolith.Solution.Template</id>
     <title>ASP.NET Core Modular Monolith Solution Template</title>
-    <version>1.10.0.4</version>
+    <version>1.10.0.5</version>
     <authors>minhvu</authors>
     <description>
       Modular Monolith Solution Template popularized by minhvu.
     </description>
     <language>en-US</language>
     <license type="expression">MIT</license>
-    <projectUrl>https://github.com/lightdotnet/dotnet-starter-template</projectUrl>
+    <projectUrl>https://github.com/lightdotnet/ModularMonolith</projectUrl>
     <releaseNotes>
       * Update BlazorServer, Migrations
     </releaseNotes>
