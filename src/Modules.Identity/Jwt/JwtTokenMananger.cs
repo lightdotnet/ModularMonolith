@@ -1,22 +1,58 @@
 ﻿using Light.Exceptions;
 using Microsoft.AspNetCore.Identity;
+using Monolith.Claims;
 using Monolith.Identity.Data;
-using Monolith.Identity.Services;
 using System.Security.Claims;
 using ClaimTypes = Monolith.Claims.ClaimTypes;
 
 namespace Monolith.Identity.Jwt;
 
-public class JwtTokenMananger(UserManager<User> userManager, IdentityDbContext context)
+public class JwtTokenMananger(
+    UserManager<User> userManager,
+    RoleManager<Role> roleManager,
+    IdentityDbContext context)
 {
     public UserManager<User> UserManager => userManager;
 
     public virtual DateTimeOffset TimeNow => DateTimeOffset.Now;
 
-    public virtual async Task<List<Claim>> GetUserClaimsAsync(User user)
+    public virtual async Task<IList<Claim>> GetUserClaimsAsync(User user)
     {
-        var claims = await context.QueryUserClaims(user.Id).ToListAsync().ConfigureAwait(false);
-        return [.. claims.Select(s => new Claim(s.Type, s.Value))];
+        //var userClaims = await userManager.GetClaimsAsync(user);
+        var userRoles = await userManager.GetRolesAsync(user);
+
+        //var roleClaims = new List<Claim>();
+        var permissionClaims = new List<Claim>();
+
+        foreach (var userRole in userRoles)
+        {
+            //roleClaims.Add(new Claim(ClaimTypes.Role, userRole));
+
+            var role = await roleManager.FindByNameAsync(userRole);
+            if (role is null)
+                continue;
+
+            var roleClaims = await roleManager.GetClaimsAsync(role);
+
+            permissionClaims.AddRange(roleClaims);
+        }
+
+        var claims = new List<Claim>
+        {
+            { ClaimTypes.UserId, user.Id },
+            { ClaimTypes.UserName, user.UserName },
+            //{ ClaimTypes.FirstName, user.FirstName },
+            //{ ClaimTypes.LastName, user.LastName },
+            //{ ClaimTypes.PhoneNumber, user.PhoneNumber },
+            //{ ClaimTypes.Email, user.Email },
+        }
+        //.Union(userClaims)
+        //.Union(roleClaims)
+        .Union(permissionClaims)
+        .Where(x => !string.IsNullOrEmpty(x.Value))
+        .ToList();
+
+        return claims;
     }
 
     public virtual async Task<TokenDto> GenerateTokenByAsync(
