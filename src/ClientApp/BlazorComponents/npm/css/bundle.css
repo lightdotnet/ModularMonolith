@@ -104,7 +104,7 @@
 
 .noti-list {
     width: 270px;
-    height: 500px;
+    max-height: 500px;
     margin: 15px 0px 15px 10px;
     overflow-y: auto;
 }
