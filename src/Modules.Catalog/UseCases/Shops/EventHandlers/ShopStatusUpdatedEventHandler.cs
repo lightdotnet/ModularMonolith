@@ -12,6 +12,8 @@ internal class ShopStatusUpdatedEventHandler(
         logger.LogInformation("Shop status updated: Shop ID: {ShopId}, New Status: {NewStatus}",
             notification.Name, notification.Status);
 
+        // Additional logic can be added here, such as notifying other services or updating related data.
+
         return Task.CompletedTask;
     }
 }

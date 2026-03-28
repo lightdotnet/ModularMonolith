@@ -13,6 +13,8 @@ internal class UserCreatedEventHandler(ILogger<UserCreatedEventHandler> logger)
             notification.UserName,
             notification.Email);
 
+        // Additional logic can be added here, such as sending a welcome email or logging to an external service.
+
         return Task.CompletedTask;
     }
 }
