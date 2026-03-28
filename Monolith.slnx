@@ -29,4 +29,7 @@
     <Project Path="src/Migrations/PostgreSQL/PostgreSQL.csproj" />
     <Project Path="src/Migrations/Sqlite/Sqlite.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Shared.Tests/Shared.Tests.csproj" />
+  </Folder>
 </Solution>
