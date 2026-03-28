@@ -11,14 +11,14 @@ using Monolith.Catalog.Infrastructure.Data;
 namespace Sqlite.Catalog
 {
     [DbContext(typeof(CatalogContext))]
-    [Migration("20260119154429_CreateCatalogSchema")]
+    [Migration("20260328103249_CreateCatalogSchema")]
     partial class CreateCatalogSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.2");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.5");
 
             modelBuilder.Entity("Monolith.Catalog.Domain.Categories.Category", b =>
                 {

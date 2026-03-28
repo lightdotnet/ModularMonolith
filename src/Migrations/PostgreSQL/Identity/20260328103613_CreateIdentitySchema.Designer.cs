@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Monolith.Identity.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,18 +12,20 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace PostgreSQL.Identity
 {
     [DbContext(typeof(IdentityDbContext))]
-    partial class AppIdentityDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260328103613_CreateIdentitySchema")]
+    partial class CreateIdentitySchema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.2")
+                .HasAnnotation("ProductVersion", "10.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Light.Identity.Models.JwtToken", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.JwtToken", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("text");
@@ -65,7 +68,56 @@ namespace PostgreSQL.Identity
                     b.ToTable("JwtTokens", "Identity");
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.Role", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.Notification", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FromName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FromUserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("LastModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("ReadStatus")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RemindRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ToUserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Url")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Notifications", "System");
+                });
+
+            modelBuilder.Entity("Monolith.Identity.Domain.Role", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("text");
@@ -106,7 +158,7 @@ namespace PostgreSQL.Identity
                     b.ToTable("Roles", "Identity");
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.RoleClaim", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.RoleClaim", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -131,7 +183,7 @@ namespace PostgreSQL.Identity
                     b.ToTable("RoleClaims", "Identity");
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.User", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.User", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("text");
@@ -222,7 +274,7 @@ namespace PostgreSQL.Identity
                     b.ToTable("Users", "Identity");
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.UserClaim", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.UserClaim", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -247,7 +299,7 @@ namespace PostgreSQL.Identity
                     b.ToTable("UserClaims", "Identity");
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.UserLogin", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.UserLogin", b =>
                 {
                     b.Property<string>("LoginProvider")
                         .HasColumnType("text");
@@ -269,7 +321,7 @@ namespace PostgreSQL.Identity
                     b.ToTable("UserLogins", "Identity");
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.UserRole", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.UserRole", b =>
                 {
                     b.Property<string>("UserId")
                         .HasColumnType("text");
@@ -284,7 +336,7 @@ namespace PostgreSQL.Identity
                     b.ToTable("UserRoles", "Identity");
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.UserToken", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.UserToken", b =>
                 {
                     b.Property<string>("UserId")
                         .HasColumnType("text");
@@ -303,67 +355,18 @@ namespace PostgreSQL.Identity
                     b.ToTable("UserTokens", "Identity");
                 });
 
-            modelBuilder.Entity("Monolith.Identity.Models.Notification", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.RoleClaim", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset>("Created")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("text");
-
-                    b.Property<string>("FromName")
-                        .HasColumnType("text");
-
-                    b.Property<string>("FromUserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset?>("LastModified")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("LastModifiedBy")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Message")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("ReadStatus")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RemindRead")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("ToUserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Url")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Notifications", "System");
-                });
-
-            modelBuilder.Entity("Light.Identity.Models.RoleClaim", b =>
-                {
-                    b.HasOne("Light.Identity.Models.Role", null)
+                    b.HasOne("Monolith.Identity.Domain.Role", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.User", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.User", b =>
                 {
-                    b.OwnsOne("Light.Identity.Models.Status", "Status", b1 =>
+                    b.OwnsOne("Monolith.Identity.Domain.Status", "Status", b1 =>
                         {
                             b1.Property<string>("UserId")
                                 .HasColumnType("text");
@@ -384,42 +387,42 @@ namespace PostgreSQL.Identity
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.UserClaim", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.UserClaim", b =>
                 {
-                    b.HasOne("Light.Identity.Models.User", null)
+                    b.HasOne("Monolith.Identity.Domain.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.UserLogin", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.UserLogin", b =>
                 {
-                    b.HasOne("Light.Identity.Models.User", null)
+                    b.HasOne("Monolith.Identity.Domain.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.UserRole", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.UserRole", b =>
                 {
-                    b.HasOne("Light.Identity.Models.Role", null)
+                    b.HasOne("Monolith.Identity.Domain.Role", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Light.Identity.Models.User", null)
+                    b.HasOne("Monolith.Identity.Domain.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.UserToken", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.UserToken", b =>
                 {
-                    b.HasOne("Light.Identity.Models.User", null)
+                    b.HasOne("Monolith.Identity.Domain.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)

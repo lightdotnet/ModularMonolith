@@ -9,14 +9,14 @@ using Monolith.Identity.Data;
 namespace Sqlite.Identity
 {
     [DbContext(typeof(IdentityDbContext))]
-    partial class AppIdentityDbContextModelSnapshot : ModelSnapshot
+    partial class IdentityDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.2");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.5");
 
-            modelBuilder.Entity("Light.Identity.Models.JwtToken", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.JwtToken", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
@@ -59,7 +59,56 @@ namespace Sqlite.Identity
                     b.ToTable("JwtTokens", "Identity");
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.Role", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.Notification", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Created")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FromName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FromUserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("LastModified")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("ReadStatus")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RemindRead")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ToUserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Url")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Notifications", "System");
+                });
+
+            modelBuilder.Entity("Monolith.Identity.Domain.Role", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
@@ -100,7 +149,7 @@ namespace Sqlite.Identity
                     b.ToTable("Roles", "Identity");
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.RoleClaim", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.RoleClaim", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -123,7 +172,7 @@ namespace Sqlite.Identity
                     b.ToTable("RoleClaims", "Identity");
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.User", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.User", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
@@ -214,7 +263,7 @@ namespace Sqlite.Identity
                     b.ToTable("Users", "Identity");
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.UserClaim", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.UserClaim", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -237,7 +286,7 @@ namespace Sqlite.Identity
                     b.ToTable("UserClaims", "Identity");
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.UserLogin", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.UserLogin", b =>
                 {
                     b.Property<string>("LoginProvider")
                         .HasColumnType("TEXT");
@@ -259,7 +308,7 @@ namespace Sqlite.Identity
                     b.ToTable("UserLogins", "Identity");
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.UserRole", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.UserRole", b =>
                 {
                     b.Property<string>("UserId")
                         .HasColumnType("TEXT");
@@ -274,7 +323,7 @@ namespace Sqlite.Identity
                     b.ToTable("UserRoles", "Identity");
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.UserToken", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.UserToken", b =>
                 {
                     b.Property<string>("UserId")
                         .HasColumnType("TEXT");
@@ -293,67 +342,18 @@ namespace Sqlite.Identity
                     b.ToTable("UserTokens", "Identity");
                 });
 
-            modelBuilder.Entity("Monolith.Identity.Models.Notification", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.RoleClaim", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<long>("Created")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("FromName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("FromUserId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<long?>("LastModified")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("LastModifiedBy")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Message")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("ReadStatus")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("RemindRead")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ToUserId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Url")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Notifications", "System");
-                });
-
-            modelBuilder.Entity("Light.Identity.Models.RoleClaim", b =>
-                {
-                    b.HasOne("Light.Identity.Models.Role", null)
+                    b.HasOne("Monolith.Identity.Domain.Role", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.User", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.User", b =>
                 {
-                    b.OwnsOne("Light.Identity.Models.Status", "Status", b1 =>
+                    b.OwnsOne("Monolith.Identity.Domain.Status", "Status", b1 =>
                         {
                             b1.Property<string>("UserId")
                                 .HasColumnType("TEXT");
@@ -374,42 +374,42 @@ namespace Sqlite.Identity
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.UserClaim", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.UserClaim", b =>
                 {
-                    b.HasOne("Light.Identity.Models.User", null)
+                    b.HasOne("Monolith.Identity.Domain.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.UserLogin", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.UserLogin", b =>
                 {
-                    b.HasOne("Light.Identity.Models.User", null)
+                    b.HasOne("Monolith.Identity.Domain.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.UserRole", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.UserRole", b =>
                 {
-                    b.HasOne("Light.Identity.Models.Role", null)
+                    b.HasOne("Monolith.Identity.Domain.Role", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Light.Identity.Models.User", null)
+                    b.HasOne("Monolith.Identity.Domain.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Light.Identity.Models.UserToken", b =>
+            modelBuilder.Entity("Monolith.Identity.Domain.UserToken", b =>
                 {
-                    b.HasOne("Light.Identity.Models.User", null)
+                    b.HasOne("Monolith.Identity.Domain.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
