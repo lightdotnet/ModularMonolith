@@ -1,6 +1,7 @@
 ﻿using Light.Exceptions;
-using Light.Identity.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
+using Monolith.Identity;
+using Monolith.Identity.Jwt;
 using Monolith.Identity.Notifications;
 using Monolith.Notifications;
 

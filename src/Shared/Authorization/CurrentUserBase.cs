@@ -1,4 +1,6 @@
-﻿namespace Monolith.Authorization;
+﻿using Monolith.Claims;
+
+namespace Monolith.Authorization;
 
 public abstract class CurrentUserBase : ICurrentUser
 {

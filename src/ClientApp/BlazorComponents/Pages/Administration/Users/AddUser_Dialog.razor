@@ -8,11 +8,11 @@
             <div class="row mb-3">
                 <div class="col">
                     <FormLabel Title="Username" Required />
-                    <Input T="string" Value=newUser.UserName Required ValueChanged=SearchUserDomain />
+                    <Input T="string" Value=newUser.UserName Required ValueChanged=SearchUserDomain autocomplete="new-user" />
                 </div>
                 <div class="col">
                     <FormLabel Title="Password" Required />
-                    <Input_Password @bind-Value=newUser.Password />
+                    <Input_Password @bind-Value=newUser.Password autocomplete="new-password" />
                 </div>
             </div>
 

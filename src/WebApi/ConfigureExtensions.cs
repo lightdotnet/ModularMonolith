@@ -9,9 +9,9 @@ using Light.Mediator;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Monolith.Authorization;
 using Monolith.Catalog;
-using Monolith.Identity.Notifications.SignalR;
 using Monolith.Modularity;
 using Monolith.Services;
+using Monolith.SignalR;
 using System.Reflection;
 
 namespace Monolith;

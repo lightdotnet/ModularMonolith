@@ -16,8 +16,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Catalog\Catalog.csproj" />
-    <ProjectReference Include="..\Identity\Identity.csproj" />
+    <ProjectReference Include="..\Modules.Catalog\Modules.Catalog.csproj" />
+    <ProjectReference Include="..\Modules.Identity\Modules.Identity.csproj" />
+    <ProjectReference Include="..\Modules.SignalR\Modules.SignalR.csproj" />
     <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
   </ItemGroup>
 

@@ -1,5 +1,6 @@
 using Light.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization;
+using Monolith.Claims;
 
 namespace Monolith.Authorization.Internal;
 

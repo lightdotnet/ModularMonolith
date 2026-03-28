@@ -7,7 +7,7 @@ namespace Monolith.Services;
 
 public class AppPermissionManager(ILogger<AppPermissionManager> logger)
 {
-    private readonly string _permissionClaimType = Light.Identity.ClaimTypes.Permission;
+    private readonly string _permissionClaimType = Monolith.Claims.ClaimTypes.Permission;
 
     private IEnumerable<Claim>? Claims { get; set; }
 

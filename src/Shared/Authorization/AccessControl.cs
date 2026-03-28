@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using Monolith.Claims;
+using System.Security.Claims;
 
 namespace Monolith.Authorization;
 

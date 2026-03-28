@@ -1,6 +1,6 @@
-﻿using Light.Identity;
-using Microsoft.AspNetCore.Components.Authorization;
+﻿using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
+using Monolith.Claims;
 
 namespace Monolith.Blazor.Services;
 

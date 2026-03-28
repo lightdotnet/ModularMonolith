@@ -1,5 +1,4 @@
-﻿using Light.Identity.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 using Monolith.Identity;

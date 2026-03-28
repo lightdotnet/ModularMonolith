@@ -9,10 +9,11 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/AppHost/AppHost.csproj" />
-    <Project Path="src/Catalog/Catalog.csproj" />
     <Project Path="src/Contracts/Contracts.csproj" />
-    <Project Path="src/Identity/Identity.csproj" />
     <Project Path="src/Infrastructure/Infrastructure.csproj" />
+    <Project Path="src/Modules.Catalog/Modules.Catalog.csproj" />
+    <Project Path="src/Modules.Identity/Modules.Identity.csproj" Id="dcf462b9-3ba4-439b-9728-08ea3be30036" />
+    <Project Path="src/Modules.SignalR/Modules.SignalR.csproj" Id="db625dea-9a7a-4f12-ab45-dec161ed7fa0" />
     <Project Path="src/ServiceDefaults/ServiceDefaults.csproj" />
     <Project Path="src/Shared/Shared.csproj" />
     <Project Path="src/WebApi/WebApi.csproj" />
@@ -27,5 +28,9 @@
     <Project Path="src/Migrations/MSSQL/MSSQL.csproj" />
     <Project Path="src/Migrations/PostgreSQL/PostgreSQL.csproj" />
     <Project Path="src/Migrations/Sqlite/Sqlite.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Identity.Tests/Identity.Tests.csproj" />
+    <Project Path="tests/Shared.Tests/Shared.Tests.csproj" />
   </Folder>
 </Solution>
