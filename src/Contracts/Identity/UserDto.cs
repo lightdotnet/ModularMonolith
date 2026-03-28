@@ -1,5 +1,4 @@
-﻿using Monolith.Claims;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using ClaimTypes = Monolith.Claims.ClaimTypes;
 
 namespace Monolith.Identity;

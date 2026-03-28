@@ -1,6 +1,6 @@
 ﻿using Monolith.Notifications;
 
-namespace Monolith.Identity.Notifications;
+namespace Monolith.Identity.Application.Notifications;
 
 public interface INotificationService
 {

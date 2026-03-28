@@ -9,6 +9,8 @@ using Light.Mediator;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Monolith.Authorization;
 using Monolith.Catalog;
+using Monolith.CORS;
+using Monolith.Identity;
 using Monolith.Modularity;
 using Monolith.Services;
 using Monolith.SignalR;
@@ -18,12 +20,11 @@ namespace Monolith;
 
 public static class ConfigureExtensions
 {
-    private const string CORS_POLICY_NAME = "AllowCors";
-
     private static readonly Assembly[] assemblies =
         [
             typeof(Program).Assembly, // inject this to import Identity Module
             typeof(SignalRModule).Assembly,
+            typeof(IdentityModule).Assembly,
             typeof(CatalogModule).Assembly,
         ];
 
@@ -41,14 +42,9 @@ public static class ConfigureExtensions
         services.AddFileGenerator();
         services.AddModules<AppModule>(configuration, assemblies);
 
-        var origins = configuration.GetSection("CorsOrigins").Get<string[]?>();
-        if (origins is not null)
-        {
-            services.AddCors(opts => opts.AllowOrigins(CORS_POLICY_NAME, origins));
-        }
-
         services.AddInfrastructureServices();
         services.AddHealthChecks();
+        services.AddCorsPolicy(configuration);
 
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, ServerCurrentUser>();
@@ -65,8 +61,8 @@ public static class ConfigureExtensions
             .UseLightRequestLogging()
             .UseLightExceptionHandler()
             .UseRouting()
-            .UseCors(CORS_POLICY_NAME) // must add before Auth
-                                       //.UseAuthentication()
+            .UseCorsPolicy() // must add before Auth
+            //.UseAuthentication()
             .UseAuthorization()
             .UseSwagger();
 

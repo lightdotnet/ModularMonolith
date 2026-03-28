@@ -53,7 +53,7 @@ public class ShopController : ApiControllerBase
         }
 
         record.Name = request.Name;
-        record.Status.Update(request.Status);
+        record.UpdateStatus(request.Status);
 
         await Context.SaveChangesAsync();
 

@@ -1,10 +1,9 @@
-﻿using Light.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 
 namespace Monolith.Catalog;
 
 [ApiExplorerSettings(GroupName = "Catalog")]
-public abstract class ApiControllerBase : VersionedApiController
+public abstract class ApiControllerBase : Endpoints.VersionedApiController
 {
     private CatalogContext? _context;
 

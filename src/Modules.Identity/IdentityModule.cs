@@ -1,8 +1,9 @@
-﻿using Monolith.Identity;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Monolith.Identity.Jwt;
 using Monolith.Modularity;
 
-namespace Monolith.Features.Identity;
+namespace Monolith.Identity;
 
 public class IdentityModule : AppModule
 {

@@ -2,7 +2,7 @@
 
 namespace Monolith.Identity;
 
-public class CreateUserRequest
+public record CreateUserRequest
 {
     public string? UserName { get; set; }
 

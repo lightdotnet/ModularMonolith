@@ -1,8 +1,8 @@
 ﻿using Light.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Monolith.Identity;
+using Monolith.Identity.Application.Notifications;
 using Monolith.Identity.Jwt;
-using Monolith.Identity.Notifications;
 using Monolith.Notifications;
 
 namespace Monolith.Features.Identity;

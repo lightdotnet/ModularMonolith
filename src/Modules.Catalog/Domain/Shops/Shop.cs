@@ -1,4 +1,6 @@
-﻿namespace Monolith.Catalog.Domain.Shops;
+﻿using static Monolith.Status;
+
+namespace Monolith.Catalog.Domain.Shops;
 
 public class Shop : AuditableEntity
 {
@@ -9,5 +11,11 @@ public class Shop : AuditableEntity
     public static Shop Create(string name)
     {
         return new Shop { Name = name };
+    }
+
+    public void UpdateStatus(ActiveStatus newStatus)
+    {
+        Status.Update(newStatus);
+        AddDomainEvent(new ShopStatusUpdatedEvent(Name, Status.Value.ToString()));
     }
 }

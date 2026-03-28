@@ -10,6 +10,7 @@
 	<PackageReference Include="Lightsoft.AspNetCore.Authorization" />
 	<PackageReference Include="Lightsoft.SharedKernel" />
 	<PackageReference Include="Lightsoft.Extensions" />
+	<PackageReference Include="Lightsoft.Mediator" />
 	<PackageReference Include="Lightsoft.Result" />
 	<PackageReference Include="Mapster" />
 	<PackageReference Include="Microsoft.Extensions.Http" />

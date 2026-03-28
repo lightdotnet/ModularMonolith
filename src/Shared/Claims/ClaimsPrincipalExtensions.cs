@@ -1,14 +1,10 @@
+using Light.Extensions;
 using ClaimsPrincipal = System.Security.Claims.ClaimsPrincipal;
 
 namespace Monolith.Claims;
 
 public static class ClaimsPrincipalExtensions
 {
-    private static string? FindFirstValue(this ClaimsPrincipal principal, string claimType) =>
-        principal is null
-            ? throw new ArgumentNullException(nameof(principal))
-            : principal.FindFirst(claimType)?.Value;
-
     public static string? GetUserId(this ClaimsPrincipal principal) =>
         principal?.FindFirstValue(ClaimTypes.UserId);
 

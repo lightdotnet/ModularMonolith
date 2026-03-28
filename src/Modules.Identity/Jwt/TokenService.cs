@@ -1,7 +1,6 @@
 ﻿using Light.ActiveDirectory.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
-using System.Security.Claims;
 using ClaimTypes = Monolith.Claims.ClaimTypes;
 
 namespace Monolith.Identity.Jwt;

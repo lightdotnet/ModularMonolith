@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Monolith.Authorization;
 using Monolith.Identity;
+using Monolith.Identity.Application.Users.Commands;
 
 namespace Monolith.Features.Identity;
 
@@ -30,9 +31,9 @@ public class UserController(
 
     [HttpPost]
     [MustHavePermission(Permissions.Users.Create)]
-    public async Task<IActionResult> PostAsync([FromBody] CreateUserRequest request)
+    public async Task<IActionResult> PostAsync([FromBody] CreateUserCommand request)
     {
-        var res = await userService.CreateAsync(request);
+        var res = await Mediator.Send(request);
         return Ok(res);
     }
 

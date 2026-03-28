@@ -4,7 +4,7 @@ using Mapster;
 using Monolith.Identity.Data;
 using Monolith.Notifications;
 
-namespace Monolith.Identity.Notifications;
+namespace Monolith.Identity.Application.Notifications;
 
 internal class NotificationService(IdentityDbContext context) : INotificationService
 {

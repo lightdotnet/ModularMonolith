@@ -7,6 +7,7 @@ namespace Monolith.Catalog.Infrastructure.Data;
 public class CatalogContext(
     ICurrentUser currentUser,
     IDateTime clock,
+    IPublisher publisher,
     DbContextOptions<CatalogContext> options) : BaseDbContext(options)
 {
     public virtual DbSet<Category> Categories => Set<Category>();
@@ -17,10 +18,26 @@ public class CatalogContext(
 
     public virtual DbSet<ProductPrice> ProductPrices => Set<ProductPrice>();
 
-    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    public override int SaveChanges()
     {
-        this.AuditEntries(currentUser.UserId, clock.Now);
-        return base.SaveChangesAsync(cancellationToken);
+        this.AuditEntries(currentUser.UserId, clock.Now, false);
+
+        var result = base.SaveChanges();
+
+        publisher.DispatchDomainEvents(this).ConfigureAwait(false).GetAwaiter().GetResult();
+
+        return result;
+    }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        this.AuditEntries(currentUser.UserId, clock.Now, false);
+
+        var result = await base.SaveChangesAsync(cancellationToken);
+
+        await publisher.DispatchDomainEvents(this);
+
+        return result;
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

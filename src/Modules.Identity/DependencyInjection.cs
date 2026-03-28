@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Monolith.Database;
+using Monolith.Identity.Application.Notifications;
 using Monolith.Identity.Data;
-using Monolith.Identity.Notifications;
 using Monolith.Identity.Services;
 using System.Runtime.InteropServices;
 
