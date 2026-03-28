@@ -1,11 +1,11 @@
 using Light.Contracts;
-using Light.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Monolith.Blazor.Extensions;
 using Monolith.Blazor.Services;
+using Monolith.Claims;
 using Monolith.HttpApi.Identity;
 using System.ComponentModel.DataAnnotations;
 

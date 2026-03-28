@@ -8,7 +8,7 @@ using Monolith.Identity.Data;
 
 namespace Sqlite.Identity
 {
-    [DbContext(typeof(AppIdentityDbContext))]
+    [DbContext(typeof(IdentityDbContext))]
     partial class AppIdentityDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)

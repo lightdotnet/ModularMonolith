@@ -1,4 +1,4 @@
-﻿using Light.Identity;
+﻿using Monolith.Identity;
 using Monolith.Notifications;
 
 namespace Monolith.HttpApi.Identity;

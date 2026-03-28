@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Monolith.Catalog.Infrastructure.Data.SeedWork;
-using Monolith.Identity.Data;
 using MSSQL;
 
 // set Environment

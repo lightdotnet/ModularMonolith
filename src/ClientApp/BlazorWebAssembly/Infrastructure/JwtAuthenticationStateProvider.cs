@@ -1,5 +1,4 @@
-﻿using Light.Identity;
-using Microsoft.AspNetCore.Components;
+﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Monolith.Blazor.Extensions;
 using Monolith.Blazor.Services;

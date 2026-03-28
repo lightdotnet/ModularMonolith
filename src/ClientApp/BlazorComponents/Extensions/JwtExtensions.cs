@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
-using ClaimTypes = Light.Identity.ClaimTypes;
+using ClaimTypes = Monolith.Claims.ClaimTypes;
 
 namespace Monolith.Blazor.Extensions;
 

@@ -1,8 +1,8 @@
 ﻿using Light.Contracts;
-using Light.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Monolith.Blazor.Services;
 using Monolith.HttpApi.Identity;
+using Monolith.Identity;
 using System.Security.Claims;
 
 namespace Monolith.Blazor.Extensions;

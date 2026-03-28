@@ -119,7 +119,7 @@
                 .Where(x => x.IsOwned == true)
                 .Select(s => new ClaimDto
                 {
-                    Type = ClaimTypes.Permission,
+                    Type = Monolith.Claims.ClaimTypes.Permission,
                     Value = s.Value,
                 })
                 .ToList();

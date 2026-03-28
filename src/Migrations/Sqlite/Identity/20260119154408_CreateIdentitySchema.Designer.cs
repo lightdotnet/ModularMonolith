@@ -9,7 +9,7 @@ using Monolith.Identity.Data;
 
 namespace Sqlite.Identity
 {
-    [DbContext(typeof(AppIdentityDbContext))]
+    [DbContext(typeof(IdentityDbContext))]
     [Migration("20260119154408_CreateIdentitySchema")]
     partial class CreateIdentitySchema
     {

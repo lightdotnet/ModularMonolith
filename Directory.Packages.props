@@ -2,11 +2,13 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
-    <AspnetVersion>10.0.4</AspnetVersion>
+    <AspnetVersion>10.0.5</AspnetVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Core -->
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="$(AspnetVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Authorization" Version="$(AspnetVersion)" />
+    <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="$(AspnetVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="$(AspnetVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(AspnetVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(AspnetVersion)" />
@@ -14,6 +16,7 @@
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(AspnetVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="$(AspnetVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="$(AspnetVersion)" />
+	  
     <!-- Light framework -->
     <PackageVersion Include="Lightsoft.ActiveDirectory" Version="1.10.0.3" />
     <PackageVersion Include="Lightsoft.AspNetCore.Authorization" Version="10.0.1.1" />
@@ -27,8 +30,6 @@
     <PackageVersion Include="Lightsoft.EventBus.MassTransit.RabbitMQ" Version="0.0.1" />
     <PackageVersion Include="Lightsoft.FluentBlazor" Version="0.0.0.1-beta2" />
     <PackageVersion Include="Lightsoft.FileGenerator" Version="1.10.0.2" />
-    <PackageVersion Include="Lightsoft.Identity" Version="10.0.1.2" />
-    <PackageVersion Include="Lightsoft.Identity.EntityFrameworkCore" Version="10.0.1.2" />
     <PackageVersion Include="Lightsoft.Mail.Contracts" Version="1.0.0" />
     <PackageVersion Include="Lightsoft.Result" Version="1.0.0.2" />
     <PackageVersion Include="Lightsoft.Serilog" Version="1.0.0.3" />
@@ -37,8 +38,8 @@
     <PackageVersion Include="AspNetCore.HealthChecks.UI.Client" Version="9.0.0" />
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
-    <PackageVersion Include="Mapster" Version="7.4.0" />
-    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+    <PackageVersion Include="Mapster" Version="10.0.6" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
     <PackageVersion Include="Spectre.Console" Version="0.54.0" />
     <!-- WebApi -->
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
