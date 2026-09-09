@@ -1,4 +1,3 @@
-using Mapster;
 using Microsoft.Extensions.Logging;
 using StarterKit.Approval.Api.Data;
 using StarterKit.Approval.Api.Domain.Approvals;
@@ -125,23 +124,6 @@ internal class ApprovalService(
         }
     }
 
-    public Task<ApprovalRequestDto?> GetByRequestAsync(
-        string requestType,
-        string requestId,
-        CancellationToken cancellationToken = default)
-    {
-        // (RequestType, RequestId) is an opaque reference to an object owned by the calling module,
-        // not a unique key here - a caller can legitimately raise a new request for the same object
-        // after an earlier one was rejected or cancelled. Return the most recent match rather than
-        // throwing when more than one exists.
-        return context.ApprovalRequests
-            .AsNoTracking()
-            .Where(x => x.RequestType == requestType && x.RequestId == requestId)
-            .OrderByDescending(x => x.Created)
-            .ProjectToType<ApprovalRequestDto>()
-            .FirstOrDefaultAsync(cancellationToken);
-    }
-
     public Task<ApprovalStatusView?> GetStatusByRequestAsync(
         string requestType,
         string requestId,
@@ -209,7 +191,11 @@ internal class ApprovalService(
         ApprovalRequest entity,
         CancellationToken cancellationToken)
     {
-        if (entity.Status == ApprovalStatus.Pending)
+        // A requester-initiated cancellation is always driven by the owning module, which learns the
+        // outcome directly from CancelAsync's result — publishing here would only re-enter that same
+        // module's scope mid-command. A future non-requester cancel path (e.g. an admin force-cancel)
+        // must publish its own finalized event explicitly.
+        if (entity.Status is ApprovalStatus.Pending or ApprovalStatus.Cancelled)
             return;
 
         // A downstream subscriber fault must never fail the decide/cancel call. The periodic

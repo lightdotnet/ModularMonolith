@@ -51,7 +51,7 @@ public class ApprovalRequest : AuditableEntity
     /// </summary>
     public string ConcurrencyToken { get; private set; } = Guid.NewGuid().ToString("N");
 
-    public IReadOnlyList<ApprovalStep> Steps => _steps;
+    public IReadOnlyList<ApprovalStep> Steps => _steps.AsReadOnly();
 
     /// <summary>
     /// Builds a new approval request, enforcing every chain invariant. Returns a failed
@@ -90,6 +90,12 @@ public class ApprovalRequest : AuditableEntity
 
         if (string.IsNullOrWhiteSpace(title))
             return Result<ApprovalRequest>.Error("A title is required.");
+
+        if (string.IsNullOrWhiteSpace(requestType))
+            return Result<ApprovalRequest>.Error("A request type is required.");
+
+        if (string.IsNullOrWhiteSpace(requestId))
+            return Result<ApprovalRequest>.Error("A request id is required.");
 
         var entity = new ApprovalRequest
         {
@@ -147,10 +153,16 @@ public class ApprovalRequest : AuditableEntity
         if (Status != ApprovalStatus.Pending)
             return Result.Error("This approval request has already been finalized.");
 
-        var currentStep = _steps.SingleOrDefault(x => x.Level == CurrentLevel);
+        var currentStep = _steps
+            .Where(x => x.Level == CurrentLevel)
+            .OrderBy(x => x.Level)
+            .FirstOrDefault();
 
         if (currentStep is null)
             return Result.Error("Current approval step could not be resolved.");
+
+        if (!currentStep.IsPending)
+            return Result.Error("The current approval step is no longer pending.");
 
         if (currentStep.ApproverUserId != decidedByUserId)
             return Result.Error("You are not the assigned approver for this step.");

@@ -2,6 +2,7 @@ using Light.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StarterKit.Infrastructure.Modularity;
+using StarterKit.LeaveManagement.Api.Application.LeaveRequests;
 using StarterKit.LeaveManagement.Api.Data;
 using StarterKit.LeaveManagement.Contracts.Authorization;
 using StarterKit.Persistence;
@@ -17,6 +18,11 @@ public class LeaveManagementModule : AppModule
             DbConnectionNames.LeaveManagement);
 
         services.AddSingleton<IPermissionDefinitionProvider, LeaveManagementPermissionProvider>();
+
+        services.AddOptions<LeaveReconciliationOptions>()
+            .BindConfiguration("LeaveManagement:Reconciliation");
+
+        services.AddHostedService<LeaveRequestReconciliationService>();
 
         ShowModuleInfo();
     }

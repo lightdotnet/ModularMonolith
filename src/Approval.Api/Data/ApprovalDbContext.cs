@@ -1,4 +1,5 @@
 using Light.Mediator;
+using Microsoft.Extensions.Logging;
 using StarterKit.Approval.Api.Domain.Approvals;
 using StarterKit.Persistence.Context;
 using StarterKit.Persistence.Extensions;
@@ -10,6 +11,7 @@ public class ApprovalDbContext(
     ICurrentUser currentUser,
     IDateTime clock,
     IPublisher publisher,
+    ILogger<ApprovalDbContext> logger,
     DbContextOptions<ApprovalDbContext> options) :
     BaseDbContext(options)
 {
@@ -37,7 +39,18 @@ public class ApprovalDbContext(
 
         var result = await base.SaveChangesAsync(cancellationToken);
 
-        await publisher.DispatchDomainEvents(this);
+        // A downstream domain-event handler fault must never fail an already-committed decide/cancel.
+        // The owning module's reconciliation backstop covers a dropped in-process notification.
+        try
+        {
+            await publisher.DispatchDomainEvents(this);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "One or more Approval domain-event handlers threw after SaveChangesAsync; the write is already committed.");
+        }
 
         return result;
     }
@@ -97,7 +110,7 @@ public class ApprovalDbContext(
         {
             entity.ToTable(name: "ApprovalSteps");
 
-            entity.HasIndex(x => x.ApprovalRequestId);
+            entity.HasIndex(x => new { x.ApprovalRequestId, x.Level }).IsUnique();
 
             entity.HasIndex(x => x.ApproverUserId);
 

@@ -19,7 +19,7 @@ Package versions are centrally managed via the root `Directory.Packages.props` (
 | Approval.Contracts | Lightsoft.AspNetCore.Authorization, Lightsoft.Mediator, Lightsoft.Result | All declared directly. `Lightsoft.Mediator` for `INotification` on `ApprovalFinalizedIntegrationEvent`. |
 | Approval.Api | Lightsoft.AspNetCore.Authorization, Lightsoft.EntityFrameworkCore, Lightsoft.Mediator, Lightsoft.Result, Mapster | Every vendor package it directly uses is declared directly. |
 | LeaveManagement.Contracts | Lightsoft.AspNetCore.Authorization, Lightsoft.Result | Declared directly. |
-| LeaveManagement.Api | Lightsoft.AspNetCore.Authorization, Lightsoft.EntityFrameworkCore, Lightsoft.Mediator, Lightsoft.Result, Mapster | Every vendor package it directly uses is declared directly. |
+| LeaveManagement.Api | Lightsoft.AspNetCore.Authorization, Lightsoft.EntityFrameworkCore, Lightsoft.Mediator, Lightsoft.Result, Mapster | Every vendor package it directly uses is declared directly. `LeaveRequestReconciliationService` derives from `BackgroundService` (`Microsoft.Extensions.Hosting.Abstractions`), which rides in via the ASP.NET Core shared framework — not a declared package. |
 | StarterKit.WebApi | AspNetCore.HealthChecks.UI.Client, FluentValidation.DependencyInjectionExtensions, Lightsoft.AspNetCore.Extensions, Lightsoft.AspNetCore.Swagger, Microsoft.AspNetCore.Authentication.JwtBearer, Microsoft.VisualStudio.Azure.Containers.Tools.Targets, Spectre.Console | `Microsoft.AspNetCore.Authentication.JwtBearer` backs the host-owned Bearer + `"HubBearer"` schemes in `Authentication/ApiAuthenticationExtensions`. Uses `Lightsoft.Serilog` without declaring it (rides in via `Infrastructure`). |
 | Framework.Tests | xunit.v3, xunit.runner.visualstudio, Microsoft.NET.Test.Sdk | Opts out of central package management. |
 | Identity.Tests | xunit.v3, xunit.runner.visualstudio, Microsoft.NET.Test.Sdk, Moq | Same opt-out, plus `Moq`. |
@@ -31,7 +31,7 @@ The undeclared-transitive-dependency pattern (a project using a vendor type with
 
 ## Circular References
 
-None found. `Shared` is the only true leaf (no `ProjectReference`s). Every module's `Contracts` project references `Shared`, so none of them is a true leaf either. Dependency direction is one-way throughout: `Api`/`Contracts` projects → `Infrastructure`/`Persistence` → `Shared`; `Identity.Web` → `Identity.Api` (intra-module, inside the Identity bounded context); and `StarterKit.WebApi` (composition-root host) → all five business modules plus `Identity.Web`. No project-reference cycle exists anywhere.
+None found. `Shared` is the only true leaf (no `ProjectReference`s). Every module's `Contracts` project references `Shared`, so none of them is a true leaf either. Dependency direction is one-way throughout: `Api`/`Contracts` projects → `Infrastructure`/`Persistence` → `Shared`; `Identity.Web` → `Identity.Api` (intra-module); and `StarterKit.WebApi` (composition-root host) → all five business modules plus `Identity.Web`. No project-reference cycle exists anywhere.
 
 ```text
 Infrastructure -> Shared
@@ -98,11 +98,11 @@ Five business-module-to-business-module dependencies exist, all compliant (each 
 
 - `Notifications.Api` references `Identity.Contracts`, consumed by `UserCreatedIntegrationEventHandler`/`ExternalUserProvisionedIntegrationEventHandler` to send a (SSO-)welcome email in reaction to the `UserCreatedIntegrationEvent` / `ExternalUserProvisionedIntegrationEvent` that Identity publishes. **This edge replaced the former `Identity.Api → Notifications.Contracts` edge** — the welcome-mail side effect moved from Identity into Notifications, and the direction flipped.
 - `Organization.Api` references `Identity.Contracts`, consumed by the employee-login command handlers via `IUserService` (create/link an Identity login, store `User.Id` as an opaque string on `Employee.UserId`) and `IUserService.SetClaimAsync` (stamp/clear the `employee_id` claim).
-- `Approval.Api` references `Notifications.Contracts`, consumed by `ApprovalStepPendingEventHandler`/`ApprovalFinalizedEventHandler` via `INotificationService.SendAsync`.
-- `LeaveManagement.Api` references `Approval.Contracts`, consumed by every approval-touching handler via `IApprovalService`.
-- `LeaveManagement.Api` references `Organization.Contracts`, consumed by the same handlers via `IOrgDirectoryService`.
+- `Approval.Api` references `Notifications.Contracts`, consumed by `ApprovalStepPendingEventHandler`/`ApprovalFinalizedEventHandler`/`ApprovalRequestCancelledEventHandler` via `INotificationService.SendAsync`.
+- `LeaveManagement.Api` references `Approval.Contracts`, consumed by the command handlers via `IApprovalService` (`CreateAsync`/`CancelAsync`, and the `GetStatus*` lean lookups) **and** by `ApprovalFinalizedIntegrationEventHandler`, which handles the `ApprovalFinalizedIntegrationEvent` `INotification` declared in `Approval.Contracts`.
+- `LeaveManagement.Api` references `Organization.Contracts`, consumed by the same command handlers via `IOrgDirectoryService`.
 
-`Approval.Contracts` also defines `ApprovalFinalizedIntegrationEvent` (an `INotification`), published by `ApprovalService` when a request is finalized/cancelled. No in-repo module subscribes to it yet — `LeaveManagement` still reconciles by polling `IApprovalService.GetByRequestAsync` on read — so this is a latent seam, not a live cross-module edge.
+`Approval.Contracts` also defines `ApprovalFinalizedIntegrationEvent` (an `INotification`), published by `ApprovalService` immediately after a decide commits to a terminal `Approved`/`Rejected` state (a requester-initiated cancellation is driven by the owning module and is **not** re-published). This is now a **live cross-module mediator-notification edge**: `LeaveManagement.Api`'s `ApprovalFinalizedIntegrationEventHandler` (`INotificationHandler<T>`, auto-registered by `AddMediatorFromAssemblies`) subscribes in-process to reconcile the local `LeaveRequest.Status`, backed by the module's own `LeaveRequestReconciliationService` (`BackgroundService`) for a dropped delivery. `LeaveManagement.Api`'s read paths no longer call `IApprovalService` at all.
 
 None of the reverse directions exist. `Identity.Api` now references **no** other business module. See the per-module docs for full detail.
 

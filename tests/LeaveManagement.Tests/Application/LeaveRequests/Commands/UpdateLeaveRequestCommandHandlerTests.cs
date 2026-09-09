@@ -28,6 +28,9 @@ public class UpdateLeaveRequestCommandHandlerTests
         Name = "Alice Approver",
     };
 
+    private static ApprovalStatusView StatusView(string requestId, ApprovalStatus status) =>
+        new("approval-1", "LeaveRequest", requestId, status, 1);
+
     private static (Mock<IOrgDirectoryService>, Mock<IApprovalService>) CreateMocks()
     {
         var orgServiceMock = new Mock<IOrgDirectoryService>();
@@ -41,6 +44,14 @@ public class UpdateLeaveRequestCommandHandlerTests
         approvalServiceMock
             .Setup(s => s.CreateAsync(It.IsAny<CreateApprovalRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<string>.Success("approval-2"));
+        // The handler checks CancelAsync's result, so an unstubbed mock (null) would NRE.
+        approvalServiceMock
+            .Setup(s => s.CancelAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+        // Reconcile-before-authorize: nothing changed upstream by default.
+        approvalServiceMock
+            .Setup(s => s.GetStatusByRequestAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ApprovalStatusView?)null);
         return (orgServiceMock, approvalServiceMock);
     }
 
@@ -287,5 +298,84 @@ public class UpdateLeaveRequestCommandHandlerTests
         Assert.Equal(LeaveRequestStatus.Approved, updated.Status);
         Assert.Equal("old-approval", updated.ApprovalRequestId);
         Assert.Equal(LeaveType.Sick, updated.LeaveType);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReconcileBeforeAuthorize_RejectingEditWhenApprovalNowApproved()
+    {
+        // Arrange
+        using var host = new LeaveManagementTestHost();
+        var entity = new LeaveRequest
+        {
+            UserId = "owner",
+            EmployeeId = "employee-1",
+            LeaveType = LeaveType.Annual,
+            StartDate = DateTimeOffset.UtcNow,
+            EndDate = DateTimeOffset.UtcNow.AddDays(1),
+            Status = LeaveRequestStatus.Pending,
+            ApprovalRequestId = "old-approval",
+        };
+        await host.Context.LeaveRequests.AddAsync(entity, TestContext.Current.CancellationToken);
+        await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var (orgServiceMock, approvalServiceMock) = CreateMocks();
+        approvalServiceMock
+            .Setup(s => s.GetStatusByRequestAsync("LeaveRequest", entity.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(StatusView(entity.Id, ApprovalStatus.Approved));
+        var handler = new UpdateLeaveRequestCommandHandler(host.Context, orgServiceMock.Object, approvalServiceMock.Object);
+
+        // Act
+        var result = await handler.Handle(
+            new UpdateLeaveRequestCommand(entity.Id, ValidModel, "owner", false),
+            TestContext.Current.CancellationToken);
+
+        // Assert — status is reconciled to Approved before the edit gate, so the edit is refused
+        Assert.False(result.IsSuccess);
+        var persisted = await host.Context.LeaveRequests
+            .AsNoTracking()
+            .FirstAsync(x => x.Id == entity.Id, TestContext.Current.CancellationToken);
+        Assert.Equal(LeaveRequestStatus.Approved, persisted.Status);
+        approvalServiceMock.Verify(
+            s => s.CancelAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        approvalServiceMock.Verify(
+            s => s.CreateAsync(It.IsAny<CreateApprovalRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldAbortResubmit_BeforeCreateAsync_WhenCancelFails()
+    {
+        // Arrange
+        using var host = new LeaveManagementTestHost();
+        var entity = new LeaveRequest
+        {
+            UserId = "owner",
+            EmployeeId = "employee-1",
+            LeaveType = LeaveType.Annual,
+            StartDate = DateTimeOffset.UtcNow,
+            EndDate = DateTimeOffset.UtcNow.AddDays(1),
+            Status = LeaveRequestStatus.Pending,
+            ApprovalRequestId = "old-approval",
+        };
+        await host.Context.LeaveRequests.AddAsync(entity, TestContext.Current.CancellationToken);
+        await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var (orgServiceMock, approvalServiceMock) = CreateMocks();
+        approvalServiceMock
+            .Setup(s => s.CancelAsync("old-approval", "owner", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Error("cannot withdraw"));
+        var handler = new UpdateLeaveRequestCommandHandler(host.Context, orgServiceMock.Object, approvalServiceMock.Object);
+
+        // Act
+        var result = await handler.Handle(
+            new UpdateLeaveRequestCommand(entity.Id, ValidModel, "owner", false),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        approvalServiceMock.Verify(
+            s => s.CreateAsync(It.IsAny<CreateApprovalRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        var persisted = await host.Context.LeaveRequests
+            .AsNoTracking()
+            .FirstAsync(x => x.Id == entity.Id, TestContext.Current.CancellationToken);
+        Assert.Equal(LeaveType.Annual, persisted.LeaveType);
+        Assert.Equal("old-approval", persisted.ApprovalRequestId);
     }
 }

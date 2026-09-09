@@ -1,8 +1,4 @@
 using LeaveManagement.Tests.TestSupport;
-using Microsoft.EntityFrameworkCore;
-using Moq;
-using StarterKit.Approval.Contracts.Approvals;
-using StarterKit.Approval.Contracts.Services;
 using StarterKit.LeaveManagement.Api.Application.LeaveRequests.Queries;
 using StarterKit.LeaveManagement.Api.Domain.LeaveRequests;
 using StarterKit.LeaveManagement.Contracts.LeaveRequests;
@@ -36,8 +32,7 @@ public class SearchLeaveRequestsQueryHandlerTests
             MakeEntity("employee-1", LeaveType.Annual, LeaveRequestStatus.Pending),
             MakeEntity("employee-2", LeaveType.Annual, LeaveRequestStatus.Pending));
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-        var approvalServiceMock = new Mock<IApprovalService>();
-        var handler = new SearchLeaveRequestsQueryHandler(host.Context, approvalServiceMock.Object);
+        var handler = new SearchLeaveRequestsQueryHandler(host.Context);
 
         // Act
         var result = await handler.Handle(
@@ -59,8 +54,7 @@ public class SearchLeaveRequestsQueryHandlerTests
             MakeEntity("employee-1", LeaveType.Annual, LeaveRequestStatus.Pending),
             MakeEntity("employee-2", LeaveType.Annual, LeaveRequestStatus.Pending));
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-        var approvalServiceMock = new Mock<IApprovalService>();
-        var handler = new SearchLeaveRequestsQueryHandler(host.Context, approvalServiceMock.Object);
+        var handler = new SearchLeaveRequestsQueryHandler(host.Context);
 
         // Act
         var result = await handler.Handle(
@@ -82,8 +76,7 @@ public class SearchLeaveRequestsQueryHandlerTests
             MakeEntity("employee-1", LeaveType.Annual, LeaveRequestStatus.Pending),
             MakeEntity("employee-1", LeaveType.Sick, LeaveRequestStatus.Pending));
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-        var approvalServiceMock = new Mock<IApprovalService>();
-        var handler = new SearchLeaveRequestsQueryHandler(host.Context, approvalServiceMock.Object);
+        var handler = new SearchLeaveRequestsQueryHandler(host.Context);
 
         // Act
         var result = await handler.Handle(
@@ -94,33 +87,5 @@ public class SearchLeaveRequestsQueryHandlerTests
         // Assert
         var record = Assert.Single(result.Data.Records);
         Assert.Equal(LeaveType.Sick, record.LeaveType);
-    }
-
-    [Fact]
-    public async Task Handle_ShouldReconcilePendingRows_BeforeApplyingStatusFilter()
-    {
-        // Arrange
-        using var host = new LeaveManagementTestHost();
-        var entity = MakeEntity("employee-1", LeaveType.Annual, LeaveRequestStatus.Pending, "approval-1");
-        await host.Context.LeaveRequests.AddAsync(entity, TestContext.Current.CancellationToken);
-        await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-        var approvalServiceMock = new Mock<IApprovalService>();
-        approvalServiceMock
-            .Setup(s => s.GetByRequestAsync("LeaveRequest", entity.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ApprovalRequestDto { Status = ApprovalStatus.Approved });
-        var handler = new SearchLeaveRequestsQueryHandler(host.Context, approvalServiceMock.Object);
-
-        // Act
-        var pendingResult = await handler.Handle(
-            new SearchLeaveRequestsQuery(
-                new LeaveRequestSearchRequest { Status = LeaveRequestStatus.Pending }, "employee-1", false),
-            TestContext.Current.CancellationToken);
-
-        // Assert — reconciled to Approved before the Status=Pending filter runs, so it's excluded
-        Assert.Empty(pendingResult.Data.Records);
-        var persisted = await host.Context.LeaveRequests
-            .AsNoTracking()
-            .FirstAsync(x => x.Id == entity.Id, TestContext.Current.CancellationToken);
-        Assert.Equal(LeaveRequestStatus.Approved, persisted.Status);
     }
 }

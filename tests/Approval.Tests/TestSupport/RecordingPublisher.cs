@@ -13,6 +13,12 @@ public sealed class RecordingPublisher : IPublisher
 {
     public List<INotification> Published { get; } = [];
 
+    /// <summary>
+    /// When set, evaluated for every published notification after it is recorded; returning
+    /// <c>true</c> makes <see cref="Publish"/> throw, simulating a downstream handler that faults.
+    /// </summary>
+    public Func<INotification, bool>? ThrowFor { get; set; }
+
     public IEnumerable<T> OfType<T>() => Published.OfType<T>();
 
     public void Clear() => Published.Clear();
@@ -20,6 +26,11 @@ public sealed class RecordingPublisher : IPublisher
     public Task Publish(INotification notification, CancellationToken cancellationToken = default)
     {
         Published.Add(notification);
+
+        if (ThrowFor?.Invoke(notification) == true)
+            throw new InvalidOperationException(
+                $"Simulated handler fault for {notification.GetType().Name}.");
+
         return Task.CompletedTask;
     }
 }

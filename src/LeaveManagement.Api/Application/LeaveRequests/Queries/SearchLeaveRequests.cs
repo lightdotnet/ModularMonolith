@@ -1,5 +1,4 @@
 using Mapster;
-using StarterKit.Approval.Contracts.Services;
 using StarterKit.LeaveManagement.Api.Data;
 using StarterKit.Persistence.Extensions;
 
@@ -11,8 +10,7 @@ internal sealed record SearchLeaveRequestsQuery(
     bool CanManage) : IQuery<PagedResult<LeaveRequestDto>>;
 
 internal class SearchLeaveRequestsQueryHandler(
-    LeaveManagementDbContext context,
-    IApprovalService approvalService)
+    LeaveManagementDbContext context)
     : IQueryHandler<SearchLeaveRequestsQuery, PagedResult<LeaveRequestDto>>
 {
     public async Task<PagedResult<LeaveRequestDto>> Handle(
@@ -30,12 +28,6 @@ internal class SearchLeaveRequestsQueryHandler(
 
         if (lookup.LeaveType.HasValue)
             scoped = scoped.Where(x => x.LeaveType == lookup.LeaveType!.Value);
-
-        var pending = await scoped
-            .Where(x => x.Status == LeaveRequestStatus.Pending && x.ApprovalRequestId != null)
-            .ToListAsync(cancellationToken);
-
-        await LeaveRequestStatusSync.ReconcileAsync(context, approvalService, pending, cancellationToken);
 
         if (lookup.Status.HasValue)
             scoped = scoped.Where(x => x.Status == lookup.Status!.Value);

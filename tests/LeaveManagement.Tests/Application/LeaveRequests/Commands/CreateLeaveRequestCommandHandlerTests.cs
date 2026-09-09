@@ -1,5 +1,7 @@
 using Light.Contracts;
 using LeaveManagement.Tests.TestSupport;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using StarterKit.Approval.Contracts.Approvals;
 using StarterKit.Approval.Contracts.Services;
@@ -12,6 +14,9 @@ namespace LeaveManagement.Tests.Application.LeaveRequests.Commands;
 
 public class CreateLeaveRequestCommandHandlerTests
 {
+    private static readonly ILogger<CreateLeaveRequestCommandHandler> Logger =
+        NullLogger<CreateLeaveRequestCommandHandler>.Instance;
+
     private static readonly CreateLeaveRequest ValidModel = new(
         LeaveType.Annual,
         new DateTimeOffset(2026, 1, 5, 0, 0, 0, TimeSpan.Zero),
@@ -33,7 +38,8 @@ public class CreateLeaveRequestCommandHandlerTests
         using var host = new LeaveManagementTestHost();
         var orgServiceMock = new Mock<IOrgDirectoryService>();
         var approvalServiceMock = new Mock<IApprovalService>();
-        var handler = new CreateLeaveRequestCommandHandler(host.Context, orgServiceMock.Object, approvalServiceMock.Object);
+        var handler = new CreateLeaveRequestCommandHandler(
+            host.Context, orgServiceMock.Object, approvalServiceMock.Object, Logger);
 
         // Act
         var result = await handler.Handle(
@@ -53,7 +59,8 @@ public class CreateLeaveRequestCommandHandlerTests
         using var host = new LeaveManagementTestHost();
         var orgServiceMock = new Mock<IOrgDirectoryService>();
         var approvalServiceMock = new Mock<IApprovalService>();
-        var handler = new CreateLeaveRequestCommandHandler(host.Context, orgServiceMock.Object, approvalServiceMock.Object);
+        var handler = new CreateLeaveRequestCommandHandler(
+            host.Context, orgServiceMock.Object, approvalServiceMock.Object, Logger);
         var model = ValidModel with { StartDate = ValidModel.EndDate.AddDays(1) };
 
         // Act
@@ -75,7 +82,8 @@ public class CreateLeaveRequestCommandHandlerTests
             .Setup(s => s.GetApproverCandidatesAsync("employee-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
         var approvalServiceMock = new Mock<IApprovalService>();
-        var handler = new CreateLeaveRequestCommandHandler(host.Context, orgServiceMock.Object, approvalServiceMock.Object);
+        var handler = new CreateLeaveRequestCommandHandler(
+            host.Context, orgServiceMock.Object, approvalServiceMock.Object, Logger);
 
         // Act
         var result = await handler.Handle(
@@ -97,7 +105,8 @@ public class CreateLeaveRequestCommandHandlerTests
             .Setup(s => s.GetApproverCandidatesAsync("employee-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync([Approver]);
         var approvalServiceMock = new Mock<IApprovalService>();
-        var handler = new CreateLeaveRequestCommandHandler(host.Context, orgServiceMock.Object, approvalServiceMock.Object);
+        var handler = new CreateLeaveRequestCommandHandler(
+            host.Context, orgServiceMock.Object, approvalServiceMock.Object, Logger);
         var model = ValidModel with { ApproverEmployeeId = "someone-else" };
 
         // Act
@@ -129,19 +138,19 @@ public class CreateLeaveRequestCommandHandlerTests
             .Setup(s => s.CreateAsync(It.IsAny<CreateApprovalRequest>(), It.IsAny<CancellationToken>()))
             .Callback<CreateApprovalRequest, CancellationToken>((request, _) => capturedRequest = request)
             .ReturnsAsync(Result<string>.Success("approval-1"));
-        var handler = new CreateLeaveRequestCommandHandler(host.Context, orgServiceMock.Object, approvalServiceMock.Object);
+        var handler = new CreateLeaveRequestCommandHandler(
+            host.Context, orgServiceMock.Object, approvalServiceMock.Object, Logger);
 
         // Act
         var result = await handler.Handle(
             new CreateLeaveRequestCommand(ValidModel, "user-1", "employee-1"),
             TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert — approval created first, then a single local commit carrying its id
         Assert.True(result.IsSuccess);
-        var entity = await host.Context.LeaveRequests.FindAsync(
-            [result.Data], TestContext.Current.CancellationToken);
-        Assert.NotNull(entity);
-        Assert.Equal("approval-1", entity!.ApprovalRequestId);
+        var entity = Assert.Single(host.Context.LeaveRequests);
+        Assert.Equal(result.Data, entity.Id);
+        Assert.Equal("approval-1", entity.ApprovalRequestId);
         Assert.Equal(LeaveRequestStatus.Pending, entity.Status);
         Assert.NotNull(capturedRequest);
         Assert.Equal("Jane Requester", capturedRequest!.RequesterName);
@@ -151,7 +160,7 @@ public class CreateLeaveRequestCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ShouldRollBackEntity_WhenApprovalCreationFails()
+    public async Task Handle_ShouldNotPersistLeaveRequest_WhenApprovalCreationFails()
     {
         // Arrange
         using var host = new LeaveManagementTestHost();
@@ -166,14 +175,15 @@ public class CreateLeaveRequestCommandHandlerTests
         approvalServiceMock
             .Setup(s => s.CreateAsync(It.IsAny<CreateApprovalRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<string>.Error("boom"));
-        var handler = new CreateLeaveRequestCommandHandler(host.Context, orgServiceMock.Object, approvalServiceMock.Object);
+        var handler = new CreateLeaveRequestCommandHandler(
+            host.Context, orgServiceMock.Object, approvalServiceMock.Object, Logger);
 
         // Act
         var result = await handler.Handle(
             new CreateLeaveRequestCommand(ValidModel, "user-1", "employee-1"),
             TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert — nothing is written locally before the approval workflow exists
         Assert.False(result.IsSuccess);
         Assert.Empty(host.Context.LeaveRequests);
     }

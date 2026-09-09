@@ -23,7 +23,7 @@ module doc:
 | Notifications | `Notifications.Api` + `.Contracts` | Same half-migration as Identity; controllers split by **audience** (admin vs. self-service) not resource | none yet |
 | Organization | `Organization.Api` + `.Contracts` (seam split into per-feature subfolders) | Handlers own their `OrganizationDbContext` logic directly — no service layer | `tests/Organization.Tests`, 63 |
 | Approval | `Approval.Api` + `.Contracts` | Workflow rules live on the `ApprovalRequest` aggregate (`Create`/`Decide`/`Cancel` return `IResult`); `IApprovalService` is a thin coordinator over it (must be DI-reachable cross-module); read-path handlers own their logic directly | `tests/Approval.Tests`, 60 |
-| LeaveManagement | `LeaveManagement.Api` + `.Contracts` | Handlers own their logic directly (Organization's shape); inject `IApprovalService` + `IOrgDirectoryService` straight into constructors | `tests/LeaveManagement.Tests`, 30 |
+| LeaveManagement | `LeaveManagement.Api` + `.Contracts` | Handlers own their logic directly (Organization's shape); command handlers inject `IApprovalService` + `IOrgDirectoryService` straight into constructors, the leave-request read queries touch neither | `tests/LeaveManagement.Tests`, 30 |
 
 Below the module layer: `src/Shared` (leaf) and `src/Persistence` (→ `Shared`) are the pre-module
 shared kernel; `src/Infrastructure` (→ `Shared`) is cross-cutting infra, no longer holding EF Core
@@ -72,18 +72,24 @@ reacting to Identity's integration events).
   throwing for expected failures. Aggregate methods on `ApprovalRequest` (`Create`/`Decide`/`Cancel`)
   also return `IResult`/`IResult<T>` rather than throwing on a broken invariant.
 - **Cross-module reactions via `Contracts`-level integration events** (`INotification`), published
-  manually through `IPublisher` from a handler/service:
+  through `IPublisher`, handled by an `INotificationHandler<T>` in another module's assembly (one
+  mediator spans every module assembly):
   - `Identity` — `UserCreatedIntegrationEvent` from `CreateUserCommandHandler`,
-    `ExternalUserProvisionedIntegrationEvent` from `ExternalLoginService`; both handled in
-    `Notifications.Api`. Identity defines no `BaseEntity` domain events.
-  - `Approval` — `ApprovalFinalizedIntegrationEvent` from `ApprovalService` (published after a
-    request is finalized or cancelled; no in-repo subscriber yet — `LeaveManagement` still
-    reconciles by polling), plus in-module `BaseEntity.AddDomainEvent` domain events dispatched
-    from its own handlers.
-  - `Organization` and `LeaveManagement` use no events (`LeaveManagement` reconciles status against
-    `Approval` on every read instead).
-  The repo-wide `DispatchDomainEventsExtensions` convention (`src/Persistence`, meant to dispatch
-  inside a module's `SaveChangesAsync`) is not wired anywhere. The `Identity` gap is tracked as
+    `ExternalUserProvisionedIntegrationEvent` from `ExternalLoginService`, both hand-published and
+    handled in `Notifications.Api`. Identity defines no `BaseEntity` domain events and does not wire
+    the `DispatchDomainEventsExtensions` convention — [known-debt.md](../known-debt.md) P6.
+  - `Approval` — `ApprovalFinalizedIntegrationEvent`, published by `ApprovalService` after a decide
+    commits to a terminal `Approved`/`Rejected` state (a requester-initiated cancel is driven by the
+    owning module and is not re-published), and handled in-process by `LeaveManagement.Api`. Approval
+    also raises in-module `BaseEntity` domain events and dispatches them via
+    `publisher.DispatchDomainEvents(this)` from `ApprovalDbContext.SaveChangesAsync` (wrapped in
+    try/catch-log) — the conforming reference for the convention P6 tracks as still-missing in
+    Identity.
+  - `LeaveManagement` — subscribes to `ApprovalFinalizedIntegrationEvent` to reconcile the local
+    `LeaveRequest.Status`, with `LeaveRequestReconciliationService` (a `BackgroundService`, the only
+    one in the backend) as the periodic delivery backstop. `Organization` uses no events.
+  The repo-wide `DispatchDomainEventsExtensions` convention (`src/Persistence`, meant to run inside a
+  module's `SaveChangesAsync`) is wired only in `Approval`; the `Identity` gap is
   [known-debt.md](../known-debt.md) P6.
 - **Authentication composition is host-owned, two-layer.** `Identity.Api` registers only token
   *services* (`AddJwtTokenServices` — signing, token/hub-token issuers, session + auth services), no

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using StarterKit.Approval.Contracts.Services;
 using StarterKit.LeaveManagement.Api.Data;
 using StarterKit.LeaveManagement.Api.Domain.LeaveRequests;
@@ -11,7 +12,8 @@ internal sealed record DeleteLeaveRequestCommand(
 
 internal class DeleteLeaveRequestCommandHandler(
     LeaveManagementDbContext context,
-    IApprovalService approvalService)
+    IApprovalService approvalService,
+    ILogger<DeleteLeaveRequestCommandHandler> logger)
     : ICommandHandler<DeleteLeaveRequestCommand, IResult>
 {
     public async Task<IResult> Handle(
@@ -25,6 +27,27 @@ internal class DeleteLeaveRequestCommandHandler(
         if (entity is null)
             return Result.NotFound($"Leave request {request.Id} not found");
 
+        // Reconcile a possibly-stale local status against Approval before the status gate — this
+        // runs for every caller (including .manage); .manage only skips the gate itself, not this.
+        if (entity.Status == LeaveRequestStatus.Pending && entity.ApprovalRequestId is not null)
+        {
+            var view = await approvalService.GetStatusByRequestAsync(
+                LeaveRequestStatusMap.RequestType,
+                entity.Id,
+                cancellationToken);
+
+            if (view is not null)
+            {
+                var mapped = LeaveRequestStatusMap.MapStatus(view.Status);
+
+                if (mapped != entity.Status)
+                {
+                    entity.Status = mapped;
+                    await context.SaveChangesAsync(cancellationToken);
+                }
+            }
+        }
+
         if (!request.CanManage)
         {
             if (entity.UserId != request.CurrentUserId)
@@ -35,7 +58,23 @@ internal class DeleteLeaveRequestCommandHandler(
         }
 
         if (entity.Status == LeaveRequestStatus.Pending && entity.ApprovalRequestId is not null)
-            await approvalService.CancelAsync(entity.ApprovalRequestId, entity.UserId, cancellationToken);
+        {
+            var cancel = await approvalService.CancelAsync(
+                entity.ApprovalRequestId,
+                entity.UserId,
+                cancellationToken);
+
+            if (!cancel.IsSuccess)
+            {
+                if (!request.CanManage)
+                    return Result.Error("Could not withdraw the pending approval for this leave request. Please try again.");
+
+                logger.LogWarning(
+                    "Approval request {ApprovalRequestId} could not be cancelled while a manage caller deleted leave request {LeaveRequestId}; deleting the local row anyway.",
+                    entity.ApprovalRequestId,
+                    entity.Id);
+            }
+        }
 
         context.LeaveRequests.Remove(entity);
         await context.SaveChangesAsync(cancellationToken);

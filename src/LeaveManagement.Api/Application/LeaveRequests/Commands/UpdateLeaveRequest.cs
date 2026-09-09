@@ -9,9 +9,11 @@ namespace StarterKit.LeaveManagement.Api.Application.LeaveRequests.Commands;
 /// <summary>
 /// Editing a <c>Pending</c>/<c>Rejected</c> request (the only statuses a non-management caller may
 /// touch) is treated as a resubmission: Approval has no "update" primitive, only Create/Decide/
-/// Cancel/GetByRequest, so the prior (still-pending) approval request is cancelled and a fresh one
-/// is created against the edited fields and a freshly-resolved approver. A <c>.manage</c> edit is a
-/// metadata correction only and never touches the approval workflow.
+/// Cancel, so the prior (still-pending) approval request is cancelled and a fresh one
+/// is created against the edited fields and a freshly-resolved approver. The old workflow is
+/// cancelled and the new one created <b>before</b> any local field is touched, so a failure on
+/// either side leaves the row untouched. A <c>.manage</c> edit is a metadata correction only and
+/// never touches the approval workflow.
 /// </summary>
 internal sealed record UpdateLeaveRequestCommand(
     string Id,
@@ -36,6 +38,26 @@ internal class UpdateLeaveRequestCommandHandler(
         if (entity is null)
             return Result.NotFound($"Leave request {request.Id} not found");
 
+        // Reconcile a possibly-stale local status against Approval before the authorization gate.
+        if (entity.Status == LeaveRequestStatus.Pending && entity.ApprovalRequestId is not null)
+        {
+            var view = await approvalService.GetStatusByRequestAsync(
+                LeaveRequestStatusMap.RequestType,
+                entity.Id,
+                cancellationToken);
+
+            if (view is not null)
+            {
+                var mapped = LeaveRequestStatusMap.MapStatus(view.Status);
+
+                if (mapped != entity.Status)
+                {
+                    entity.Status = mapped;
+                    await context.SaveChangesAsync(cancellationToken);
+                }
+            }
+        }
+
         if (!request.CanManage)
         {
             if (entity.UserId != request.CurrentUserId)
@@ -52,18 +74,17 @@ internal class UpdateLeaveRequestCommandHandler(
 
         var wasPending = entity.Status == LeaveRequestStatus.Pending;
 
-        entity.LeaveType = model.LeaveType;
-        entity.StartDate = model.StartDate;
-        entity.EndDate = model.EndDate;
-        entity.Reason = model.Reason;
-
-        if (!request.CanManage)
+        if (request.CanManage)
+        {
+            entity.LeaveType = model.LeaveType;
+            entity.StartDate = model.StartDate;
+            entity.EndDate = model.EndDate;
+            entity.Reason = model.Reason;
+        }
+        else
         {
             if (string.IsNullOrEmpty(model.ApproverEmployeeId))
                 return Result.Error("Please select an approver.");
-
-            if (wasPending && entity.ApprovalRequestId is not null)
-                await approvalService.CancelAsync(entity.ApprovalRequestId, entity.UserId, cancellationToken);
 
             var candidates = await orgDirectoryService.GetApproverCandidatesAsync(
                 entity.EmployeeId, cancellationToken);
@@ -78,9 +99,20 @@ internal class UpdateLeaveRequestCommandHandler(
             var requesterName = await orgDirectoryService.GetEmployeeNameAsync(
                 entity.EmployeeId, cancellationToken);
 
+            if (wasPending && entity.ApprovalRequestId is not null)
+            {
+                var cancel = await approvalService.CancelAsync(
+                    entity.ApprovalRequestId,
+                    entity.UserId,
+                    cancellationToken);
+
+                if (!cancel.IsSuccess)
+                    return Result.Error("Could not withdraw the current approval to resubmit. Please try again.");
+            }
+
             var approvalResult = await approvalService.CreateAsync(
                 new CreateApprovalRequest(
-                    RequestType: "LeaveRequest",
+                    RequestType: LeaveRequestStatusMap.RequestType,
                     RequestId: entity.Id,
                     RequesterUserId: entity.UserId,
                     RequesterEmployeeId: entity.EmployeeId,
@@ -95,9 +127,16 @@ internal class UpdateLeaveRequestCommandHandler(
                     ]),
                 cancellationToken);
 
+            // Residual, accepted: if the cancel above succeeded but this create failed, the row
+            // stays Pending pointing at the now-cancelled workflow until the next reconcile tick
+            // flips it to Cancelled. No eager status write here.
             if (!approvalResult.IsSuccess)
                 return Result.Error("Failed to resubmit the leave request for approval.");
 
+            entity.LeaveType = model.LeaveType;
+            entity.StartDate = model.StartDate;
+            entity.EndDate = model.EndDate;
+            entity.Reason = model.Reason;
             entity.ApprovalRequestId = approvalResult.Data;
             entity.Status = LeaveRequestStatus.Pending;
         }

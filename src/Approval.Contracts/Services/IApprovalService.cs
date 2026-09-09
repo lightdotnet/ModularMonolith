@@ -37,13 +37,6 @@ public interface IApprovalService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Looks up the approval request tied to a given source record, for the owning module to
-    /// check current status/level (e.g. to block edits once approved).
-    /// </summary>
-    Task<ApprovalRequestDto?> GetByRequestAsync(
-        string requestType, string requestId, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Lean status lookup for a single source record — the most recent approval request tied to
     /// <paramref name="requestType"/>/<paramref name="requestId"/>, or <c>null</c> when none exists.
     /// </summary>

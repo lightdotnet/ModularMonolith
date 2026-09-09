@@ -312,75 +312,25 @@ public class ApprovalServiceTests
     }
 
     [Fact]
-    public async Task GetByRequestAsync_ShouldReturnNull_WhenNoMatchExists()
+    public async Task DecideAsync_ShouldStillSucceedAndCommit_WhenADomainEventHandlerThrows()
     {
         // Arrange
         using var host = new ApprovalTestHost();
         var service = CreateService(host);
+        var created = await service.CreateAsync(
+            NewRequest((1, "approver-1")), TestContext.Current.CancellationToken);
+        host.Publisher.Clear();
+        host.Publisher.ThrowFor = _ => true;
 
-        // Act
-        var dto = await service.GetByRequestAsync("Leave", "missing", TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Null(dto);
-    }
-
-    [Fact]
-    public async Task GetByRequestAsync_ShouldReturnDto_WhenMatchExists()
-    {
-        // Arrange
-        var (host, requestId) = await SeedTwoLevelRequestAsync();
-        using var _ = host;
-        var service = CreateService(host);
-
-        // Act
-        var dto = await service.GetByRequestAsync("Test", "req-1", TestContext.Current.CancellationToken);
+        // Act — a throwing subscriber must not fault the already-committed decision
+        var result = await service.DecideAsync(
+            created.Data!, "approver-1", true, "ok", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(dto);
-        Assert.Equal(requestId, dto!.Id);
-    }
-
-    [Fact]
-    public async Task GetByRequestAsync_ShouldReturnMostRecent_WhenMultipleMatchExist()
-    {
-        // Arrange: (RequestType, RequestId) is not unique - a re-submission after a rejection
-        // leaves two rows. The query must return the latest rather than throw.
-        using var host = new ApprovalTestHost();
-
-        host.DateTime.UtcNow = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
-        await host.Context.ApprovalRequests.AddAsync(
-            ApprovalEntityBuilder.Request(
-                requestType: "Leave",
-                requestId: "L-1",
-                requesterUserId: "u1",
-                title: "First",
-                status: ApprovalStatus.Rejected,
-                currentLevel: 1,
-                steps: [ApprovalEntityBuilder.Step(1, "a1", "e1")]),
-            TestContext.Current.CancellationToken);
-        await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        host.DateTime.UtcNow = host.DateTime.UtcNow.AddDays(1);
-        await host.Context.ApprovalRequests.AddAsync(
-            ApprovalEntityBuilder.Request(
-                requestType: "Leave",
-                requestId: "L-1",
-                requesterUserId: "u1",
-                title: "Second",
-                status: ApprovalStatus.Pending,
-                currentLevel: 1,
-                steps: [ApprovalEntityBuilder.Step(1, "a1", "e1")]),
-            TestContext.Current.CancellationToken);
-        await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        var service = CreateService(host);
-
-        // Act
-        var dto = await service.GetByRequestAsync("Leave", "L-1", TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.NotNull(dto);
-        Assert.Equal("Second", dto!.Title);
+        Assert.True(result.IsSuccess);
+        var entity = await host.Context.ApprovalRequests.FindAsync(
+            [created.Data], TestContext.Current.CancellationToken);
+        Assert.Equal(ApprovalStatus.Approved, entity!.Status);
+        Assert.NotNull(entity.FinalizedAt);
     }
 }

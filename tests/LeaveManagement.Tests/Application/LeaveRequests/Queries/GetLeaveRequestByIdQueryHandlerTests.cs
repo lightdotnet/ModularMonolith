@@ -1,8 +1,4 @@
 using LeaveManagement.Tests.TestSupport;
-using Microsoft.EntityFrameworkCore;
-using Moq;
-using StarterKit.Approval.Contracts.Approvals;
-using StarterKit.Approval.Contracts.Services;
 using StarterKit.LeaveManagement.Api.Application.LeaveRequests.Queries;
 using StarterKit.LeaveManagement.Api.Domain.LeaveRequests;
 using StarterKit.LeaveManagement.Contracts.LeaveRequests;
@@ -31,8 +27,7 @@ public class GetLeaveRequestByIdQueryHandlerTests
     {
         // Arrange
         using var host = new LeaveManagementTestHost();
-        var approvalServiceMock = new Mock<IApprovalService>();
-        var handler = new GetLeaveRequestByIdQueryHandler(host.Context, approvalServiceMock.Object);
+        var handler = new GetLeaveRequestByIdQueryHandler(host.Context);
 
         // Act
         var result = await handler.Handle(
@@ -51,8 +46,7 @@ public class GetLeaveRequestByIdQueryHandlerTests
         var entity = MakeEntity("employee-1", LeaveRequestStatus.Pending);
         await host.Context.LeaveRequests.AddAsync(entity, TestContext.Current.CancellationToken);
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-        var approvalServiceMock = new Mock<IApprovalService>();
-        var handler = new GetLeaveRequestByIdQueryHandler(host.Context, approvalServiceMock.Object);
+        var handler = new GetLeaveRequestByIdQueryHandler(host.Context);
 
         // Act
         var result = await handler.Handle(
@@ -71,8 +65,7 @@ public class GetLeaveRequestByIdQueryHandlerTests
         var entity = MakeEntity("employee-1", LeaveRequestStatus.Pending);
         await host.Context.LeaveRequests.AddAsync(entity, TestContext.Current.CancellationToken);
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-        var approvalServiceMock = new Mock<IApprovalService>();
-        var handler = new GetLeaveRequestByIdQueryHandler(host.Context, approvalServiceMock.Object);
+        var handler = new GetLeaveRequestByIdQueryHandler(host.Context);
 
         // Act
         var result = await handler.Handle(
@@ -82,33 +75,5 @@ public class GetLeaveRequestByIdQueryHandlerTests
         // Assert
         Assert.True(result.IsSuccess);
         Assert.Equal(entity.Id, result.Data.Id);
-    }
-
-    [Fact]
-    public async Task Handle_ShouldReconcileStatus_WhenApprovalResolved()
-    {
-        // Arrange
-        using var host = new LeaveManagementTestHost();
-        var entity = MakeEntity("employee-1", LeaveRequestStatus.Pending, "approval-1");
-        await host.Context.LeaveRequests.AddAsync(entity, TestContext.Current.CancellationToken);
-        await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-        var approvalServiceMock = new Mock<IApprovalService>();
-        approvalServiceMock
-            .Setup(s => s.GetByRequestAsync("LeaveRequest", entity.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ApprovalRequestDto { Status = ApprovalStatus.Approved });
-        var handler = new GetLeaveRequestByIdQueryHandler(host.Context, approvalServiceMock.Object);
-
-        // Act
-        var result = await handler.Handle(
-            new GetLeaveRequestByIdQuery(entity.Id, "employee-1", false),
-            TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(LeaveRequestStatus.Approved, result.Data.Status);
-        var persisted = await host.Context.LeaveRequests
-            .AsNoTracking()
-            .FirstAsync(x => x.Id == entity.Id, TestContext.Current.CancellationToken);
-        Assert.Equal(LeaveRequestStatus.Approved, persisted.Status);
     }
 }

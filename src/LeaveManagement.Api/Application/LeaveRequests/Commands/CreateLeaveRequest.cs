@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using StarterKit.Approval.Contracts.Approvals;
 using StarterKit.Approval.Contracts.Services;
 using StarterKit.LeaveManagement.Api.Data;
@@ -14,7 +15,8 @@ internal sealed record CreateLeaveRequestCommand(
 internal class CreateLeaveRequestCommandHandler(
     LeaveManagementDbContext context,
     IOrgDirectoryService orgDirectoryService,
-    IApprovalService approvalService)
+    IApprovalService approvalService,
+    ILogger<CreateLeaveRequestCommandHandler> logger)
     : ICommandHandler<CreateLeaveRequestCommand, IResult<string>>
 {
     public async Task<IResult<string>> Handle(
@@ -40,6 +42,13 @@ internal class CreateLeaveRequestCommandHandler(
         if (approver is null)
             return Result<string>.Error("Invalid approver selection.");
 
+        // The JWT carries no name claims, so the requester's display name is resolved from their
+        // Organization employee record instead — same source as the approver's own name above.
+        var requesterName = await orgDirectoryService.GetEmployeeNameAsync(
+            request.RequesterEmployeeId, cancellationToken);
+
+        // Built in memory only — the approval workflow is created first so nothing is persisted
+        // locally when it fails, and there is a single local commit once it succeeds.
         var entity = new LeaveRequest
         {
             UserId = request.RequesterUserId,
@@ -51,17 +60,9 @@ internal class CreateLeaveRequestCommandHandler(
             Status = LeaveRequestStatus.Pending,
         };
 
-        await context.LeaveRequests.AddAsync(entity, cancellationToken);
-        await context.SaveChangesAsync(cancellationToken);
-
-        // The JWT carries no name claims, so the requester's display name is resolved from their
-        // Organization employee record instead — same source as the approver's own name above.
-        var requesterName = await orgDirectoryService.GetEmployeeNameAsync(
-            request.RequesterEmployeeId, cancellationToken);
-
         var approvalResult = await approvalService.CreateAsync(
             new CreateApprovalRequest(
-                RequestType: "LeaveRequest",
+                RequestType: LeaveRequestStatusMap.RequestType,
                 RequestId: entity.Id,
                 RequesterUserId: request.RequesterUserId,
                 RequesterEmployeeId: request.RequesterEmployeeId,
@@ -77,14 +78,40 @@ internal class CreateLeaveRequestCommandHandler(
             cancellationToken);
 
         if (!approvalResult.IsSuccess)
-        {
-            context.LeaveRequests.Remove(entity);
-            await context.SaveChangesAsync(cancellationToken);
-            return approvalResult;
-        }
+            return Result<string>.Error(approvalResult.Message);
 
         entity.ApprovalRequestId = approvalResult.Data;
-        await context.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            await context.LeaveRequests.AddAsync(entity, cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Failed to persist leave request {LeaveRequestId} after approval {ApprovalRequestId} was created; attempting to cancel the workflow.",
+                entity.Id,
+                approvalResult.Data);
+
+            try
+            {
+                await approvalService.CancelAsync(
+                    approvalResult.Data,
+                    request.RequesterUserId,
+                    cancellationToken);
+            }
+            catch (Exception cancelEx)
+            {
+                logger.LogError(
+                    cancelEx,
+                    "Failed to compensate by cancelling approval {ApprovalRequestId} for the unsaved leave request.",
+                    approvalResult.Data);
+            }
+
+            return Result<string>.Error("Could not save the leave request. Please try again.");
+        }
 
         return Result<string>.Success(entity.Id);
     }

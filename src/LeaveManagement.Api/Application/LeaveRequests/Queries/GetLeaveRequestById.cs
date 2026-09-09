@@ -1,5 +1,4 @@
 using Mapster;
-using StarterKit.Approval.Contracts.Services;
 using StarterKit.LeaveManagement.Api.Data;
 using StarterKit.LeaveManagement.Api.Domain.LeaveRequests;
 
@@ -11,8 +10,7 @@ internal sealed record GetLeaveRequestByIdQuery(
     bool CanManage) : IQuery<IResult<LeaveRequestDto>>;
 
 internal class GetLeaveRequestByIdQueryHandler(
-    LeaveManagementDbContext context,
-    IApprovalService approvalService)
+    LeaveManagementDbContext context)
     : IQueryHandler<GetLeaveRequestByIdQuery, IResult<LeaveRequestDto>>
 {
     public async Task<IResult<LeaveRequestDto>> Handle(
@@ -28,8 +26,6 @@ internal class GetLeaveRequestByIdQueryHandler(
 
         if (!request.CanManage && entity.EmployeeId != request.CurrentEmployeeId)
             return Result<LeaveRequestDto>.Error("You can only view your own leave requests.");
-
-        await LeaveRequestStatusSync.ReconcileAsync(context, approvalService, [entity], cancellationToken);
 
         return Result<LeaveRequestDto>.Success(entity.Adapt<LeaveRequestDto>());
     }
