@@ -2,6 +2,7 @@ using Identity.Tests.TestSupport;
 using Microsoft.EntityFrameworkCore;
 using StarterKit.Identity.Api.Entities;
 using StarterKit.Identity.Api.Extensions;
+using StarterKit.Identity.Contracts;
 using StarterKit.Shared;
 using Xunit;
 
@@ -20,7 +21,7 @@ public class DataMapperTests
             LastName = "Doe",
             Email = "jane@example.com",
             PhoneNumber = "555-0100",
-            AuthProvider = "AD",
+            AuthProvider = AuthProvider.ActiveDirectory,
             Status = new ActiveStatus(ActiveStatus.State.Locked),
         };
 

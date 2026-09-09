@@ -3,7 +3,7 @@
 namespace StarterKit.WebApi.Controllers;
 
 #if DEBUG
-[Route("/")]
+[Route("/hello")]
 [ApiExplorerSettings(IgnoreApi = true)]
 public class HomeController : Controller
 {

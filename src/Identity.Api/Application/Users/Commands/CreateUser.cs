@@ -1,6 +1,6 @@
-﻿using StarterKit.Identity.Api.Events;
-using StarterKit.Identity.Contracts;
+﻿using StarterKit.Identity.Contracts;
 using StarterKit.Identity.Contracts.Services;
+using StarterKit.Identity.Contracts.Users;
 
 namespace StarterKit.Identity.Api.Application.Users.Commands;
 
@@ -21,7 +21,7 @@ internal class CreateUserCommandHandler(
         if (result.IsSuccess)
         {
             await publisher.Publish(
-                new UserCreatedEvent(
+                new UserCreatedIntegrationEvent(
                     result.Data,
                     request.Model.UserName,
                     request.Model.Email),

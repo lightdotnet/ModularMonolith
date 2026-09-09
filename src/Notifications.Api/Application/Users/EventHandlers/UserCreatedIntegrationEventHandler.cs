@@ -1,15 +1,15 @@
-﻿using Light.Mediator;
-using StarterKit.Identity.Api.Events;
+using Microsoft.Extensions.Logging;
+using StarterKit.Identity.Contracts.Users;
 using StarterKit.Notifications.Contracts.Services;
 
-namespace StarterKit.Identity.Api.Application.Users.EventHandlers;
+namespace StarterKit.Notifications.Api.Application.Users.EventHandlers;
 
-internal class UserCreatedEventHandler(
+internal class UserCreatedIntegrationEventHandler(
     IMailService mailService,
-    ILogger<UserCreatedEventHandler> logger)
-    : INotificationHandler<UserCreatedEvent>
+    ILogger<UserCreatedIntegrationEventHandler> logger)
+    : INotificationHandler<UserCreatedIntegrationEvent>
 {
-    public async Task Handle(UserCreatedEvent notification, CancellationToken cancellationToken)
+    public async Task Handle(UserCreatedIntegrationEvent notification, CancellationToken cancellationToken)
     {
         logger.LogInformation("User created: {UserId}, {UserName}, {Email}",
             notification.UserId,

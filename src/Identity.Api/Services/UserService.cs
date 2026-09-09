@@ -99,7 +99,7 @@ public class UserService(UserManager<User> userManager) : IUserService
             PhoneNumber = newUser.PhoneNumber,
             FirstName = newUser.FirstName,
             LastName = newUser.LastName,
-            AuthProvider = newUser.AuthProvider,
+            AuthProvider = AuthProviderWire.Parse(newUser.AuthProvider),
         };
 
         var identityResult = string.IsNullOrWhiteSpace(newUser.Password)
@@ -138,7 +138,7 @@ public class UserService(UserManager<User> userManager) : IUserService
         }
 
         // update auth provider
-        user.ChangeAuthProvider(updateUser.AuthProvider);
+        user.ChangeAuthProvider(AuthProviderWire.Parse(updateUser.AuthProvider));
 
         var updatedResult = await userManager
             .UpdateAsync(user)

@@ -89,7 +89,7 @@ public class UserController(
     {
         var users = await userService.GetAllAsync();
 
-        var domainUsers = users.Where(x => x.AuthProvider == AuthProvider.AD.ToString());
+        var domainUsers = users.Where(x => x.AuthProvider == AuthProviderWire.ActiveDirectory);
 
         foreach (var user in domainUsers)
         {

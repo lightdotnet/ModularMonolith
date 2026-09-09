@@ -13,6 +13,7 @@
   <Folder Name="/src/identity-module/">
     <Project Path="src/Identity.Api/Identity.Api.csproj" />
     <Project Path="src/Identity.Contracts/Identity.Contracts.csproj" />
+    <Project Path="src/Identity.Web/Identity.Web.csproj" />
   </Folder>
   <Folder Name="/src/leave-management-module/">
     <Project Path="src/LeaveManagement.Api/LeaveManagement.Api.csproj" />

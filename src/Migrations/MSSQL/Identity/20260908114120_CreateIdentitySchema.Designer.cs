@@ -12,7 +12,7 @@ using StarterKit.Identity.Api.Data;
 namespace MSSQL.Identity
 {
     [DbContext(typeof(IdentityDbContext))]
-    [Migration("20260801104131_CreateIdentitySchema")]
+    [Migration("20260908114120_CreateIdentitySchema")]
     partial class CreateIdentitySchema
     {
         /// <inheritdoc />
@@ -21,7 +21,7 @@ namespace MSSQL.Identity
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("identity")
-                .HasAnnotation("ProductVersion", "10.0.10")
+                .HasAnnotation("ProductVersion", "10.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -101,8 +101,8 @@ namespace MSSQL.Identity
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
-                    b.Property<string>("AuthProvider")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("AuthProvider")
+                        .HasColumnType("int");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()

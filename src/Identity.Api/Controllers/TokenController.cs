@@ -3,13 +3,15 @@ using Microsoft.AspNetCore.Mvc;
 using StarterKit.Identity.Api.Jwt;
 using StarterKit.Identity.Contracts;
 using StarterKit.Infrastructure.Endpoints;
+using StarterKit.Shared;
 
 namespace StarterKit.Identity.Api.Controllers;
 
 [ApiExplorerSettings(GroupName = "identity")]
 [Route("api/v{version:apiVersion}/auth")]
 public class TokenController(
-    IAuthenticationService authenticationService) : VersionedApiController
+    IAuthenticationService authenticationService,
+    ICurrentUser currentUser) : VersionedApiController
 {
     [AllowAnonymous]
     [HttpPost("token/get")]
@@ -46,6 +48,21 @@ public class TokenController(
             {
                 IpAddress = ipAddress,
             });
+
+        return Ok(res);
+    }
+
+    [Authorize]
+    [HttpPost("token/hub")]
+    public async Task<IActionResult> GetHubToken()
+    {
+        var userId = currentUser.UserId;
+        var sessionId = currentUser.SessionId;
+
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(sessionId))
+            return Ok(Result.Unauthorized());
+
+        var res = await authenticationService.IssueHubTokenAsync(userId, sessionId);
 
         return Ok(res);
     }

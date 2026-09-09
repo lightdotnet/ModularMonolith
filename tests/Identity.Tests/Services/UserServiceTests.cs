@@ -130,7 +130,7 @@ public class UserServiceTests
         var reloaded = await host.UserManager.FindByIdAsync(user.Id);
         Assert.Equal("Jane", reloaded!.FirstName);
         Assert.Equal(ActiveStatus.State.Locked, reloaded.Status.Value);
-        Assert.Equal("AD", reloaded.AuthProvider);
+        Assert.Equal(AuthProvider.ActiveDirectory, reloaded.AuthProvider);
         var roles = await host.UserManager.GetRolesAsync(reloaded);
         Assert.Equal(["Admin"], roles);
         var claims = await host.UserManager.GetClaimsAsync(reloaded);

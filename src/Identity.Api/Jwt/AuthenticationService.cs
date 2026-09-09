@@ -15,6 +15,7 @@ internal class AuthenticationService(
     UserManager<User> userManager,
     IActiveDirectoryService domainService,
     JwtSigningService jwtSigningService,
+    HubTokenIssuer hubTokenIssuer,
     IDateTime dateTime) : IAuthenticationService
 {
     private readonly JwtOptions _jwt = jwtOptions.Value;
@@ -32,7 +33,7 @@ internal class AuthenticationService(
 
         bool isPasswordValid;
 
-        if (user.AuthProvider == AuthProvider.AD.ToString())
+        if (user.AuthProvider == AuthProvider.ActiveDirectory)
         {
             isPasswordValid = await domainService.CheckPasswordSignInAsync(username, password);
         }
@@ -86,6 +87,26 @@ internal class AuthenticationService(
             device);
 
         return Result<TokenDto>.Success(token);
+    }
+
+    public async Task<IResult<HubTokenResponse>> IssueHubTokenAsync(
+        string userId,
+        string sessionId)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+
+        if (user is null || await CheckInvalidUser(user))
+            return Result<HubTokenResponse>.Unauthorized("Invalid credentials.");
+
+        // A user who revoked this session must not be able to mint fresh hub tokens
+        // against it, even within the access token's remaining lifetime.
+        if (await userSessionService.IsTokenValidAsync(sessionId) is false)
+            return Result<HubTokenResponse>.Unauthorized("Session is no longer valid.");
+
+        var token = hubTokenIssuer.Issue(user, sessionId);
+
+        return Result<HubTokenResponse>.Success(
+            new HubTokenResponse(token, _jwt.HubTokenExpirationSeconds));
     }
 
     private (DateTime TokenExpiresAt, DateTime RefreshTokenExpiresAt) ComputeExpirations()

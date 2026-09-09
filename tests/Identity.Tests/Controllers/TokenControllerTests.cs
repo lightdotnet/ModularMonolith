@@ -5,6 +5,7 @@ using Moq;
 using StarterKit.Identity.Api.Controllers;
 using StarterKit.Identity.Api.Jwt;
 using StarterKit.Identity.Contracts;
+using StarterKit.Shared;
 using Xunit;
 
 namespace Identity.Tests.Controllers;
@@ -14,7 +15,10 @@ public class TokenControllerTests
     private static (TokenController Controller, Mock<IAuthenticationService> AuthenticationService) CreateSut()
     {
         var authServiceMock = new Mock<IAuthenticationService>();
-        var controller = new TokenController(authServiceMock.Object)
+        var currentUserMock = new Mock<ICurrentUser>();
+        var controller = new TokenController(
+            authServiceMock.Object,
+            currentUserMock.Object)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
         };

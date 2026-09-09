@@ -1,0 +1,34 @@
+@page
+@model StarterKit.Identity.Web.Pages.IndexModel
+@{
+    ViewData["Title"] = "Home";
+}
+
+<div class="text-center">
+    <h1 class="display-5">Identity.Web</h1>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <p class="lead">Signed in as <strong>@(Model.CurrentUser?.DisplayName ?? User.Identity.Name)</strong>.</p>
+        @if (Model.CurrentUser is not null)
+        {
+            <div class="card shadow-sm text-start mx-auto mt-4" style="max-width: 32rem;">
+                <div class="card-header">User information</div>
+                <dl class="card-body row mb-0">
+                    <dt class="col-sm-4">User ID</dt>
+                    <dd class="col-sm-8 text-break">@Model.CurrentUser.Id</dd>
+                    <dt class="col-sm-4">Name</dt>
+                    <dd class="col-sm-8">@(Model.CurrentUser.DisplayName ?? "-")</dd>
+                    <dt class="col-sm-4">Email</dt>
+                    <dd class="col-sm-8">@(Model.CurrentUser.Email ?? "-")</dd>
+                    <dt class="col-sm-4">Provider</dt>
+                    <dd class="col-sm-8">@(Model.CurrentUser.AuthProvider ?? "-")</dd>
+                </dl>
+            </div>
+        }
+    }
+    else
+    {
+        <p class="lead">Sign in with your Microsoft account to continue.</p>
+        <a class="btn btn-primary" asp-page="/Account/Login">Sign in</a>
+    }
+</div>

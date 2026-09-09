@@ -14,7 +14,11 @@ public static class DataMapper
         LastName = s.LastName,
         Email = s.Email,
         PhoneNumber = s.PhoneNumber,
-        AuthProvider = s.AuthProvider,
+        AuthProvider = s.AuthProvider == StarterKit.Identity.Contracts.AuthProvider.ActiveDirectory
+            ? AuthProviderWire.ActiveDirectory
+            : s.AuthProvider == StarterKit.Identity.Contracts.AuthProvider.EntraId
+                ? AuthProviderWire.EntraId
+                : null,
         Status = s.Status.Value.ToString(),
         IsDeleted = s.Deleted != null,
     };

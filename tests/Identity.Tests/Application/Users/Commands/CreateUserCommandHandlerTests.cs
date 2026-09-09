@@ -2,9 +2,9 @@ using Light.Contracts;
 using Light.Mediator;
 using Moq;
 using StarterKit.Identity.Api.Application.Users.Commands;
-using StarterKit.Identity.Api.Events;
 using StarterKit.Identity.Contracts;
 using StarterKit.Identity.Contracts.Services;
+using StarterKit.Identity.Contracts.Users;
 using Xunit;
 
 namespace Identity.Tests.Application.Users.Commands;
@@ -12,7 +12,7 @@ namespace Identity.Tests.Application.Users.Commands;
 public class CreateUserCommandHandlerTests
 {
     [Fact]
-    public async Task Handle_ShouldPublishUserCreatedEvent_WhenCreateSucceeds()
+    public async Task Handle_ShouldPublishUserCreatedIntegrationEvent_WhenCreateSucceeds()
     {
         // Arrange
         var userServiceMock = new Mock<IUserService>();
@@ -31,7 +31,7 @@ public class CreateUserCommandHandlerTests
         Assert.Equal("user-1", result.Data);
         publisherMock.Verify(
             p => p.Publish(
-                It.Is<UserCreatedEvent>(e =>
+                It.Is<UserCreatedIntegrationEvent>(e =>
                     e.UserId == "user-1" && e.UserName == "jane" && e.Email == "jane@example.com"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -55,7 +55,7 @@ public class CreateUserCommandHandlerTests
         // Assert
         Assert.False(result.IsSuccess);
         publisherMock.Verify(
-            p => p.Publish(It.IsAny<UserCreatedEvent>(), It.IsAny<CancellationToken>()),
+            p => p.Publish(It.IsAny<UserCreatedIntegrationEvent>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 }

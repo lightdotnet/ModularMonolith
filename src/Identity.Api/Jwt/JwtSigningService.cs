@@ -13,9 +13,12 @@ internal class JwtSigningService(IOptions<JwtOptions> jwtOptions)
 
     public string Issuer => _jwt.Issuer;
 
-    public string RoleClaimType => ClaimTypeConstants.Role;
+    public static string RoleClaimType => ClaimTypeConstants.Role;
 
-    public string Generate(IEnumerable<Claim> claims, DateTime expiresAt)
+    public string Generate(
+        IEnumerable<Claim> claims,
+        DateTime expiresAt,
+        string? audience = null)
     {
         var signingCredentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.SecretKey)),
@@ -23,6 +26,7 @@ internal class JwtSigningService(IOptions<JwtOptions> jwtOptions)
 
         var token = new JwtSecurityToken(
             issuer: Issuer,
+            audience: audience,
             claims: claims,
             expires: expiresAt,
             signingCredentials: signingCredentials);

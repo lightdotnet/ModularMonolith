@@ -6,6 +6,7 @@ using Light.AspNetCore.Swagger;
 using Light.Mediator;
 using StarterKit.Approval.Api;
 using StarterKit.Identity.Api;
+using StarterKit.Identity.Web;
 using StarterKit.Infrastructure;
 using StarterKit.Infrastructure.Cors;
 using StarterKit.Infrastructure.HealthChecks;
@@ -16,6 +17,7 @@ using StarterKit.Notifications.Api;
 using StarterKit.Organization.Api;
 using StarterKit.Shared;
 using StarterKit.Shared.Authorization;
+using StarterKit.WebApi.Authentication;
 using System.Reflection;
 
 namespace StarterKit.WebApi;
@@ -59,6 +61,9 @@ public static class ConfigureExtensions
 
         services.AddModules<AppModule>(configuration, assemblies);
 
+        services.AddIdentityWeb(configuration);
+        services.AddApiAuthentication(configuration);
+
         return services;
     }
 
@@ -68,6 +73,7 @@ public static class ConfigureExtensions
             .UseGuidV7TraceId()
             .UseLightRequestLogging()
             .UseLightExceptionHandler()
+            .UseStaticFiles()
             .UseRouting()
             .UseCorsPolicy() // must add before Auth
             .UseAuthentication()
@@ -90,6 +96,8 @@ public static class ConfigureExtensions
         //map versioned endpoint
         var endpoints = app.MapGroup("api/v{version:apiVersion}").WithApiVersionSet(versions);
         endpoints.MapModuleEndpoints<AppModule>(assemblies);
+
+        app.UseIdentityWeb();
 
         return app;
     }
