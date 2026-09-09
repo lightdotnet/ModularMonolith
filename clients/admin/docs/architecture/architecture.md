@@ -219,13 +219,17 @@ No cycles found among internal imports.
   Backend-connectivity failures never reach this path — `guardCall` already turns those into a
   rendered `Result`.
 
-- **Real-time push via SignalR — browser-direct, action-issued token, server-resolved hub URL.**
+- **Real-time push via SignalR — browser-direct, dedicated hub token, server-resolved hub URL.**
   `use-notifications.ts` opens a `HubConnection` straight from the browser to an absolute backend URL
-  (not proxied). Both the hub URL and a short-lived access token come from `getSignalRTokenAction()`
-  on every (re)connect — `SIGNALR_HUB_URL` is a server-only env var, not `NEXT_PUBLIC_`-inlined, so
-  changing it needs only a server restart. This is the one place the access token is readable by
-  browser JS (a deliberate narrowing of the httpOnly-cookie invariant). Failed connects retry after
-  30s; logging is pinned to `LogLevel.Critical` to silence expected 1006 closures on route-away.
+  (not proxied). Both the hub URL and the handshake token come from `getSignalRTokenAction()` on every
+  (re)connect (via an `accessTokenFactory`, so `withAutomaticReconnect()` always re-mints) —
+  `SIGNALR_HUB_URL` is a server-only env var, not `NEXT_PUBLIC_`-inlined, so changing it needs only a
+  server restart. The token is **not the session JWT**: the action calls `POST auth/token/hub`
+  (`signalr.api.ts`) for a purpose-built ~120s token scoped to the hub audience (`uid`+`jti` only),
+  which the backend rejects on `/api`. It first refreshes a near-expiry session so the (authenticated)
+  mint call succeeds. This is the one place a token is readable by browser JS — a deliberate, now
+  materially narrowed, exception to the httpOnly-cookie invariant. Failed connects retry after 30s;
+  logging is pinned to `LogLevel.Critical` to silence expected 1006 closures on route-away.
 
 - **A Popover nested inside a Dialog portals into the Dialog's own node, not `document.body`.**
   `dialog.tsx` centers via a flex wrapper (not a `transform`, which would break a nested Popover's
@@ -303,4 +307,4 @@ none exists. `pnpm-workspace.yaml` only configures build-script approval, not a 
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-07_
+_Last synced: 2026-09-09_

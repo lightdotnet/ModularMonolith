@@ -2,35 +2,36 @@
 
 ## Package References
 
-Package versions are centrally managed via the root `Directory.Packages.props` (`ManagePackageVersionsCentrally=true`) — individual `.csproj` files reference packages by name only, with no `Version` attribute. Most `Lightsoft.*` packages share one version via a single `$(LightVersion)` MSBuild property; `Lightsoft.Mediator`, `Lightsoft.Result`, and `Lightsoft.EventBus`/`Lightsoft.EventBus.MassTransit.RabbitMQ` are pinned on their own version lines instead. Most `Microsoft.AspNetCore.*`/EF Core packages similarly share a single `$(AspnetVersion)` property. `tests/Framework.Tests`, `tests/Identity.Tests`, `tests/Organization.Tests`, `tests/Approval.Tests`, and `tests/LeaveManagement.Tests` are the only opt-outs (`ManagePackageVersionsCentrally=false`) and pin their own package versions directly in their `.csproj` files. Exact version numbers are intentionally omitted below — check `Directory.Packages.props` (and the five test `.csproj` files) for current pins rather than trusting a number here.
+Package versions are centrally managed via the root `Directory.Packages.props` (`ManagePackageVersionsCentrally=true`) — individual `.csproj` files reference packages by name only, with no `Version` attribute. Most `Lightsoft.*` packages share one `$(LightVersion)` property; `Lightsoft.Mediator`, `Lightsoft.Result`, and `Lightsoft.EventBus`/`Lightsoft.EventBus.MassTransit.RabbitMQ` are pinned separately. Most `Microsoft.AspNetCore.*`/EF Core packages share `$(AspnetVersion)`. `tests/Framework.Tests`, `tests/Identity.Tests`, `tests/Organization.Tests`, `tests/Approval.Tests`, and `tests/LeaveManagement.Tests` opt out (`ManagePackageVersionsCentrally=false`) and pin their own versions. Exact numbers are intentionally omitted below — check `Directory.Packages.props` (and the five test `.csproj` files).
 
 | Project | Packages | Notes |
 |---|---|---|
 | Shared | FluentValidation, Lightsoft.AspNetCore.Authorization, Lightsoft.EventBus, Lightsoft.Extensions, Lightsoft.Mediator, Lightsoft.Result, Lightsoft.SharedKernel, Mapster | `Lightsoft.EventBus` has no usage found in `Shared` — see `../known-debt.md` (dependency hygiene). |
 | Infrastructure | AspNetCore.HealthChecks.UI.Client, Lightsoft.AspNetCore.Extensions, Lightsoft.AspNetCore.Modularity, Lightsoft.FileGenerator, Lightsoft.Serilog | `Lightsoft.FileGenerator` has no usage found here either — see `../known-debt.md`. |
-| Persistence | Lightsoft.EntityFrameworkCore, Microsoft.EntityFrameworkCore.InMemory, Microsoft.EntityFrameworkCore.Sqlite, Microsoft.EntityFrameworkCore.SqlServer, Npgsql.EntityFrameworkCore.PostgreSQL, SQLitePCLRaw.lib.e_sqlite3 | One EF Core provider package per supported `DbProvider` value; `SQLitePCLRaw.lib.e_sqlite3` (Sqlite native bundle) is declared but not directly used in code — a transitive dependency of `Microsoft.EntityFrameworkCore.Sqlite`. |
-| Identity.Contracts | Lightsoft.Result | |
-| Identity.Api | Lightsoft.ActiveDirectory, Lightsoft.SharedKernel, Microsoft.AspNetCore.Identity.EntityFrameworkCore | Several other vendor types it uses (`Lightsoft.AspNetCore.Authorization`, `Lightsoft.Result`, `Lightsoft.Extensions`, `Lightsoft.Mediator`, `Light.EntityFrameworkCore.Extensions.WhereIf`) ride in transitively via `ProjectReference`s rather than being declared directly — see `../known-debt.md` (dependency hygiene). |
-| Notifications.Contracts | (none — no direct `<PackageReference>`) | The `Light.AspNetCore.Authorization` types it uses (`IPermissionDefinitionProvider`, permission attributes) ride in transitively via its `ProjectReference` to `Shared`. |
-| Notifications.Api | Lightsoft.SmtpMail | Its only direct package reference; everything else it uses (`Light.EntityFrameworkCore.Extensions`, `Light.Specification`, `Mapster`, `Microsoft.AspNetCore.SignalR` — the last a shared-framework reference, not a NuGet package) rides in transitively via `Infrastructure`/`Persistence`/`Shared`. |
-| Organization.Contracts | Lightsoft.AspNetCore.Authorization | Declared directly (for `IPermissionDefinitionProvider`/`OrganizationPermissionProvider`) — unlike `Notifications.Contracts`, which uses the same vendor type transitively without declaring it. |
-| Organization.Api | Lightsoft.AspNetCore.Authorization, Lightsoft.EntityFrameworkCore, Lightsoft.Mediator, Lightsoft.Result, Mapster | Every vendor package the project directly uses is declared directly — no undeclared-transitive-dependency instance here, unlike `Identity.Api`/`Notifications.Api` (see `../known-debt.md`). |
-| Approval.Contracts | Lightsoft.AspNetCore.Authorization, Lightsoft.Result | Declared directly (for `IPermissionDefinitionProvider`/`ApprovalPermissionProvider` and `IResult`/`IResult<T>`) — same "declare what you use" discipline as `Organization.Contracts`. |
-| Approval.Api | Lightsoft.AspNetCore.Authorization, Lightsoft.EntityFrameworkCore, Lightsoft.Mediator, Lightsoft.Result, Mapster | Every vendor package the project directly uses is declared directly — same positive pattern as `Organization.Api`, no undeclared-transitive-dependency instance. |
-| LeaveManagement.Contracts | Lightsoft.AspNetCore.Authorization, Lightsoft.Result | Declared directly (for `IPermissionDefinitionProvider`/`LeaveManagementPermissionProvider` and `IResult`/`IResult<T>`) — same "declare what you use" discipline as `Organization.Contracts`/`Approval.Contracts`. |
-| LeaveManagement.Api | Lightsoft.AspNetCore.Authorization, Lightsoft.EntityFrameworkCore, Lightsoft.Mediator, Lightsoft.Result, Mapster | Every vendor package the project directly uses is declared directly — same positive pattern as `Organization.Api`/`Approval.Api`, no undeclared-transitive-dependency instance. |
-| StarterKit.WebApi | AspNetCore.HealthChecks.UI.Client, FluentValidation.DependencyInjectionExtensions, Lightsoft.AspNetCore.Swagger, Microsoft.VisualStudio.Azure.Containers.Tools.Targets, Spectre.Console | Uses `Lightsoft.Serilog` too, without declaring it directly — rides in via `Infrastructure`. |
-| Framework.Tests | xunit.v3, xunit.runner.visualstudio, Microsoft.NET.Test.Sdk | Opts out of central package management and pins these directly. |
-| Identity.Tests | xunit.v3, xunit.runner.visualstudio, Microsoft.NET.Test.Sdk, Moq | Same opt-out as `Framework.Tests`, plus `Moq`. |
-| Organization.Tests | xunit.v3, xunit.runner.visualstudio, Microsoft.NET.Test.Sdk, Moq | Same opt-out/package set as `Identity.Tests`. Uses `Moq` to mock `Identity.Contracts.Services.IUserService` in the employee-login command tests; everything else runs against a real Sqlite in-memory `OrganizationDbContext` (`OrganizationTestHost`). |
-| Approval.Tests | xunit.v3, xunit.runner.visualstudio, Microsoft.NET.Test.Sdk, Moq | Same opt-out/package set as `Identity.Tests`/`Organization.Tests`. |
-| LeaveManagement.Tests | xunit.v3, xunit.runner.visualstudio, Microsoft.NET.Test.Sdk, Moq | Same opt-out/package set as `Identity.Tests`/`Organization.Tests`/`Approval.Tests`. Uses `Moq` to mock `Organization.Contracts.Services.IOrgDirectoryService` and `Approval.Contracts.Services.IApprovalService` — both real cross-module boundaries, same rationale as `Organization.Tests` mocking `IUserService`; everything else runs against a real Sqlite in-memory `LeaveManagementDbContext` (`LeaveManagementTestHost`). |
+| Persistence | Lightsoft.EntityFrameworkCore, Microsoft.EntityFrameworkCore.InMemory, Microsoft.EntityFrameworkCore.Sqlite, Microsoft.EntityFrameworkCore.SqlServer, Npgsql.EntityFrameworkCore.PostgreSQL, SQLitePCLRaw.lib.e_sqlite3 | One EF Core provider package per supported `DbProvider` value; `SQLitePCLRaw.lib.e_sqlite3` is a transitive of `Microsoft.EntityFrameworkCore.Sqlite`. |
+| Identity.Contracts | Lightsoft.Mediator, Lightsoft.Result | `Lightsoft.Mediator` for `INotification` on the integration events; `Lightsoft.Result` for the service return types. The `Lightsoft.AspNetCore.Authorization` types used by `IdentityPermissionProvider` still ride in transitively via `Shared` — see `../known-debt.md`. |
+| Identity.Api | Lightsoft.ActiveDirectory, Lightsoft.SharedKernel, Microsoft.AspNetCore.Identity.EntityFrameworkCore, Microsoft.Extensions.Identity.Core | Several vendor types it uses (`Lightsoft.AspNetCore.Authorization`, `Lightsoft.Result`, `Lightsoft.Extensions`, `Lightsoft.Mediator`, `Light.EntityFrameworkCore.Extensions.WhereIf`) ride in transitively via `ProjectReference`s rather than being declared directly — see `../known-debt.md`. |
+| Identity.Web | FluentValidation.DependencyInjectionExtensions, Microsoft.AspNetCore.Authentication.OpenIdConnect | Razor Pages login host inside the Identity module. `OpenIdConnect` backs the Microsoft Entra ID external-login scheme; `FluentValidation.DependencyInjectionExtensions` registers validators in the standalone-host composition. |
+| Notifications.Contracts | (none — no direct `<PackageReference>`) | The `Light.AspNetCore.Authorization` types it uses ride in transitively via its `ProjectReference` to `Shared`. |
+| Notifications.Api | Lightsoft.SmtpMail | Its only direct package reference; everything else (`Light.EntityFrameworkCore.Extensions`, `Light.Specification`, `Mapster`, `Microsoft.AspNetCore.SignalR`) rides in transitively. |
+| Organization.Contracts | Lightsoft.AspNetCore.Authorization | Declared directly. |
+| Organization.Api | Lightsoft.AspNetCore.Authorization, Lightsoft.EntityFrameworkCore, Lightsoft.Mediator, Lightsoft.Result, Mapster | Every vendor package it directly uses is declared directly. |
+| Approval.Contracts | Lightsoft.AspNetCore.Authorization, Lightsoft.Mediator, Lightsoft.Result | All declared directly. `Lightsoft.Mediator` for `INotification` on `ApprovalFinalizedIntegrationEvent`. |
+| Approval.Api | Lightsoft.AspNetCore.Authorization, Lightsoft.EntityFrameworkCore, Lightsoft.Mediator, Lightsoft.Result, Mapster | Every vendor package it directly uses is declared directly. |
+| LeaveManagement.Contracts | Lightsoft.AspNetCore.Authorization, Lightsoft.Result | Declared directly. |
+| LeaveManagement.Api | Lightsoft.AspNetCore.Authorization, Lightsoft.EntityFrameworkCore, Lightsoft.Mediator, Lightsoft.Result, Mapster | Every vendor package it directly uses is declared directly. |
+| StarterKit.WebApi | AspNetCore.HealthChecks.UI.Client, FluentValidation.DependencyInjectionExtensions, Lightsoft.AspNetCore.Extensions, Lightsoft.AspNetCore.Swagger, Microsoft.AspNetCore.Authentication.JwtBearer, Microsoft.VisualStudio.Azure.Containers.Tools.Targets, Spectre.Console | `Microsoft.AspNetCore.Authentication.JwtBearer` backs the host-owned Bearer + `"HubBearer"` schemes in `Authentication/ApiAuthenticationExtensions`. Uses `Lightsoft.Serilog` without declaring it (rides in via `Infrastructure`). |
+| Framework.Tests | xunit.v3, xunit.runner.visualstudio, Microsoft.NET.Test.Sdk | Opts out of central package management. |
+| Identity.Tests | xunit.v3, xunit.runner.visualstudio, Microsoft.NET.Test.Sdk, Moq | Same opt-out, plus `Moq`. |
+| Organization.Tests | xunit.v3, xunit.runner.visualstudio, Microsoft.NET.Test.Sdk, Moq | Mocks `Identity.Contracts.Services.IUserService` in the employee-login tests; else runs against a real Sqlite in-memory `OrganizationDbContext`. |
+| Approval.Tests | xunit.v3, xunit.runner.visualstudio, Microsoft.NET.Test.Sdk, Moq | Same opt-out/package set. |
+| LeaveManagement.Tests | xunit.v3, xunit.runner.visualstudio, Microsoft.NET.Test.Sdk, Moq | Mocks `IOrgDirectoryService` and `IApprovalService`; else runs against a real Sqlite in-memory `LeaveManagementDbContext`. |
 
-This undeclared-transitive-dependency pattern (a project using a vendor type without declaring the package itself, riding in via a `ProjectReference`) recurs three times in the repo — `Identity.Api`, `Identity.Contracts`, and `Notifications.Contracts` each have one instance. `Organization.Contracts`/`Organization.Api`, `Approval.Contracts`/`Approval.Api`, and `LeaveManagement.Contracts`/`LeaveManagement.Api` do not repeat it — all six declare every vendor package they directly use. See `../known-debt.md` for the full list and the recommendation to declare packages a project actually uses directly.
+The undeclared-transitive-dependency pattern (a project using a vendor type without declaring the package, riding in via a `ProjectReference`) still recurs in `Identity.Api`, `Identity.Contracts` (for `Lightsoft.AspNetCore.Authorization` only — `Mediator`/`Result` are declared), and `Notifications.Contracts`. `Organization`/`Approval`/`LeaveManagement` (both `.Contracts` and `.Api`) don't repeat it — `Approval.Contracts` now declares `Lightsoft.Mediator` directly for its integration event. See `../known-debt.md`.
 
 ## Circular References
 
-None found. `Shared` is the only true leaf (no `ProjectReference`s of its own); every module's `Contracts` project — `Identity.Contracts`, `Notifications.Contracts`, `Organization.Contracts`, `Approval.Contracts`, `LeaveManagement.Contracts` — references `Shared`, so none of them are true leaves either; `Identity.Contracts` references it solely to reach a transitive package (see Package References above). Dependency direction is one-way throughout: `Api`/`Contracts` projects → `Infrastructure`/`Persistence` → `Shared`, and `StarterKit.WebApi` (composition-root host) → all five business modules. No project reference cycle exists anywhere in the graph.
+None found. `Shared` is the only true leaf (no `ProjectReference`s). Every module's `Contracts` project references `Shared`, so none of them is a true leaf either. Dependency direction is one-way throughout: `Api`/`Contracts` projects → `Infrastructure`/`Persistence` → `Shared`; `Identity.Web` → `Identity.Api` (intra-module, inside the Identity bounded context); and `StarterKit.WebApi` (composition-root host) → all five business modules plus `Identity.Web`. No project-reference cycle exists anywhere.
 
 ```text
 Infrastructure -> Shared
@@ -39,11 +40,13 @@ Identity.Contracts -> Shared
 Identity.Api -> Identity.Contracts
 Identity.Api -> Infrastructure
 Identity.Api -> Persistence
+Identity.Web -> Identity.Api
+Identity.Web -> Infrastructure
 Notifications.Contracts -> Shared
 Notifications.Api -> Notifications.Contracts
 Notifications.Api -> Infrastructure
 Notifications.Api -> Persistence
-Identity.Api -> Notifications.Contracts
+Notifications.Api -> Identity.Contracts
 Organization.Contracts -> Shared
 Organization.Api -> Organization.Contracts
 Organization.Api -> Infrastructure
@@ -61,7 +64,9 @@ LeaveManagement.Api -> Persistence
 LeaveManagement.Api -> Approval.Contracts
 LeaveManagement.Api -> Organization.Contracts
 StarterKit.WebApi -> Identity.Api
+StarterKit.WebApi -> Identity.Web
 StarterKit.WebApi -> Notifications.Api
+StarterKit.WebApi -> Notifications.Contracts
 StarterKit.WebApi -> Organization.Api
 StarterKit.WebApi -> Approval.Api
 StarterKit.WebApi -> LeaveManagement.Api
@@ -87,19 +92,23 @@ LeaveManagement.Tests -> Shared
 
 ## Cross-Module Boundary Violations (backend only)
 
-None found. Five business-module-to-business-module dependencies exist, all compliant (each reaches only the other module's `Contracts` seam, never its `.Api` internals):
+None found. `Identity.Web → Identity.Api` is a direct project reference into another project's internals, but both projects belong to the **same module** (the Identity bounded context), so it is not a cross-module edge.
 
-- `Identity.Api` references `Notifications.Contracts`, consumed by `UserCreatedEventHandler` for a welcome-email side effect via `IMailService`.
-- `Organization.Api` references `Identity.Contracts`, consumed by `CreateEmployeeLoginCommandHandler`/`LinkEmployeeLoginCommandHandler`/`UnlinkEmployeeLoginCommandHandler` via `IUserService`, to create or link an Identity login for an employee and store the resulting `User.Id` as an opaque string on `Employee.UserId` (no FK — the same opaque-reference pattern `Notifications.Notification.FromUserId`/`ToUserId` already uses against `Identity`), plus stamping/clearing that user's `employee_id` claim via `IUserService.SetClaimAsync`.
-- `Approval.Api` references `Notifications.Contracts`, consumed by `ApprovalStepPendingEventHandler`/`ApprovalFinalizedEventHandler` via `INotificationService.SendAsync`, to notify the relevant approver/requester when a step becomes pending or a request is finalized.
-- `LeaveManagement.Api` references `Approval.Contracts`, consumed by every `Application/LeaveRequests/{Commands,Queries}` handler that touches the approval workflow via `IApprovalService` (`CreateAsync`/`CancelAsync`/`GetByRequestAsync`) — LeaveManagement never runs its own approval mechanics.
-- `LeaveManagement.Api` references `Organization.Contracts`, consumed by the same handlers via `IOrgDirectoryService` (`GetApproverCandidatesAsync`/`GetEmployeeNameAsync`) to resolve eligible approvers and display names from the org hierarchy without reaching into `Organization.Api`'s internals.
+Five business-module-to-business-module dependencies exist, all compliant (each reaches only the other module's `Contracts` seam):
 
-None of the reverse directions exist: `Notifications` references nothing belonging to `Identity`, `Organization`, `Approval`, or `LeaveManagement`; `Identity`/`Notifications`/`Approval` reference nothing belonging to `Organization`; `Identity`/`Notifications`/`Organization` reference nothing belonging to `Approval`; and no module besides `LeaveManagement.Api` references `Approval.Contracts`/`Organization.Contracts` for this pairing, nor does any module reference `LeaveManagement.Api`/`LeaveManagement.Contracts` at all yet. See `modules/Identity.md`, `modules/Notifications.md`, `modules/Organization.md`, `modules/Approval.md`, and `modules/LeaveManagement.md` for full detail.
+- `Notifications.Api` references `Identity.Contracts`, consumed by `UserCreatedIntegrationEventHandler`/`ExternalUserProvisionedIntegrationEventHandler` to send a (SSO-)welcome email in reaction to the `UserCreatedIntegrationEvent` / `ExternalUserProvisionedIntegrationEvent` that Identity publishes. **This edge replaced the former `Identity.Api → Notifications.Contracts` edge** — the welcome-mail side effect moved from Identity into Notifications, and the direction flipped.
+- `Organization.Api` references `Identity.Contracts`, consumed by the employee-login command handlers via `IUserService` (create/link an Identity login, store `User.Id` as an opaque string on `Employee.UserId`) and `IUserService.SetClaimAsync` (stamp/clear the `employee_id` claim).
+- `Approval.Api` references `Notifications.Contracts`, consumed by `ApprovalStepPendingEventHandler`/`ApprovalFinalizedEventHandler` via `INotificationService.SendAsync`.
+- `LeaveManagement.Api` references `Approval.Contracts`, consumed by every approval-touching handler via `IApprovalService`.
+- `LeaveManagement.Api` references `Organization.Contracts`, consumed by the same handlers via `IOrgDirectoryService`.
+
+`Approval.Contracts` also defines `ApprovalFinalizedIntegrationEvent` (an `INotification`), published by `ApprovalService` when a request is finalized/cancelled. No in-repo module subscribes to it yet — `LeaveManagement` still reconciles by polling `IApprovalService.GetByRequestAsync` on read — so this is a latent seam, not a live cross-module edge.
+
+None of the reverse directions exist. `Identity.Api` now references **no** other business module. See the per-module docs for full detail.
 
 ## Notes
 
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-07_
+_Last synced: 2026-09-09_

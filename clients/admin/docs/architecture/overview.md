@@ -48,7 +48,7 @@ routes, backend contract surface, and the auth flow.
   `*-action.ts` Server Actions are one file per action (including read-only ones a Client Component
   needs). Whole-list reads happen in async Server Components; writes via a Server Action.
   `modules/notifications` is the one exception — a browser-direct SignalR WebSocket authenticated
-  with a short-lived server-issued token. See [architecture.md § Key Design Patterns](./architecture.md#key-design-patterns)
+  with a short-lived, hub-scoped token. See [architecture.md § Key Design Patterns](./architecture.md#key-design-patterns)
   for the API-layer, DataTable-consumption, and lazy-fetch patterns.
 - **State management**: local component state + React Context, no global store. `*-data-table.tsx`
   components drive search/pagination through URL `searchParams`; dialogs use `useActionState` + a
@@ -89,14 +89,15 @@ Real, but partial. `lib/server/api-clients.ts` registers five backend clients �
 `lib/server/backend-api.ts`'s `createBackendApiClient(client)` factory produces five ready instances
 (`identityApi` … `leaveManagementApi`); auth is attached by a request-handler pipeline
 (`bearerTokenHandler` reads the ambient session), not a passed token. The five backends are logically
-separate modules currently co-hosted in one process (`StarterKit.WebApi`, `http://localhost:5000`).
+separate modules currently co-hosted in one process (`StarterKit.WebApi`).
 Error handling, the envelope contract, and the permanent-vs-transient refresh-failure distinction are
 covered in [architecture.md § Key Design Patterns](./architecture.md#key-design-patterns).
 
 Endpoints this client consumes, by module:
 
 - **auth** — `auth/token/get`, `auth/token/refresh` (`modules/identity/auth/api/token.api.ts`,
-  explicit `client: Identity`).
+  explicit `client: Identity`); `auth/token/hub` (POST, authenticated — mints the short-lived
+  hub-scoped token for the SignalR handshake, `modules/notifications/api/signalr.api.ts`).
 - **user-profile** — `user_profile` (GET), `user_profile/token/{list,revoke}`.
 - **users** — `user/search`, `user` (GET-all / PUT / DELETE), get-by-id, create, force-password,
   `user/get_domain_user/{userName}` (AD lookup). `user/search` also backs the three on-demand
@@ -104,7 +105,7 @@ Endpoints this client consumes, by module:
 - **roles** — `role` (GET-all / POST / PUT / DELETE), get-by-id.
 - **permissions** — `permissions` (the definable-permission catalog for the Roles edit dialog).
 - **notifications** — `notification` (admin GET/POST), `user_notification` (self-scoped
-  GET/mark-read/count), plus a WebSocket to `/signalr-hub`.
+  GET/mark-read/count), plus a browser-direct WebSocket to `/signalr-hub` (`SIGNALR_HUB_URL`).
 - **companies** — `company` (paged search / POST / PUT / DELETE), get-by-id.
 - **departments** — `org_unit/company/{id}/tree`, `org_unit/{id}` (GET/PUT), `org_unit/{id}/move`,
   `org_unit` (POST), `org_unit/{id}` (DELETE), `org_unit/{id}/{employee,manager}`; `employee_level/company/{id}`
@@ -158,9 +159,15 @@ Cookie-based session, AES-256-GCM encrypted at rest (`TOKEN_ENCRYPTION_KEY`), wi
 7. **`getSession()`** reads and decrypts the cookie (no fetch); `resolveSession()` is a thin
    passthrough used by the dashboard layout and every gated page.
 
-`get-signalr-token-action.ts` also calls `refreshSessionIfNearExpiry()` before handing the browser a
-short-lived access token for the SignalR handshake (the one place the token is browser-readable).
-`token-cipher.ts` uses Node's `crypto` and `proxy.ts` has no explicit runtime pin — see
+**SignalR handshake token.** `getSignalRTokenAction()` (`modules/notifications/api/get-signalr-token-action.ts`)
+first calls `refreshSessionIfNearExpiry()` so the session bearer is valid (the mint call is
+authenticated and `proxy.ts` skips `/api` paths), then calls `getHubToken()` →
+`POST auth/token/hub` for a **dedicated hub-audience-scoped token** (~120s, `uid`+`jti` only) — not
+the session access token. It returns that token plus the server-resolved `SIGNALR_HUB_URL`.
+`use-notifications.ts` passes an `accessTokenFactory` that re-invokes the action on every (re)connect,
+so `withAutomaticReconnect()` always gets a fresh short-lived token. This is the one place a token is
+readable by browser JS, and it is now a purpose-built token that is rejected on `/api`. `token-cipher.ts`
+uses Node's `crypto` and `proxy.ts` has no explicit runtime pin — see
 [architecture.md § Known Risks](./architecture.md#known-architectural-risks--debt).
 
 ## Notes
@@ -168,4 +175,4 @@ short-lived access token for the SignalR handshake (the one place the token is b
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-07_
+_Last synced: 2026-09-09_

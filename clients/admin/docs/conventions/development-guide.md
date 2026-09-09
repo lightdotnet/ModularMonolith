@@ -10,19 +10,22 @@ How to set up, run, and make common changes to `clients/admin`. Architectural ba
   presumed target — inferred, not enforced.
 - **pnpm**: required (`pnpm-lock.yaml` is the only lockfile). Version not pinned (no `packageManager`).
 - **A reachable backend**: login, profile, notifications, and every feature page make real HTTP calls.
-  All five `*_API_BASE_URL` vars must point at a running instance (currently one co-hosted backend at
-  `http://localhost:5000`). SignalR notifications additionally need the backend reachable **directly
-  from the browser** (`SIGNALR_HUB_URL` resolvable + backend CORS allowing the admin origin).
+  All five `*_API_BASE_URL` vars must point at a running instance (currently one co-hosted backend).
+  SignalR notifications additionally need the backend reachable **directly from the browser**
+  (`SIGNALR_HUB_URL` resolvable + backend CORS allowing the admin origin).
 
 ## Scripts
 
 ```bash
-pnpm dev     # next dev — default port 3000
+pnpm dev     # cross-env NODE_OPTIONS=--use-system-ca next dev — default port 3000
 pnpm build   # next build — output: "standalone" (per next.config.ts)
-pnpm start   # next start — serves a prior pnpm build
+pnpm start   # cross-env NODE_OPTIONS=--use-system-ca next start — serves a prior pnpm build
 pnpm lint    # eslint (eslint.config.mjs)
 ```
 
+`dev` and `start` run through `cross-env` (a dev dependency) to set `NODE_OPTIONS=--use-system-ca`,
+so Node's `fetch` trusts certificates from the OS trust store — needed when a backend base URL is
+`https://` served with a locally-trusted dev certificate (e.g. the ASP.NET Core dev HTTPS cert).
 The `next dev` bundler is not pinned (no `--turbopack` flag, no config override).
 
 ## Environment
@@ -84,9 +87,9 @@ and the auth flow in [§ Auth Flow](../architecture/overview.md#auth-flow). Beyo
 | Session cookie: crypto, chunking, refresh | `lib/server/{session-cookie,token-cipher,stored-session,cookie-codec,session,jwt,build-session-claims,refresh-session,refetch-profile,persist-session-cookie}.ts` |
 | Session freshness gate | `components/layout/session-gate.tsx` → `modules/identity/auth/api/ensure-fresh-session-action.ts`. `src/proxy.ts` is only the 7-day cap + `/login` redirect |
 | Deploy-stale-tab recovery | `lib/shared/deployment-recovery.ts`, `components/layout/deployment-recovery-notice.tsx`, both `error.tsx` boundaries, `app/api/health/route.ts` |
-| Server-only API plumbing | `lib/server/{http,backend-api,api-clients,call-guard,config}.ts`, `lib/server/http-handlers/bearer-token-handler.ts` |
+| Server-only API plumbing | `lib/server/{http,backend-api,api-clients,call-guard,config}.ts`, `lib/server/http-handlers/bearer-token-handler.ts`. `http.ts` emits `[api]` request traces to the console **in development only** (never bodies/query/headers — those carry tokens) |
 | Permission checks | `lib/shared/authorization.ts` (logic), `lib/server/authorization.ts` (wrapper), `lib/server/require-permission.tsx` (page gate), `components/shared/access-denied.tsx` |
-| Real-time notifications | `modules/notifications/hooks/use-notifications.ts`, `context/notifications-provider.tsx`, `components/{notification-bell,notification-inbox}.tsx`, `api/get-signalr-token-action.ts` |
+| Real-time notifications | `modules/notifications/hooks/use-notifications.ts`, `context/notifications-provider.tsx`, `components/{notification-bell,notification-inbox}.tsx`, `api/{get-signalr-token-action,signalr.api}.ts` |
 | Reusable list/table block | `components/shared/data-table/` |
 | Command palette (⌘K) | `components/command/*`, wired via `components/shared/search-box.tsx` |
 | Nav structure | each feature/module's `constants/nav-item.ts` + `src/constants/nav-items.ts` (assembly), `lib/shared/menu.ts` |
@@ -98,4 +101,4 @@ and the auth flow in [§ Auth Flow](../architecture/overview.md#auth-flow). Beyo
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-07_
+_Last synced: 2026-09-09_
