@@ -68,7 +68,12 @@ export function useNotifications() {
 
       const connection = new HubConnectionBuilder()
         .withUrl(tokenState.hubUrl, {
-          accessTokenFactory: () => tokenState.accessToken,
+          // Re-mint on every (re)connect instead of capturing once: SignalR
+          // awaits an async accessTokenFactory and invokes it again for each
+          // negotiate, so withAutomaticReconnect() gets a fresh short-lived
+          // hub token rather than reusing a now-expired one.
+          accessTokenFactory: async () =>
+            (await getSignalRTokenAction())?.accessToken ?? "",
           transport: HttpTransportType.WebSockets,
         })
         .withAutomaticReconnect()
