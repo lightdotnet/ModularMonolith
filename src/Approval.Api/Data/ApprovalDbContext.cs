@@ -1,3 +1,4 @@
+using Light.Mediator;
 using StarterKit.Approval.Api.Domain.Approvals;
 using StarterKit.Persistence.Context;
 using StarterKit.Persistence.Extensions;
@@ -8,6 +9,7 @@ namespace StarterKit.Approval.Api.Data;
 public class ApprovalDbContext(
     ICurrentUser currentUser,
     IDateTime clock,
+    IPublisher publisher,
     DbContextOptions<ApprovalDbContext> options) :
     BaseDbContext(options)
 {
@@ -21,14 +23,23 @@ public class ApprovalDbContext(
 
     public override int SaveChanges()
     {
+        // The Approval write path is 100% async (ApprovalService only ever calls SaveChangesAsync),
+        // so this override stays audit-only and does not dispatch domain events.
         this.AuditEntries(currentUser.UserId, clock.AuditTime, false);
+        RotateConcurrencyTokens();
         return base.SaveChanges();
     }
 
-    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         this.AuditEntries(currentUser.UserId, clock.AuditTime, false);
-        return base.SaveChangesAsync(cancellationToken);
+        RotateConcurrencyTokens();
+
+        var result = await base.SaveChangesAsync(cancellationToken);
+
+        await publisher.DispatchDomainEvents(this);
+
+        return result;
     }
 
     protected override void ConfigureModel(ModelBuilder builder)
@@ -39,11 +50,16 @@ public class ApprovalDbContext(
         {
             entity.ToTable(name: "ApprovalRequests");
 
-            entity.HasIndex(x => new { x.RequestType, x.RequestId });
+            entity.HasIndex(x => new { x.RequestType, x.RequestId, x.Created });
 
             entity.HasIndex(x => x.RequesterUserId);
 
             entity.HasIndex(x => x.DocumentTypeId);
+
+            entity.Property(x => x.ConcurrencyToken)
+                .IsConcurrencyToken()
+                .HasMaxLength(32)
+                .IsRequired();
 
             entity.ConfigureAuditableEntity();
 
@@ -67,6 +83,14 @@ public class ApprovalDbContext(
                 .WithMany()
                 .HasForeignKey(x => x.DocumentTypeId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasMany(x => x.Steps)
+                .WithOne(x => x.ApprovalRequest)
+                .HasForeignKey(x => x.ApprovalRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Navigation(x => x.Steps)
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
         });
 
         builder.Entity<ApprovalStep>(entity =>
@@ -88,11 +112,6 @@ public class ApprovalDbContext(
             entity.Property(x => x.ApproverName).HasMaxLength(256);
 
             entity.Property(x => x.Comment).HasMaxLength(1000);
-
-            entity.HasOne(x => x.ApprovalRequest)
-                .WithMany(x => x.Steps)
-                .HasForeignKey(x => x.ApprovalRequestId)
-                .OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<ApprovalDocumentType>(entity =>
@@ -109,5 +128,14 @@ public class ApprovalDbContext(
 
             entity.Property(x => x.Description).HasMaxLength(1000);
         });
+    }
+
+    private void RotateConcurrencyTokens()
+    {
+        foreach (var entry in ChangeTracker.Entries<ApprovalRequest>()
+            .Where(e => e.State == EntityState.Modified))
+        {
+            entry.Entity.RotateConcurrencyToken();
+        }
     }
 }

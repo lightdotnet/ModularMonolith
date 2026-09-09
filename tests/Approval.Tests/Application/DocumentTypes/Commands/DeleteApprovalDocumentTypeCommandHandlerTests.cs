@@ -30,15 +30,13 @@ public class DeleteApprovalDocumentTypeCommandHandlerTests
         await host.Context.ApprovalDocumentTypes.AddAsync(docType, TestContext.Current.CancellationToken);
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         await host.Context.ApprovalRequests.AddAsync(
-            new ApprovalRequest
-            {
-                RequestType = "Test",
-                RequestId = "req-1",
-                RequesterUserId = "requester",
-                RequesterEmployeeId = "emp-1",
-                Title = "Title",
-                DocumentTypeId = docType.Id,
-            },
+            ApprovalEntityBuilder.Request(
+                requestType: "Test",
+                requestId: "req-1",
+                requesterUserId: "requester",
+                title: "Title",
+                requesterEmployeeId: "emp-1",
+                documentTypeId: docType.Id),
             TestContext.Current.CancellationToken);
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         var handler = new DeleteApprovalDocumentTypeCommandHandler(host.Context);

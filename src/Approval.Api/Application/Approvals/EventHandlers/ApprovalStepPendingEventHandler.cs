@@ -19,7 +19,7 @@ internal class ApprovalStepPendingEventHandler(
             {
                 Title = "Approval requested",
                 Message = $"\"{notification.Title}\" is waiting for your approval.",
-                Url = notification.DeepLinkUrl ?? ApprovalDeepLink.RequestDetail(notification.ApprovalRequestId),
+                Url = notification.DeepLinkUrl,
             },
             cancellationToken);
 }

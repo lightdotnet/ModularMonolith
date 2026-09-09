@@ -19,7 +19,7 @@ internal class ApprovalFinalizedEventHandler(
             {
                 Title = $"Request {notification.Status.ToString().ToLowerInvariant()}",
                 Message = $"\"{notification.Title}\" has been {notification.Status.ToString().ToLowerInvariant()}.",
-                Url = notification.DeepLinkUrl ?? ApprovalDeepLink.RequestDetail(notification.ApprovalRequestId),
+                Url = notification.DeepLinkUrl,
             },
             cancellationToken);
 }

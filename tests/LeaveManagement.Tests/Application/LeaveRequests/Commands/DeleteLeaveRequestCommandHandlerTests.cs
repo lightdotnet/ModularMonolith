@@ -93,7 +93,7 @@ public class DeleteLeaveRequestCommandHandlerTests
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         var approvalServiceMock = new Mock<IApprovalService>();
         approvalServiceMock
-            .Setup(s => s.CancelAsync("approval-1", It.IsAny<CancellationToken>()))
+            .Setup(s => s.CancelAsync("approval-1", "owner", It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
         var handler = new DeleteLeaveRequestCommandHandler(host.Context, approvalServiceMock.Object);
 
@@ -104,7 +104,7 @@ public class DeleteLeaveRequestCommandHandlerTests
 
         // Assert
         Assert.True(result.IsSuccess);
-        approvalServiceMock.Verify(s => s.CancelAsync("approval-1", It.IsAny<CancellationToken>()), Times.Once);
+        approvalServiceMock.Verify(s => s.CancelAsync("approval-1", "owner", It.IsAny<CancellationToken>()), Times.Once);
         Assert.Empty(host.Context.LeaveRequests);
     }
 

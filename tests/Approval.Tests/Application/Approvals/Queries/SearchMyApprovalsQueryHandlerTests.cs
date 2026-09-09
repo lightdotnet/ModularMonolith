@@ -10,33 +10,25 @@ namespace Approval.Tests.Application.Approvals.Queries;
 public class SearchMyApprovalsQueryHandlerTests
 {
     private static ApprovalRequest NewRequest(
-        string requesterUserId, ApprovalStatus status, int currentLevel, params ApprovalStep[] steps)
-    {
-        return new ApprovalRequest
-        {
-            RequestType = "Test",
-            RequestId = Guid.NewGuid().ToString(),
-            RequesterUserId = requesterUserId,
-            RequesterEmployeeId = requesterUserId,
-            Title = "Title",
-            Status = status,
-            CurrentLevel = currentLevel,
-            Steps = steps.ToList(),
-        };
-    }
+        string requesterUserId, ApprovalStatus status, int currentLevel, params ApprovalStep[] steps) =>
+        ApprovalEntityBuilder.Request(
+            requestType: "Test",
+            requestId: Guid.NewGuid().ToString(),
+            requesterUserId: requesterUserId,
+            title: "Title",
+            status: status,
+            currentLevel: currentLevel,
+            steps: steps,
+            requesterEmployeeId: requesterUserId);
 
     private static ApprovalStep NewStep(
-        int level, string approverUserId, ApprovalStepStatus status, DateTimeOffset? decidedAt = null)
-    {
-        return new ApprovalStep
-        {
-            Level = level,
-            ApproverUserId = approverUserId,
-            ApproverEmployeeId = approverUserId,
-            Status = status,
-            DecidedAt = decidedAt,
-        };
-    }
+        int level, string approverUserId, ApprovalStepStatus status, DateTimeOffset? decidedAt = null) =>
+        ApprovalEntityBuilder.Step(
+            level: level,
+            approverUserId: approverUserId,
+            approverEmployeeId: approverUserId,
+            status: status,
+            decidedAt: decidedAt);
 
     [Fact]
     public async Task Handle_Requested_ShouldReturnOnlyRequestsCreatedByTheUser()
@@ -144,9 +136,9 @@ public class SearchMyApprovalsQueryHandlerTests
         // Arrange
         using var host = new ApprovalTestHost();
         var matching = NewRequest("user-1", ApprovalStatus.Pending, 1, NewStep(1, "approver-1", ApprovalStepStatus.Pending));
-        matching.Title = "Annual leave request";
+        ApprovalEntityBuilder.SetTitle(matching, "Annual leave request");
         var nonMatching = NewRequest("user-1", ApprovalStatus.Pending, 1, NewStep(1, "approver-1", ApprovalStepStatus.Pending));
-        nonMatching.Title = "Expense report";
+        ApprovalEntityBuilder.SetTitle(nonMatching, "Expense report");
         await host.Context.ApprovalRequests.AddRangeAsync(matching, nonMatching);
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         var handler = new SearchMyApprovalsQueryHandler(host.Context);

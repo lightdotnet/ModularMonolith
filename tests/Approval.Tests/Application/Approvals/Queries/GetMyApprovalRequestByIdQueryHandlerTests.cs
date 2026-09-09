@@ -27,17 +27,15 @@ public class GetMyApprovalRequestByIdQueryHandlerTests
     {
         // Arrange
         using var host = new ApprovalTestHost();
-        var entity = new ApprovalRequest
-        {
-            RequestType = "Test",
-            RequestId = "req-1",
-            RequesterUserId = "requester",
-            RequesterEmployeeId = "requester",
-            Title = "Title",
-            Status = ApprovalStatus.Pending,
-            CurrentLevel = 1,
-            Steps = [new ApprovalStep { Level = 1, ApproverUserId = "approver-1", ApproverEmployeeId = "approver-1" }],
-        };
+        var entity = ApprovalEntityBuilder.Request(
+            requestType: "Test",
+            requestId: "req-1",
+            requesterUserId: "requester",
+            title: "Title",
+            status: ApprovalStatus.Pending,
+            currentLevel: 1,
+            steps: [ApprovalEntityBuilder.Step(1, "approver-1", "approver-1")],
+            requesterEmployeeId: "requester");
         await host.Context.ApprovalRequests.AddAsync(entity, TestContext.Current.CancellationToken);
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         var handler = new GetMyApprovalRequestByIdQueryHandler(host.Context);
@@ -54,17 +52,15 @@ public class GetMyApprovalRequestByIdQueryHandlerTests
     {
         // Arrange
         using var host = new ApprovalTestHost();
-        var entity = new ApprovalRequest
-        {
-            RequestType = "Test",
-            RequestId = "req-1",
-            RequesterUserId = "requester",
-            RequesterEmployeeId = "requester",
-            Title = "Title",
-            Status = ApprovalStatus.Pending,
-            CurrentLevel = 1,
-            Steps = [new ApprovalStep { Level = 1, ApproverUserId = "approver-1", ApproverEmployeeId = "approver-1" }],
-        };
+        var entity = ApprovalEntityBuilder.Request(
+            requestType: "Test",
+            requestId: "req-1",
+            requesterUserId: "requester",
+            title: "Title",
+            status: ApprovalStatus.Pending,
+            currentLevel: 1,
+            steps: [ApprovalEntityBuilder.Step(1, "approver-1", "approver-1")],
+            requesterEmployeeId: "requester");
         await host.Context.ApprovalRequests.AddAsync(entity, TestContext.Current.CancellationToken);
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         var handler = new GetMyApprovalRequestByIdQueryHandler(host.Context);
@@ -82,21 +78,19 @@ public class GetMyApprovalRequestByIdQueryHandlerTests
     {
         // Arrange
         using var host = new ApprovalTestHost();
-        var entity = new ApprovalRequest
-        {
-            RequestType = "Test",
-            RequestId = "req-1",
-            RequesterUserId = "requester",
-            RequesterEmployeeId = "requester",
-            Title = "Title",
-            Status = ApprovalStatus.Pending,
-            CurrentLevel = 1,
-            Steps =
+        var entity = ApprovalEntityBuilder.Request(
+            requestType: "Test",
+            requestId: "req-1",
+            requesterUserId: "requester",
+            title: "Title",
+            status: ApprovalStatus.Pending,
+            currentLevel: 1,
+            steps:
             [
-                new ApprovalStep { Level = 1, ApproverUserId = "approver-1", ApproverEmployeeId = "approver-1" },
-                new ApprovalStep { Level = 2, ApproverUserId = "approver-2", ApproverEmployeeId = "approver-2" },
+                ApprovalEntityBuilder.Step(1, "approver-1", "approver-1"),
+                ApprovalEntityBuilder.Step(2, "approver-2", "approver-2"),
             ],
-        };
+            requesterEmployeeId: "requester");
         await host.Context.ApprovalRequests.AddAsync(entity, TestContext.Current.CancellationToken);
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         var handler = new GetMyApprovalRequestByIdQueryHandler(host.Context);
@@ -118,27 +112,16 @@ public class GetMyApprovalRequestByIdQueryHandlerTests
         var documentType = new ApprovalDocumentType { Name = "Purchase order", Code = "PO", IsActive = true };
         await host.Context.ApprovalDocumentTypes.AddAsync(documentType, TestContext.Current.CancellationToken);
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-        var entity = new ApprovalRequest
-        {
-            RequestType = "PO",
-            RequestId = "req-1",
-            RequesterUserId = "requester",
-            RequesterName = "Requester One",
-            Title = "Title",
-            Status = ApprovalStatus.Pending,
-            CurrentLevel = 1,
-            DocumentTypeId = documentType.Id,
-            Steps =
-            [
-                new ApprovalStep
-                {
-                    Level = 1,
-                    ApproverUserId = "approver-1",
-                    ApproverEmployeeId = "emp-1",
-                    ApproverName = "Approver One",
-                },
-            ],
-        };
+        var entity = ApprovalEntityBuilder.Request(
+            requestType: "PO",
+            requestId: "req-1",
+            requesterUserId: "requester",
+            title: "Title",
+            status: ApprovalStatus.Pending,
+            currentLevel: 1,
+            steps: [ApprovalEntityBuilder.Step(1, "approver-1", "emp-1", approverName: "Approver One")],
+            requesterName: "Requester One",
+            documentTypeId: documentType.Id);
         await host.Context.ApprovalRequests.AddAsync(entity, TestContext.Current.CancellationToken);
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         var handler = new GetMyApprovalRequestByIdQueryHandler(host.Context);

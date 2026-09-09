@@ -1,4 +1,5 @@
 using Mapster;
+using Microsoft.Extensions.Logging;
 using StarterKit.Approval.Api.Data;
 using StarterKit.Approval.Api.Domain.Approvals;
 using StarterKit.Approval.Contracts.Services;
@@ -9,60 +10,43 @@ namespace StarterKit.Approval.Api.Services;
 internal class ApprovalService(
     ApprovalDbContext context,
     IPublisher publisher,
-    IDateTime clock) : IApprovalService
+    IDateTime clock,
+    ILogger<ApprovalService> logger) : IApprovalService
 {
+    private const string ConcurrencyConflictMessage =
+        "This approval request was just updated by someone else. Reload and try again.";
+
     public async Task<IResult<string>> CreateAsync(
         CreateApprovalRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request.ApproverChain.Count == 0)
-            return Result<string>.Error("At least one approver level is required.");
-
         if (request.DocumentTypeId is not null
             && !await context.ApprovalDocumentTypes
-                .AnyAsync(x => x.Id == request.DocumentTypeId, cancellationToken))
+                .AnyAsync(x => x.Id == request.DocumentTypeId && x.IsActive, cancellationToken))
         {
-            return Result<string>.Error($"Approval document type {request.DocumentTypeId} not found");
+            return Result<string>.Error(
+                $"Approval document type {request.DocumentTypeId} was not found or is not active.");
         }
 
-        var orderedChain = request.ApproverChain.OrderBy(x => x.Level).ToList();
+        var creation = ApprovalRequest.Create(
+            request.RequestType,
+            request.RequestId,
+            request.RequesterUserId,
+            request.RequesterEmployeeId,
+            request.RequesterName,
+            request.Title,
+            request.Content,
+            request.DeepLinkUrl,
+            request.DocumentTypeId,
+            request.ApproverChain);
 
-        var entity = new ApprovalRequest
-        {
-            RequestType = request.RequestType,
-            RequestId = request.RequestId,
-            RequesterUserId = request.RequesterUserId,
-            RequesterEmployeeId = request.RequesterEmployeeId,
-            RequesterName = request.RequesterName,
-            Title = request.Title,
-            Content = request.Content,
-            DeepLinkUrl = request.DeepLinkUrl,
-            DocumentTypeId = request.DocumentTypeId,
-            CurrentLevel = orderedChain[0].Level,
-            Status = ApprovalStatus.Pending,
-            Steps = [.. orderedChain.Select(step => new ApprovalStep
-            {
-                Level = step.Level,
-                ApproverUserId = step.ApproverUserId,
-                ApproverEmployeeId = step.ApproverEmployeeId,
-                ApproverName = step.ApproverName,
-                Status = ApprovalStepStatus.Pending,
-            })]
-        };
+        if (!creation.IsSuccess)
+            return Result<string>.Error(creation.Message);
+
+        var entity = creation.Data;
 
         await context.ApprovalRequests.AddAsync(entity, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
-
-        var firstStep = entity.Steps.First(s => s.Level == entity.CurrentLevel);
-
-        await publisher.Publish(
-            new ApprovalStepPendingEvent(
-                entity.Id,
-                entity.Title,
-                entity.DeepLinkUrl,
-                firstStep.ApproverUserId,
-                entity.RequesterUserId),
-            cancellationToken);
 
         return Result<string>.Success(entity.Id);
     }
@@ -74,97 +58,71 @@ internal class ApprovalService(
         string? comment,
         CancellationToken cancellationToken = default)
     {
-        var entity = await context.ApprovalRequests
-            .Include(x => x.Steps)
-            .FirstOrDefaultAsync(x => x.Id == approvalRequestId, cancellationToken);
-
-        if (entity is null)
-            return Result.NotFound($"Approval request {approvalRequestId} not found");
-
-        if (entity.Status != ApprovalStatus.Pending)
-            return Result.Error("This approval request has already been finalized.");
-
-        var step = entity.Steps.SingleOrDefault(s => s.Level == entity.CurrentLevel);
-
-        if (step is null)
-            return Result.Error("Current approval step could not be resolved.");
-
-        if (step.ApproverUserId != decidedByUserId)
-            return Result.Error("You are not the assigned approver for this step.");
-
-        if (!approved && string.IsNullOrWhiteSpace(comment))
-            return Result.Error("A reason is required when rejecting a request.");
-
-        step.Comment = comment;
-        step.DecidedAt = clock.AuditTime;
-
-        ApprovalStep? nextStep = null;
-
-        if (!approved)
+        for (var attempt = 0; ; attempt++)
         {
-            step.Status = ApprovalStepStatus.Rejected;
-            entity.Status = ApprovalStatus.Rejected;
-            entity.FinalizedAt = clock.AuditTime;
-        }
-        else
-        {
-            step.Status = ApprovalStepStatus.Approved;
+            var entity = await LoadWithStepsAsync(approvalRequestId, cancellationToken);
 
-            nextStep = entity.Steps
-                .Where(s => s.Level > entity.CurrentLevel)
-                .OrderBy(s => s.Level)
-                .FirstOrDefault();
+            if (entity is null)
+                return Result.NotFound($"Approval request {approvalRequestId} not found");
 
-            if (nextStep is null)
+            var decision = entity.Decide(decidedByUserId, approved, comment, clock.AuditTime);
+
+            if (!decision.IsSuccess)
+                return decision;
+
+            try
             {
-                entity.Status = ApprovalStatus.Approved;
-                entity.FinalizedAt = clock.AuditTime;
+                await context.SaveChangesAsync(cancellationToken);
             }
-            else
+            catch (DbUpdateConcurrencyException)
             {
-                entity.CurrentLevel = nextStep.Level;
+                if (attempt >= 1)
+                    return Result.Conflict(ConcurrencyConflictMessage);
+
+                Detach(entity);
+                continue;
             }
-        }
 
-        await context.SaveChangesAsync(cancellationToken);
+            await PublishFinalizedIntegrationEventAsync(entity, cancellationToken);
 
-        if (entity.Status != ApprovalStatus.Pending)
-        {
-            await publisher.Publish(
-                new ApprovalFinalizedEvent(
-                    entity.Id, entity.Title, entity.DeepLinkUrl, entity.RequesterUserId, decidedByUserId, entity.Status),
-                cancellationToken);
+            return Result.Success();
         }
-        else if (nextStep is not null)
-        {
-            await publisher.Publish(
-                new ApprovalStepPendingEvent(
-                    entity.Id, entity.Title, entity.DeepLinkUrl, nextStep.ApproverUserId, entity.RequesterUserId),
-                cancellationToken);
-        }
-
-        return Result.Success();
     }
 
     public async Task<IResult> CancelAsync(
         string approvalRequestId,
+        string cancelledByUserId,
         CancellationToken cancellationToken = default)
     {
-        var entity = await context.ApprovalRequests
-            .FirstOrDefaultAsync(x => x.Id == approvalRequestId, cancellationToken);
+        for (var attempt = 0; ; attempt++)
+        {
+            var entity = await LoadWithStepsAsync(approvalRequestId, cancellationToken);
 
-        if (entity is null)
-            return Result.NotFound($"Approval request {approvalRequestId} not found");
+            if (entity is null)
+                return Result.NotFound($"Approval request {approvalRequestId} not found");
 
-        if (entity.Status != ApprovalStatus.Pending)
-            return Result.Error("Only a pending approval request can be cancelled.");
+            var cancellation = entity.Cancel(cancelledByUserId, clock.AuditTime);
 
-        entity.Status = ApprovalStatus.Cancelled;
-        entity.FinalizedAt = clock.AuditTime;
+            if (!cancellation.IsSuccess)
+                return cancellation;
 
-        await context.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await context.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (attempt >= 1)
+                    return Result.Conflict(ConcurrencyConflictMessage);
 
-        return Result.Success();
+                Detach(entity);
+                continue;
+            }
+
+            await PublishFinalizedIntegrationEventAsync(entity, cancellationToken);
+
+            return Result.Success();
+        }
     }
 
     public Task<ApprovalRequestDto?> GetByRequestAsync(
@@ -182,5 +140,97 @@ internal class ApprovalService(
             .OrderByDescending(x => x.Created)
             .ProjectToType<ApprovalRequestDto>()
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public Task<ApprovalStatusView?> GetStatusByRequestAsync(
+        string requestType,
+        string requestId,
+        CancellationToken cancellationToken = default)
+    {
+        return context.ApprovalRequests
+            .AsNoTracking()
+            .Where(x => x.RequestType == requestType && x.RequestId == requestId)
+            .OrderByDescending(x => x.Created)
+            .Select(x => new ApprovalStatusView(
+                x.Id,
+                x.RequestType,
+                x.RequestId,
+                x.Status,
+                x.CurrentLevel))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<string, ApprovalStatusView>> GetStatusesByRequestAsync(
+        string requestType,
+        IReadOnlyCollection<string> requestIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (requestIds is null || requestIds.Count == 0)
+            return new Dictionary<string, ApprovalStatusView>();
+
+        var ids = requestIds.Distinct().ToList();
+
+        var rows = await context.ApprovalRequests
+            .AsNoTracking()
+            .Where(x => x.RequestType == requestType && ids.Contains(x.RequestId))
+            .OrderByDescending(x => x.Created)
+            .Select(x => new ApprovalStatusView(
+                x.Id,
+                x.RequestType,
+                x.RequestId,
+                x.Status,
+                x.CurrentLevel))
+            .ToListAsync(cancellationToken);
+
+        // Rows arrive newest-first; GroupBy preserves source order, so First() per group is the
+        // most recent approval request for that source record.
+        return rows
+            .GroupBy(x => x.RequestId)
+            .ToDictionary(g => g.Key, g => g.First());
+    }
+
+    private Task<ApprovalRequest?> LoadWithStepsAsync(
+        string approvalRequestId,
+        CancellationToken cancellationToken) =>
+        context.ApprovalRequests
+            .Include(x => x.Steps)
+            .Where(new ApprovalRequestByIdSpec(approvalRequestId))
+            .FirstOrDefaultAsync(cancellationToken);
+
+    private void Detach(ApprovalRequest entity)
+    {
+        foreach (var step in entity.Steps)
+            context.Entry(step).State = EntityState.Detached;
+
+        context.Entry(entity).State = EntityState.Detached;
+    }
+
+    private async Task PublishFinalizedIntegrationEventAsync(
+        ApprovalRequest entity,
+        CancellationToken cancellationToken)
+    {
+        if (entity.Status == ApprovalStatus.Pending)
+            return;
+
+        // A downstream subscriber fault must never fail the decide/cancel call. The periodic
+        // reconciliation backstop in the owning module covers a dropped delivery.
+        try
+        {
+            await publisher.Publish(
+                new ApprovalFinalizedIntegrationEvent(
+                    entity.RequestType,
+                    entity.RequestId,
+                    entity.Id,
+                    entity.Status),
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Failed to publish {IntegrationEvent} for approval request {ApprovalRequestId}.",
+                nameof(ApprovalFinalizedIntegrationEvent),
+                entity.Id);
+        }
     }
 }

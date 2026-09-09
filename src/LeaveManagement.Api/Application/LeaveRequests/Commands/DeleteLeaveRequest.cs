@@ -35,7 +35,7 @@ internal class DeleteLeaveRequestCommandHandler(
         }
 
         if (entity.Status == LeaveRequestStatus.Pending && entity.ApprovalRequestId is not null)
-            await approvalService.CancelAsync(entity.ApprovalRequestId, cancellationToken);
+            await approvalService.CancelAsync(entity.ApprovalRequestId, entity.UserId, cancellationToken);
 
         context.LeaveRequests.Remove(entity);
         await context.SaveChangesAsync(cancellationToken);

@@ -227,7 +227,7 @@ public class UpdateLeaveRequestCommandHandlerTests
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         var (orgServiceMock, approvalServiceMock) = CreateMocks();
         approvalServiceMock
-            .Setup(s => s.CancelAsync("old-approval", It.IsAny<CancellationToken>()))
+            .Setup(s => s.CancelAsync("old-approval", "owner", It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
         var handler = new UpdateLeaveRequestCommandHandler(host.Context, orgServiceMock.Object, approvalServiceMock.Object);
 
@@ -238,7 +238,7 @@ public class UpdateLeaveRequestCommandHandlerTests
 
         // Assert
         Assert.True(result.IsSuccess);
-        approvalServiceMock.Verify(s => s.CancelAsync("old-approval", It.IsAny<CancellationToken>()), Times.Once);
+        approvalServiceMock.Verify(s => s.CancelAsync("old-approval", "owner", It.IsAny<CancellationToken>()), Times.Once);
         approvalServiceMock.Verify(
             s => s.CreateAsync(It.IsAny<CreateApprovalRequest>(), It.IsAny<CancellationToken>()), Times.Once);
         var updated = await host.Context.LeaveRequests
@@ -278,7 +278,7 @@ public class UpdateLeaveRequestCommandHandlerTests
         // Assert
         Assert.True(result.IsSuccess);
         approvalServiceMock.Verify(
-            s => s.CancelAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            s => s.CancelAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         approvalServiceMock.Verify(
             s => s.CreateAsync(It.IsAny<CreateApprovalRequest>(), It.IsAny<CancellationToken>()), Times.Never);
         var updated = await host.Context.LeaveRequests

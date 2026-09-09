@@ -74,6 +74,12 @@ namespace MSSQL.Approval
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
                     b.Property<string>("Content")
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
@@ -142,7 +148,7 @@ namespace MSSQL.Approval
 
                     b.HasIndex("RequesterUserId");
 
-                    b.HasIndex("RequestType", "RequestId");
+                    b.HasIndex("RequestType", "RequestId", "Created");
 
                     b.ToTable("ApprovalRequests", "approval");
                 });

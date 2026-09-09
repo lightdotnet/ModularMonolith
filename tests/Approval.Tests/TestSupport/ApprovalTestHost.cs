@@ -1,3 +1,4 @@
+using Light.Mediator;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +30,7 @@ public sealed class ApprovalTestHost : IDisposable
         services.AddLogging();
         services.AddSingleton<ICurrentUser>(CurrentUser);
         services.AddSingleton<IDateTime>(DateTime);
+        services.AddSingleton<IPublisher>(Publisher);
         services.AddDbContext<ApprovalDbContext>(options => options.UseSqlite(_connection));
 
         _provider = services.BuildServiceProvider();
@@ -40,6 +42,8 @@ public sealed class ApprovalTestHost : IDisposable
     public FakeCurrentUser CurrentUser { get; }
 
     public FakeDateTime DateTime { get; }
+
+    public RecordingPublisher Publisher { get; } = new();
 
     public ApprovalDbContext Context { get; }
 

@@ -63,7 +63,7 @@ internal class UpdateLeaveRequestCommandHandler(
                 return Result.Error("Please select an approver.");
 
             if (wasPending && entity.ApprovalRequestId is not null)
-                await approvalService.CancelAsync(entity.ApprovalRequestId, cancellationToken);
+                await approvalService.CancelAsync(entity.ApprovalRequestId, entity.UserId, cancellationToken);
 
             var candidates = await orgDirectoryService.GetApproverCandidatesAsync(
                 entity.EmployeeId, cancellationToken);

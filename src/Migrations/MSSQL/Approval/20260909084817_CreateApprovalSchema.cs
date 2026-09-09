@@ -52,6 +52,7 @@ namespace MSSQL.Approval
                     CurrentLevel = table.Column<int>(type: "int", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     FinalizedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    ConcurrencyToken = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
                     Created = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
                     LastModified = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
@@ -120,10 +121,10 @@ namespace MSSQL.Approval
                 column: "RequesterUserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ApprovalRequests_RequestType_RequestId",
+                name: "IX_ApprovalRequests_RequestType_RequestId_Created",
                 schema: "approval",
                 table: "ApprovalRequests",
-                columns: new[] { "RequestType", "RequestId" });
+                columns: new[] { "RequestType", "RequestId", "Created" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ApprovalSteps_ApprovalRequestId",

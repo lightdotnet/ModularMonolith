@@ -1,17 +1,22 @@
 using Approval.Tests.TestSupport;
-using Light.Mediator;
 using Microsoft.EntityFrameworkCore;
-using Moq;
+using Microsoft.Extensions.Logging.Abstractions;
 using StarterKit.Approval.Api.Domain.Approvals;
 using StarterKit.Approval.Api.Services;
 using StarterKit.Approval.Contracts.Approvals;
-using StarterKit.Approval.Contracts.Services;
 using Xunit;
 
 namespace Approval.Tests.Services;
 
 public class ApprovalServiceTests
 {
+    private static ApprovalService CreateService(ApprovalTestHost host) =>
+        new(
+            host.Context,
+            host.Publisher,
+            host.DateTime,
+            NullLogger<ApprovalService>.Instance);
+
     private static CreateApprovalRequest NewRequest(params (int Level, string ApproverUserId)[] chain) =>
         new(
             RequestType: "Test",
@@ -33,16 +38,46 @@ public class ApprovalServiceTests
     {
         // Arrange
         using var host = new ApprovalTestHost();
-        var publisherMock = new Mock<IPublisher>();
-        var service = new ApprovalService(host.Context, publisherMock.Object, host.DateTime);
+        var service = CreateService(host);
 
         // Act
         var result = await service.CreateAsync(NewRequest(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.IsSuccess);
-        publisherMock.Verify(
-            p => p.Publish(It.IsAny<ApprovalStepPendingEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.DoesNotContain(host.Publisher.Published, e => e is ApprovalStepPendingEvent);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ShouldReject_WhenChainLevelsAreDuplicated()
+    {
+        // Arrange
+        using var host = new ApprovalTestHost();
+        var service = CreateService(host);
+
+        // Act
+        var result = await service.CreateAsync(
+            NewRequest((1, "approver-1"), (1, "approver-2")), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.DoesNotContain(host.Publisher.Published, e => e is ApprovalStepPendingEvent);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ShouldReject_WhenChainLevelIsNotPositive()
+    {
+        // Arrange
+        using var host = new ApprovalTestHost();
+        var service = CreateService(host);
+
+        // Act
+        var result = await service.CreateAsync(
+            NewRequest((0, "approver-1")), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.DoesNotContain(host.Publisher.Published, e => e is ApprovalStepPendingEvent);
     }
 
     [Fact]
@@ -50,8 +85,7 @@ public class ApprovalServiceTests
     {
         // Arrange
         using var host = new ApprovalTestHost();
-        var publisherMock = new Mock<IPublisher>();
-        var service = new ApprovalService(host.Context, publisherMock.Object, host.DateTime);
+        var service = CreateService(host);
 
         // Act
         var result = await service.CreateAsync(
@@ -67,21 +101,18 @@ public class ApprovalServiceTests
         // Display labels supplied by the caller are persisted verbatim (Approval cannot resolve them).
         Assert.Equal("Requester One", entity.RequesterName);
         Assert.Equal("Approver 1", entity.Steps.Single(s => s.Level == 1).ApproverName);
-        publisherMock.Verify(
-            p => p.Publish(
-                It.Is<ApprovalStepPendingEvent>(e =>
-                    e.ApprovalRequestId == result.Data && e.ApproverUserId == "approver-1"),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        Assert.Contains(
+            host.Publisher.Published.OfType<ApprovalStepPendingEvent>(),
+            e => e.ApprovalRequestId == result.Data && e.ApproverUserId == "approver-1");
     }
 
     private static async Task<(ApprovalTestHost Host, string RequestId)> SeedTwoLevelRequestAsync()
     {
         var host = new ApprovalTestHost();
-        var publisherMock = new Mock<IPublisher>();
-        var service = new ApprovalService(host.Context, publisherMock.Object, host.DateTime);
+        var service = CreateService(host);
         var created = await service.CreateAsync(
             NewRequest((1, "approver-1"), (2, "approver-2")), TestContext.Current.CancellationToken);
+        host.Publisher.Clear();
         return (host, created.Data!);
     }
 
@@ -90,7 +121,7 @@ public class ApprovalServiceTests
     {
         // Arrange
         using var host = new ApprovalTestHost();
-        var service = new ApprovalService(host.Context, Mock.Of<IPublisher>(), host.DateTime);
+        var service = CreateService(host);
 
         // Act
         var result = await service.DecideAsync(
@@ -106,7 +137,7 @@ public class ApprovalServiceTests
         // Arrange
         var (host, requestId) = await SeedTwoLevelRequestAsync();
         using var _ = host;
-        var service = new ApprovalService(host.Context, Mock.Of<IPublisher>(), host.DateTime);
+        var service = CreateService(host);
 
         // Act
         var result = await service.DecideAsync(
@@ -122,7 +153,7 @@ public class ApprovalServiceTests
         // Arrange
         var (host, requestId) = await SeedTwoLevelRequestAsync();
         using var _ = host;
-        var service = new ApprovalService(host.Context, Mock.Of<IPublisher>(), host.DateTime);
+        var service = CreateService(host);
 
         // Act
         var result = await service.DecideAsync(
@@ -138,8 +169,7 @@ public class ApprovalServiceTests
         // Arrange
         var (host, requestId) = await SeedTwoLevelRequestAsync();
         using var _ = host;
-        var publisherMock = new Mock<IPublisher>();
-        var service = new ApprovalService(host.Context, publisherMock.Object, host.DateTime);
+        var service = CreateService(host);
 
         // Act
         var result = await service.DecideAsync(
@@ -150,13 +180,10 @@ public class ApprovalServiceTests
         var entity = await host.Context.ApprovalRequests.FindAsync([requestId], TestContext.Current.CancellationToken);
         Assert.Equal(ApprovalStatus.Pending, entity!.Status);
         Assert.Equal(2, entity.CurrentLevel);
-        publisherMock.Verify(
-            p => p.Publish(
-                It.Is<ApprovalStepPendingEvent>(e => e.ApproverUserId == "approver-2"),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-        publisherMock.Verify(
-            p => p.Publish(It.IsAny<ApprovalFinalizedEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.Contains(
+            host.Publisher.Published.OfType<ApprovalStepPendingEvent>(),
+            e => e.ApproverUserId == "approver-2");
+        Assert.DoesNotContain(host.Publisher.Published, e => e is ApprovalFinalizedEvent);
     }
 
     [Fact]
@@ -165,8 +192,7 @@ public class ApprovalServiceTests
         // Arrange
         var (host, requestId) = await SeedTwoLevelRequestAsync();
         using var _ = host;
-        var publisherMock = new Mock<IPublisher>();
-        var service = new ApprovalService(host.Context, publisherMock.Object, host.DateTime);
+        var service = CreateService(host);
         await service.DecideAsync(requestId, "approver-1", true, null, TestContext.Current.CancellationToken);
 
         // Act
@@ -178,11 +204,9 @@ public class ApprovalServiceTests
         var entity = await host.Context.ApprovalRequests.FindAsync([requestId], TestContext.Current.CancellationToken);
         Assert.Equal(ApprovalStatus.Approved, entity!.Status);
         Assert.NotNull(entity.FinalizedAt);
-        publisherMock.Verify(
-            p => p.Publish(
-                It.Is<ApprovalFinalizedEvent>(e => e.Status == ApprovalStatus.Approved && e.DecidedByUserId == "approver-2"),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        Assert.Contains(
+            host.Publisher.Published.OfType<ApprovalFinalizedEvent>(),
+            e => e.Status == ApprovalStatus.Approved && e.DecidedByUserId == "approver-2");
     }
 
     [Fact]
@@ -191,8 +215,7 @@ public class ApprovalServiceTests
         // Arrange
         var (host, requestId) = await SeedTwoLevelRequestAsync();
         using var _ = host;
-        var publisherMock = new Mock<IPublisher>();
-        var service = new ApprovalService(host.Context, publisherMock.Object, host.DateTime);
+        var service = CreateService(host);
 
         // Act
         var result = await service.DecideAsync(
@@ -203,11 +226,9 @@ public class ApprovalServiceTests
         var entity = await host.Context.ApprovalRequests.FindAsync([requestId], TestContext.Current.CancellationToken);
         Assert.Equal(ApprovalStatus.Rejected, entity!.Status);
         Assert.Equal(1, entity.CurrentLevel);
-        publisherMock.Verify(
-            p => p.Publish(
-                It.Is<ApprovalFinalizedEvent>(e => e.Status == ApprovalStatus.Rejected),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        Assert.Contains(
+            host.Publisher.Published.OfType<ApprovalFinalizedEvent>(),
+            e => e.Status == ApprovalStatus.Rejected);
     }
 
     [Fact]
@@ -216,7 +237,7 @@ public class ApprovalServiceTests
         // Arrange
         var (host, requestId) = await SeedTwoLevelRequestAsync();
         using var _ = host;
-        var service = new ApprovalService(host.Context, Mock.Of<IPublisher>(), host.DateTime);
+        var service = CreateService(host);
         await service.DecideAsync(requestId, "approver-1", false, "Not compliant", TestContext.Current.CancellationToken);
 
         // Act
@@ -232,10 +253,25 @@ public class ApprovalServiceTests
     {
         // Arrange
         using var host = new ApprovalTestHost();
-        var service = new ApprovalService(host.Context, Mock.Of<IPublisher>(), host.DateTime);
+        var service = CreateService(host);
 
         // Act
-        var result = await service.CancelAsync("missing", TestContext.Current.CancellationToken);
+        var result = await service.CancelAsync("missing", "requester-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+    }
+
+    [Fact]
+    public async Task CancelAsync_ShouldReject_WhenCallerIsNotTheRequester()
+    {
+        // Arrange
+        var (host, requestId) = await SeedTwoLevelRequestAsync();
+        using var _ = host;
+        var service = CreateService(host);
+
+        // Act
+        var result = await service.CancelAsync(requestId, "approver-1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.IsSuccess);
@@ -247,26 +283,26 @@ public class ApprovalServiceTests
         // Arrange
         var (host, requestId) = await SeedTwoLevelRequestAsync();
         using var _ = host;
-        var service = new ApprovalService(host.Context, Mock.Of<IPublisher>(), host.DateTime);
+        var service = CreateService(host);
         await service.DecideAsync(requestId, "approver-1", false, "Not compliant", TestContext.Current.CancellationToken);
 
         // Act
-        var result = await service.CancelAsync(requestId, TestContext.Current.CancellationToken);
+        var result = await service.CancelAsync(requestId, "requester-1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.IsSuccess);
     }
 
     [Fact]
-    public async Task CancelAsync_ShouldCancel_WhenRequestIsPending()
+    public async Task CancelAsync_ShouldCancel_WhenRequesterCancelsPendingRequest()
     {
         // Arrange
         var (host, requestId) = await SeedTwoLevelRequestAsync();
         using var _ = host;
-        var service = new ApprovalService(host.Context, Mock.Of<IPublisher>(), host.DateTime);
+        var service = CreateService(host);
 
         // Act
-        var result = await service.CancelAsync(requestId, TestContext.Current.CancellationToken);
+        var result = await service.CancelAsync(requestId, "requester-1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.IsSuccess);
@@ -280,7 +316,7 @@ public class ApprovalServiceTests
     {
         // Arrange
         using var host = new ApprovalTestHost();
-        var service = new ApprovalService(host.Context, Mock.Of<IPublisher>(), host.DateTime);
+        var service = CreateService(host);
 
         // Act
         var dto = await service.GetByRequestAsync("Leave", "missing", TestContext.Current.CancellationToken);
@@ -295,7 +331,7 @@ public class ApprovalServiceTests
         // Arrange
         var (host, requestId) = await SeedTwoLevelRequestAsync();
         using var _ = host;
-        var service = new ApprovalService(host.Context, Mock.Of<IPublisher>(), host.DateTime);
+        var service = CreateService(host);
 
         // Act
         var dto = await service.GetByRequestAsync("Test", "req-1", TestContext.Current.CancellationToken);
@@ -314,35 +350,31 @@ public class ApprovalServiceTests
 
         host.DateTime.UtcNow = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
         await host.Context.ApprovalRequests.AddAsync(
-            new ApprovalRequest
-            {
-                RequestType = "Leave",
-                RequestId = "L-1",
-                RequesterUserId = "u1",
-                Title = "First",
-                Status = ApprovalStatus.Rejected,
-                CurrentLevel = 1,
-                Steps = [new ApprovalStep { Level = 1, ApproverUserId = "a1", ApproverEmployeeId = "e1" }],
-            },
+            ApprovalEntityBuilder.Request(
+                requestType: "Leave",
+                requestId: "L-1",
+                requesterUserId: "u1",
+                title: "First",
+                status: ApprovalStatus.Rejected,
+                currentLevel: 1,
+                steps: [ApprovalEntityBuilder.Step(1, "a1", "e1")]),
             TestContext.Current.CancellationToken);
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         host.DateTime.UtcNow = host.DateTime.UtcNow.AddDays(1);
         await host.Context.ApprovalRequests.AddAsync(
-            new ApprovalRequest
-            {
-                RequestType = "Leave",
-                RequestId = "L-1",
-                RequesterUserId = "u1",
-                Title = "Second",
-                Status = ApprovalStatus.Pending,
-                CurrentLevel = 1,
-                Steps = [new ApprovalStep { Level = 1, ApproverUserId = "a1", ApproverEmployeeId = "e1" }],
-            },
+            ApprovalEntityBuilder.Request(
+                requestType: "Leave",
+                requestId: "L-1",
+                requesterUserId: "u1",
+                title: "Second",
+                status: ApprovalStatus.Pending,
+                currentLevel: 1,
+                steps: [ApprovalEntityBuilder.Step(1, "a1", "e1")]),
             TestContext.Current.CancellationToken);
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var service = new ApprovalService(host.Context, Mock.Of<IPublisher>(), host.DateTime);
+        var service = CreateService(host);
 
         // Act
         var dto = await service.GetByRequestAsync("Leave", "L-1", TestContext.Current.CancellationToken);

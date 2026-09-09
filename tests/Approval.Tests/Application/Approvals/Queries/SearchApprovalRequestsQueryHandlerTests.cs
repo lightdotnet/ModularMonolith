@@ -9,20 +9,16 @@ namespace Approval.Tests.Application.Approvals.Queries;
 
 public class SearchApprovalRequestsQueryHandlerTests
 {
-    private static ApprovalRequest NewRequest(string requestType, string title, ApprovalStatus status)
-    {
-        return new ApprovalRequest
-        {
-            RequestType = requestType,
-            RequestId = Guid.NewGuid().ToString(),
-            RequesterUserId = "requester",
-            RequesterEmployeeId = "requester",
-            Title = title,
-            Status = status,
-            CurrentLevel = 1,
-            Steps = [new ApprovalStep { Level = 1, ApproverUserId = "approver-1", ApproverEmployeeId = "approver-1" }],
-        };
-    }
+    private static ApprovalRequest NewRequest(string requestType, string title, ApprovalStatus status) =>
+        ApprovalEntityBuilder.Request(
+            requestType: requestType,
+            requestId: Guid.NewGuid().ToString(),
+            requesterUserId: "requester",
+            title: title,
+            status: status,
+            currentLevel: 1,
+            steps: [ApprovalEntityBuilder.Step(1, "approver-1", "approver-1")],
+            requesterEmployeeId: "requester");
 
     [Fact]
     public async Task Handle_ShouldReturnEveryRequest_RegardlessOfRequesterOrApprover()
