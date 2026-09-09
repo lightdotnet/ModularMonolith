@@ -95,7 +95,7 @@ reacting to Identity's integration events).
   *services* (`AddJwtTokenServices` — signing, token/hub-token issuers, session + auth services), no
   scheme. `Identity.Web` registers the cookie + Microsoft OIDC schemes. The co-host
   (`AddApiAuthentication`) adds the JWT `"Bearer"` scheme, the `"Identity.CookieOrBearer"` policy
-  scheme (Bearer header → `"Bearer"`; hub path + `?access_token=` → fail-closed `"HubBearer"`; else
+  scheme (routes by request path: hub path → fail-closed `"HubBearer"`; `/api` → `"Bearer"`; else
   cookie), a `"Bearer"` `PostConfigure` rejecting the hub audience and flowing token expiry into the
   ticket, and the `HubTokenApiGuardHandler` backstop. See [modules/Identity.md § Authentication Wiring](modules/Identity.md#authentication-wiring).
 - **SignalR hub handshake token.** The browser never receives the full session JWT for the hub
@@ -111,7 +111,7 @@ reacting to Identity's integration events).
   `ApprovalRequest` aggregate behind a thin `IApprovalService`. See each module doc.
 - **Audience-split controllers + real-time push** in `Notifications` — an admin controller (explicit
   permissions) and a self-service controller (permission-less, hard-scoped via `ICurrentUser`) over
-  one table, plus a push-only SignalR hub at `/signalr-hub`.
+  one table, plus a push-only SignalR hub at `/signalr-hub` (path configurable via `Notifications:Hub:Path`).
 
 ## Shared Kernel / Common Building Blocks
 
