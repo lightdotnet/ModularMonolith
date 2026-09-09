@@ -22,10 +22,12 @@ namespace StarterKit.WebApi.Authentication;
 /// </summary>
 internal sealed class HubTokenApiGuardHandler(
     IHttpContextAccessor httpContextAccessor,
-    IOptions<JwtOptions> jwtOptions)
+    IOptions<JwtOptions> jwtOptions,
+    IOptions<NotificationHubOptions> notificationHubOptions)
     : IAuthorizationHandler
 {
     private readonly string _hubAudience = jwtOptions.Value.HubAudience;
+    private readonly string _hubPath = notificationHubOptions.Value.Path;
 
     public Task HandleAsync(AuthorizationHandlerContext context)
     {
@@ -37,7 +39,7 @@ internal sealed class HubTokenApiGuardHandler(
             return Task.CompletedTask;
 
         var isHubRequest = httpContextAccessor.HttpContext?.Request
-            .Path.StartsWithSegments(NotificationConstants.HubPath) is true;
+            .Path.StartsWithSegments(_hubPath) is true;
 
         if (!isHubRequest)
         {
