@@ -227,9 +227,10 @@ No cycles found among internal imports.
   server restart. The token is **not the session JWT**: the action calls `POST auth/token/hub`
   (`signalr.api.ts`) for a purpose-built ~120s token scoped to the hub audience (`uid`+`jti` only),
   which the backend rejects on `/api`. It first refreshes a near-expiry session so the (authenticated)
-  mint call succeeds. This is the one place a token is readable by browser JS — a deliberate, now
-  materially narrowed, exception to the httpOnly-cookie invariant. Failed connects retry after 30s;
-  logging is pinned to `LogLevel.Critical` to silence expected 1006 closures on route-away.
+  mint call succeeds. This is one of two deliberate exceptions to the httpOnly-cookie invariant — the
+  other being the super-admin-gated "Session tokens" card on `/user-profile` that renders the raw
+  session tokens for inspection. Failed connects retry after 30s; logging is pinned to
+  `LogLevel.Critical` to silence expected 1006 closures on route-away.
 
 - **A Popover nested inside a Dialog portals into the Dialog's own node, not `document.body`.**
   `dialog.tsx` centers via a flex wrapper (not a `transform`, which would break a nested Popover's
@@ -307,4 +308,4 @@ none exists. `pnpm-workspace.yaml` only configures build-script approval, not a 
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-09_
+_Last synced: 2026-09-10_

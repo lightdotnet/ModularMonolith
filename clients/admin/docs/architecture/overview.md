@@ -62,7 +62,7 @@ routes, backend contract surface, and the auth flow.
 | Route | Path | Notes |
 |---|---|---|
 | Home | `/` | Async Server Component — resolves the session (redirect to `/login` if absent), renders `ProfileSummaryCard` + `NotificationInbox` (initial page fetched server-side) |
-| Profile | `/user-profile` | Account details, QR of the user id, roles/claims, session lifecycle card |
+| Profile | `/user-profile` | Account details, QR of the user id, roles/claims/permissions, session lifecycle card. Super-admin-only extras (`isSuperAdminUser`): a manual "Refresh now" action and a "Session tokens" card exposing the raw access/refresh token with copy + show/hide |
 | Login | `/login` | Outside `(dashboard)` — no `AppShell`/session resolution |
 | Dashboard layout | `src/app/(dashboard)/layout.tsx` | `resolveSession()` → `SessionGate` wrapping `AppShell`. Sibling `error.tsx` (deploy-recovery branch) + `loading.tsx` (spinner) cascade to nested routes |
 | Root layout | `src/app/layout.tsx` | Fonts, `ThemeProvider` → `AccentColorProvider` → `TooltipProvider`, `<AppToaster />`; owns `app/error.tsx` |
@@ -165,9 +165,10 @@ authenticated and `proxy.ts` skips `/api` paths), then calls `getHubToken()` →
 `POST auth/token/hub` for a **dedicated hub-audience-scoped token** (~120s, `uid`+`jti` only) — not
 the session access token. It returns that token plus the server-resolved `SIGNALR_HUB_URL`.
 `use-notifications.ts` passes an `accessTokenFactory` that re-invokes the action on every (re)connect,
-so `withAutomaticReconnect()` always gets a fresh short-lived token. This is the one place a token is
-readable by browser JS, and it is now a purpose-built token that is rejected on `/api`. `token-cipher.ts`
-uses Node's `crypto` and `proxy.ts` has no explicit runtime pin — see
+so `withAutomaticReconnect()` always gets a fresh short-lived token that is rejected on `/api`. The
+only other place a token reaches the browser is the super-admin-only "Session tokens" card on
+`/user-profile` (`isSuperAdminUser` gate), which renders the raw session access/refresh token for
+inspection. `token-cipher.ts` uses Node's `crypto` and `proxy.ts` has no explicit runtime pin — see
 [architecture.md § Known Risks](./architecture.md#known-architectural-risks--debt).
 
 ## Notes
@@ -175,4 +176,4 @@ uses Node's `crypto` and `proxy.ts` has no explicit runtime pin — see
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-09_
+_Last synced: 2026-09-10_
