@@ -21,6 +21,7 @@ import {
 import { resolveSession } from "@/modules/identity/user-profile/api/resolve-session";
 import { UserStatusBadge } from "@/modules/identity/user-profile/components/user-status-badge";
 import { SessionInfoCard } from "@/modules/identity/user-profile/components/session-info-card";
+import { SessionTokensCard } from "@/modules/identity/user-profile/components/session-tokens-card";
 import { getDisplayName } from "@/lib/shared/user-display";
 import { isSuperAdminUser } from "@/lib/server/authorization";
 
@@ -55,7 +56,16 @@ export async function UserProfilePage() {
     redirect("/login");
   }
 
-  const { profile, claims, roles, permissions, expiresAt, sessionExpiresAt } = session;
+  const {
+    profile,
+    claims,
+    roles,
+    permissions,
+    expiresAt,
+    sessionExpiresAt,
+    accessToken,
+    refreshToken,
+  } = session;
 
   if (!profile) {
     return (
@@ -68,6 +78,7 @@ export async function UserProfilePage() {
 
   const qrCode = await QRCode.toDataURL(profile.id, { width: 200, margin: 1 });
   const displayName = getDisplayName(profile) || "Authenticated user";
+  const isSuperAdmin = isSuperAdminUser(profile.userName);
 
   return (
     <div className="flex flex-col gap-6">
@@ -126,9 +137,6 @@ export async function UserProfilePage() {
               height={200}
               className="rounded-lg border border-border p-2"
             />
-            <p className="text-center font-mono text-xs break-all text-muted-foreground">
-              {profile.id}
-            </p>
           </div>
         </CardContent>
       </Card>
@@ -211,8 +219,11 @@ export async function UserProfilePage() {
       <SessionInfoCard
         expiresAt={expiresAt}
         sessionExpiresAt={sessionExpiresAt}
-        canManuallyRefresh={isSuperAdminUser(profile.userName)}
+        canManuallyRefresh={isSuperAdmin}
       />
+      {isSuperAdmin && (
+        <SessionTokensCard accessToken={accessToken} refreshToken={refreshToken} />
+      )}
     </div>
   );
 }
