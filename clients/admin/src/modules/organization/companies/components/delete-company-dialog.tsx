@@ -48,7 +48,7 @@ export function DeleteCompanyDialog({
           <DialogTitle>Delete company</DialogTitle>
           <DialogDescription>
             Are you sure you want to delete &quot;{company?.name ?? "this company"}&quot;? This
-            action cannot be undone. Companies with existing departments/teams or employees can't
+            action cannot be undone. Companies with existing departments/teams or employees cannot
             be deleted.
           </DialogDescription>
         </DialogHeader>
