@@ -1,13 +1,16 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
 import { useActionSuccessToast } from "@/hooks/use-action-success-toast";
 import { useGuardedAction } from "@/hooks/use-guarded-action";
+import { getUserDetailAction } from "@/modules/identity/users/api/get-user-detail-action";
+import type { UserDto } from "@/modules/identity/users";
 import {
   createEmployeeLoginAction,
   type CreateEmployeeLoginFormState,
@@ -37,6 +40,38 @@ export function EmployeeLoginTab({
   const [linking, runLink] = useGuardedAction();
   const [selectedUserId, setSelectedUserId] = useState("");
   const [selectedUserLabel, setSelectedUserLabel] = useState("");
+  const [linkedUser, setLinkedUser] = useState<UserDto | null>(null);
+  const [linkedUserLoading, setLinkedUserLoading] = useState(false);
+  const [linkedUserFailed, setLinkedUserFailed] = useState(false);
+
+  // Show a basic summary of the already-linked Identity user. The action
+  // normalizes a backend 403 (operator without `identity.users.view`) or a
+  // missing user into `data: null` — treated as a soft failure that falls back
+  // to just the raw user ID. Stale-response guard matches edit-employee-dialog.tsx.
+  useEffect(() => {
+    if (!userId) return;
+
+    let cancelled = false;
+
+    (async () => {
+      setLinkedUserLoading(true);
+      setLinkedUserFailed(false);
+
+      const result = await getUserDetailAction(userId);
+      if (cancelled) return;
+
+      if (result.data) {
+        setLinkedUser(result.data);
+      } else {
+        setLinkedUserFailed(true);
+      }
+      setLinkedUserLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   const boundCreateAction = createEmployeeLoginAction.bind(null, employeeId);
   const [createState, createFormAction, createPending] = useActionState(
@@ -58,9 +93,49 @@ export function EmployeeLoginTab({
   if (userId) {
     return (
       <div className="flex flex-col gap-3">
-        <p className="text-sm">
-          This employee has a login account linked (user ID <code>{userId}</code>).
-        </p>
+        {linkedUserLoading ? (
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Spinner />
+            Loading linked account...
+          </p>
+        ) : linkedUser ? (
+          <div className="flex flex-col gap-2 text-sm">
+            <p>
+              <span className="font-medium">
+                {`${linkedUser.firstName ?? ""} ${linkedUser.lastName ?? ""}`.trim()}
+              </span>{" "}
+              <span className="text-muted-foreground">@{linkedUser.userName}</span>
+            </p>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs text-muted-foreground">Email</span>
+              <span>{linkedUser.email ?? ""}</span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs text-muted-foreground">Phone number</span>
+              <span>{linkedUser.phoneNumber ?? ""}</span>
+            </div>
+            {linkedUser.status && (
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs text-muted-foreground">Status</span>
+                <span>{linkedUser.status}</span>
+              </div>
+            )}
+            {linkedUser.isDeleted && (
+              <p className="text-sm text-destructive">This account has been deleted.</p>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1">
+            <p className="text-sm">
+              This employee has a login account linked (user ID <code>{userId}</code>).
+            </p>
+            {linkedUserFailed && (
+              <p className="text-xs text-muted-foreground">
+                Unable to load linked account details.
+              </p>
+            )}
+          </div>
+        )}
         <div>
           <Button variant="outline" loading={unlinking} onClick={handleUnlink}>
             Unlink login

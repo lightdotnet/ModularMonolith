@@ -39,6 +39,7 @@ None found among internal module imports. `components/ui/*` is not an absolutely
 | `modules/notifications/components/user-select.tsx` | `modules/identity/users/api/search-users-action` | Server Action, never barrel-exported |
 | `modules/organization/employees/components/user-select.tsx` | `modules/identity/users/api/search-users-action` | Same as above — second duplicate consumer |
 | `modules/approvals/components/approver-select.tsx` | `modules/identity/users/api/search-users-action` | Same as above — third duplicate consumer |
+| `modules/organization/employees/components/employee-login-tab.tsx` | `modules/identity/users/api/get-user-detail-action` | Server Action, never barrel-exported |
 | `modules/organization/departments/components/company-filter.tsx` | `modules/organization/companies/components/company-select` | Component not re-exported by the `companies` barrel |
 | `modules/organization/employees/components/create-employee-dialog.tsx` | `modules/organization/companies/components/company-select` | Same as above |
 | `modules/organization/departments/api/get-org-unit-managers-action.ts`, `.../components/view-org-unit-managers-dialog.tsx`, `.../api/org-units.api.ts` | `modules/organization/employees`'s barrel, `EmployeeDto` type only | Not a bypass — this one genuinely goes *through* the barrel; listed here only because it's the counterpart of the reversed dependency below |
@@ -74,4 +75,4 @@ Not applicable — this is a client-app dependency graph, not backend.
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-05_
+_Last synced: 2026-09-10_
