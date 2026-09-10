@@ -14,7 +14,7 @@ layering and patterns are in [architecture.md](architecture.md), the project-ref
 | Identity | `src/Identity.Api` + `.Contracts` + `src/Identity.Web` | Users, roles, claims; API token issuance (password/AD), refresh, sessions; interactive cookie login + Microsoft Entra ID (OIDC) external login (`Identity.Web`); SignalR hub handshake token; permission catalog | Built, tested (100). Internal layering still informal — [known-debt.md](../known-debt.md) D1 |
 | Notifications | `src/Notifications.Api` + `.Contracts` | Notification storage + real-time SignalR push; admin + self-service surfaces over one table; owns the welcome-mail handlers reacting to Identity's integration events | Built, no tests yet. No "mark all read", nothing sets `Archived` |
 | Organization | `src/Organization.Api` + `.Contracts` | Companies, a self-referencing department/team hierarchy (`OrgUnit`), company-scoped employee levels, employees (membership history + optional Identity-login link) | Built, tested (63). Also exposes `IOrgDirectoryService`, a second cross-module seam consumed by LeaveManagement |
-| Approval | `src/Approval.Api` + `.Contracts` | A generic, reusable multi-level approval engine — the caller resolves the approver chain and drives the workflow via `IApprovalService`; not tied to any request type | Built, tested (60) |
+| Approval | `src/Approval.Api` + `.Contracts` | A generic, reusable multi-level approval engine — the caller resolves the approver chain and drives the workflow via `IApprovalService`; not tied to any request type | Built, tested (64) |
 | LeaveManagement | `src/LeaveManagement.Api` + `.Contracts` | Self-service CRUD for employee leave requests; delegates the entire approval workflow to Approval via `IApprovalService`, resolves approvers/names via Organization's `IOrgDirectoryService` — no decide endpoint of its own | Built, tested (30) |
 
 ## Shared / Host Projects
@@ -91,4 +91,4 @@ hub token), `Organization`, `Approval`, and `LeaveManagement`. See
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-09_
+_Last synced: 2026-09-10_

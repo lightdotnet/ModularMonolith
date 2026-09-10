@@ -14,6 +14,7 @@
 	<PackageReference Include="Lightsoft.EntityFrameworkCore" />
 	<PackageReference Include="Lightsoft.Mediator" />
 	<PackageReference Include="Lightsoft.Result" />
+	<PackageReference Include="Lightsoft.SharedKernel" />
 	<PackageReference Include="Mapster" />
   </ItemGroup>
 

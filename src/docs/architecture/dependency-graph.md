@@ -17,7 +17,7 @@ Package versions are centrally managed via the root `Directory.Packages.props` (
 | Organization.Contracts | Lightsoft.AspNetCore.Authorization | Declared directly. |
 | Organization.Api | Lightsoft.AspNetCore.Authorization, Lightsoft.EntityFrameworkCore, Lightsoft.Mediator, Lightsoft.Result, Mapster | Every vendor package it directly uses is declared directly. |
 | Approval.Contracts | Lightsoft.AspNetCore.Authorization, Lightsoft.Mediator, Lightsoft.Result | All declared directly. `Lightsoft.Mediator` for `INotification` on `ApprovalFinalizedIntegrationEvent`. |
-| Approval.Api | Lightsoft.AspNetCore.Authorization, Lightsoft.EntityFrameworkCore, Lightsoft.Mediator, Lightsoft.Result, Mapster | Every vendor package it directly uses is declared directly. |
+| Approval.Api | Lightsoft.AspNetCore.Authorization, Lightsoft.EntityFrameworkCore, Lightsoft.Mediator, Lightsoft.Result, Lightsoft.SharedKernel, Mapster | Every vendor package it directly uses is declared directly. `Lightsoft.SharedKernel` for `Light.Exceptions.*`, thrown by the `ApprovalRequest` aggregate and mapped back to `Result` in `ApprovalService`. |
 | LeaveManagement.Contracts | Lightsoft.AspNetCore.Authorization, Lightsoft.Result | Declared directly. |
 | LeaveManagement.Api | Lightsoft.AspNetCore.Authorization, Lightsoft.EntityFrameworkCore, Lightsoft.Mediator, Lightsoft.Result, Mapster | Every vendor package it directly uses is declared directly. `LeaveRequestReconciliationService` derives from `BackgroundService` (`Microsoft.Extensions.Hosting.Abstractions`), which rides in via the ASP.NET Core shared framework — not a declared package. |
 | StarterKit.WebApi | AspNetCore.HealthChecks.UI.Client, FluentValidation.DependencyInjectionExtensions, Lightsoft.AspNetCore.Extensions, Lightsoft.AspNetCore.Swagger, Microsoft.AspNetCore.Authentication.JwtBearer, Microsoft.VisualStudio.Azure.Containers.Tools.Targets, Spectre.Console | `Microsoft.AspNetCore.Authentication.JwtBearer` backs the host-owned Bearer + `"HubBearer"` schemes in `Authentication/ApiAuthenticationExtensions`. Uses `Lightsoft.Serilog` without declaring it (rides in via `Infrastructure`). |
@@ -111,4 +111,4 @@ None of the reverse directions exist. `Identity.Api` now references **no** other
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-09_
+_Last synced: 2026-09-10_

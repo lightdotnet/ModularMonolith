@@ -1,3 +1,4 @@
+using Light.Exceptions;
 using Microsoft.Extensions.Logging;
 using StarterKit.Approval.Api.Data;
 using StarterKit.Approval.Api.Domain.Approvals;
@@ -27,22 +28,26 @@ internal class ApprovalService(
                 $"Approval document type {request.DocumentTypeId} was not found or is not active.");
         }
 
-        var creation = ApprovalRequest.Create(
-            request.RequestType,
-            request.RequestId,
-            request.RequesterUserId,
-            request.RequesterEmployeeId,
-            request.RequesterName,
-            request.Title,
-            request.Content,
-            request.DeepLinkUrl,
-            request.DocumentTypeId,
-            request.ApproverChain);
+        ApprovalRequest entity;
 
-        if (!creation.IsSuccess)
-            return Result<string>.Error(creation.Message);
-
-        var entity = creation.Data;
+        try
+        {
+            entity = ApprovalRequest.Create(
+                request.RequestType,
+                request.RequestId,
+                request.RequesterUserId,
+                request.RequesterEmployeeId,
+                request.RequesterName,
+                request.Title,
+                request.Content,
+                request.DeepLinkUrl,
+                request.DocumentTypeId,
+                request.ApproverChain);
+        }
+        catch (ExceptionBase ex)
+        {
+            return ToStringResult(ex);
+        }
 
         await context.ApprovalRequests.AddAsync(entity, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
@@ -64,10 +69,14 @@ internal class ApprovalService(
             if (entity is null)
                 return Result.NotFound($"Approval request {approvalRequestId} not found");
 
-            var decision = entity.Decide(decidedByUserId, approved, comment, clock.AuditTime);
-
-            if (!decision.IsSuccess)
-                return decision;
+            try
+            {
+                entity.Decide(decidedByUserId, approved, comment, clock.AuditTime);
+            }
+            catch (ExceptionBase ex)
+            {
+                return ToResult(ex);
+            }
 
             try
             {
@@ -100,10 +109,14 @@ internal class ApprovalService(
             if (entity is null)
                 return Result.NotFound($"Approval request {approvalRequestId} not found");
 
-            var cancellation = entity.Cancel(cancelledByUserId, clock.AuditTime);
-
-            if (!cancellation.IsSuccess)
-                return cancellation;
+            try
+            {
+                entity.Cancel(cancelledByUserId, clock.AuditTime);
+            }
+            catch (ExceptionBase ex)
+            {
+                return ToResult(ex);
+            }
 
             try
             {
@@ -186,6 +199,25 @@ internal class ApprovalService(
 
         context.Entry(entity).State = EntityState.Detached;
     }
+
+    private static IResult ToResult(ExceptionBase ex) => ex switch
+    {
+        ConflictException => Result.Conflict(ex.Message),
+        ForbiddenException => Result.Forbidden(ex.Message),
+        _ => Result.Error(DescribeValidation(ex)),
+    };
+
+    private static IResult<string> ToStringResult(ExceptionBase ex) => ex switch
+    {
+        ConflictException => Result<string>.Conflict(ex.Message),
+        ForbiddenException => Result<string>.Forbidden(ex.Message),
+        _ => Result<string>.Error(DescribeValidation(ex)),
+    };
+
+    private static string DescribeValidation(ExceptionBase ex) =>
+        ex is ValidationException v && v.ValidationErrors.Count > 0
+            ? string.Join("|", v.ValidationErrors.Select(e => $"{e.Key}: {string.Join(",", e.Value)}"))
+            : ex.Message;
 
     private async Task PublishFinalizedIntegrationEventAsync(
         ApprovalRequest entity,
