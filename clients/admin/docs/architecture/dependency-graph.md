@@ -13,7 +13,7 @@ The full dependency/devDependency list with exact versions lives in `clients/adm
 - **Styling toolchain** (devDependencies): `tailwindcss` + `@tailwindcss/postcss` (Tailwind v4), `shadcn` (CLI that generated `components/ui/*`; also imported at runtime for `shadcn/tailwind.css`), `prettier` + `prettier-plugin-tailwindcss` (no config file/`format` script found — see [coding-conventions.md](../conventions/coding-conventions.md)).
 - **Tooling** (devDependencies): `eslint` + `eslint-config-next` (pinned to match `next`'s version), `typescript`, `@types/*`.
 
-Package manager: pnpm (`pnpm-lock.yaml`). `pnpm-workspace.yaml` exists but only configures build-script approval (`sharp`, `unrs-resolver`) — not a multi-package workspace. `package.json` is the source of truth for exact versions; ordinary version bumps in the course of dependency updates are not tracked in prose here or in `architecture.md`.
+Package manager: pnpm (`pnpm-lock.yaml`). `pnpm-workspace.yaml` exists but only holds build-script approval (`sharp`, `unrs-resolver`), dependency `overrides`, and minimum-release-age exclusions — not a multi-package workspace. Node is pinned via `.nvmrc` + `package.json` `engines` (`node >=26.8.2`). `package.json` is the source of truth for exact versions; ordinary version bumps in the course of dependency updates are not tracked in prose here or in `architecture.md`.
 
 ## Module Layout (for import-path purposes)
 

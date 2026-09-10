@@ -9,7 +9,8 @@ write code that matches" companion, not a second architecture doc.
 - **Next.js 16**, App Router (`src/app/`, no `pages/`). React 19, TypeScript `strict: true`,
   target `ES2017`, module resolution `bundler`, path alias `@/*` → `./src/*`.
 - **Package manager**: pnpm (`pnpm-lock.yaml`). `pnpm-workspace.yaml` only configures build-script
-  approval, not a multi-package workspace.
+  approval, dependency `overrides`, and minimum-release-age exclusions — not a multi-package
+  workspace. Node is pinned via `.nvmrc` + `package.json` `engines` (`node >=26.8.2`).
 - **Styling**: Tailwind CSS v4, CSS-first config in `src/app/globals.css` (`@import "tailwindcss"` +
   an inline `@theme inline` block). No `tailwind.config.*`.
 - **`next dev` bundler**: not pinned — no `--turbopack` flag, no `next.config.ts` override.

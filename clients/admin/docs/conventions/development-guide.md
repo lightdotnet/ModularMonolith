@@ -6,8 +6,8 @@ How to set up, run, and make common changes to `clients/admin`. Architectural ba
 
 ## Prerequisites
 
-- **Node.js**: not pinned (no `engines`, no `.nvmrc`). `@types/node` is `^20`, so Node 20.x is the
-  presumed target — inferred, not enforced.
+- **Node.js**: `.nvmrc` pins `26.8.2`; `package.json` `engines` requires `node >=26.8.2`.
+  `@types/node` is `^26.5.1`.
 - **pnpm**: required (`pnpm-lock.yaml` is the only lockfile). Version not pinned (no `packageManager`).
 - **A reachable backend**: login, profile, notifications, and every feature page make real HTTP calls.
   All five `*_API_BASE_URL` vars must point at a running instance (currently one co-hosted backend).
@@ -17,16 +17,18 @@ How to set up, run, and make common changes to `clients/admin`. Architectural ba
 ## Scripts
 
 ```bash
-pnpm dev     # cross-env NODE_OPTIONS=--use-system-ca next dev — default port 3000
+pnpm dev     # next dev — default port 3000
 pnpm build   # next build — output: "standalone" (per next.config.ts)
-pnpm start   # cross-env NODE_OPTIONS=--use-system-ca next start — serves a prior pnpm build
+pnpm start   # next start — serves a prior pnpm build
 pnpm lint    # eslint (eslint.config.mjs)
 ```
 
-`dev` and `start` run through `cross-env` (a dev dependency) to set `NODE_OPTIONS=--use-system-ca`,
-so Node's `fetch` trusts certificates from the OS trust store — needed when a backend base URL is
-`https://` served with a locally-trusted dev certificate (e.g. the ASP.NET Core dev HTTPS cert).
-The `next dev` bundler is not pinned (no `--turbopack` flag, no config override).
+Local dev talks to the backend over plain HTTP (`http://localhost:5000`): the backend disables
+HTTPS redirection in Development, so the server-side `fetch` calls in `lib/server/*` reach it
+directly without tripping over the untrusted self-signed ASP.NET dev certificate. The backend's
+`https` launch profile still exposes `https://localhost:5001` for anyone who needs it. Set the
+`*_API_BASE_URL` / `SIGNALR_HUB_URL` vars to match (see `.env.example`). The `next dev` bundler is
+not pinned (no `--turbopack` flag, no config override).
 
 ## Environment
 
@@ -101,4 +103,4 @@ and the auth flow in [§ Auth Flow](../architecture/overview.md#auth-flow). Beyo
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-09_
+_Last synced: 2026-09-10_
