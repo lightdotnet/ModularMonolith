@@ -22,8 +22,8 @@ module doc:
 | Identity | `Identity.Api` + `Identity.Contracts` + `Identity.Web` | Handlers delegate to `UserService`/`RoleService` — a half-migration ([known-debt.md](../known-debt.md) D1) | `tests/Identity.Tests`, 100 |
 | Notifications | `Notifications.Api` + `.Contracts` | Same half-migration as Identity; controllers split by **audience** (admin vs. self-service) not resource | none yet |
 | Organization | `Organization.Api` + `.Contracts` (seam split into per-feature subfolders) | Handlers own their `OrganizationDbContext` logic directly — no service layer | `tests/Organization.Tests`, 63 |
-| Approval | `Approval.Api` + `.Contracts` | Workflow rules live on the `ApprovalRequest` aggregate (`Create`/`Decide`/`Cancel` throw `Light.Exceptions.*` on a broken invariant); `IApprovalService` is a thin coordinator over it — maps those exceptions back to `IResult` (must be DI-reachable cross-module); read-path handlers own their logic directly | `tests/Approval.Tests`, 64 |
-| LeaveManagement | `LeaveManagement.Api` + `.Contracts` | Handlers own their logic directly (Organization's shape); command handlers inject `IApprovalService` + `IOrgDirectoryService` straight into constructors, the leave-request read queries touch neither | `tests/LeaveManagement.Tests`, 30 |
+| Approval | `Approval.Api` + `.Contracts` | Workflow rules live on the `ApprovalRequest` aggregate (`Create`/`Decide`/`Cancel` throw `Light.Exceptions.*` on a broken invariant); `IApprovalService` is a thin coordinator over it — maps those exceptions back to `IResult` (must be DI-reachable cross-module); read-path handlers own their logic directly | `tests/Approval.Tests`, 68 |
+| LeaveManagement | `LeaveManagement.Api` + `.Contracts` | Workflow rules live on the `LeaveRequest` aggregate (`Create`/`LinkApprovalRequest`/`Resubmit`/`ReviseDetails`/`ApplyApprovalOutcome`, same throw-then-translate shape as `Approval`); `LeaveRequestApprovalCoordinator` is the shared seam for cross-row/cross-module orchestration (Approval reconcile, overlap check, approver resolution) the command handlers and the reconciliation sweep all call into; the leave-request read queries touch neither | `tests/LeaveManagement.Tests`, 122 |
 
 Below the module layer: `src/Shared` (leaf) and `src/Persistence` (→ `Shared`) are the pre-module
 shared kernel; `src/Infrastructure` (→ `Shared`) is cross-cutting infra, no longer holding EF Core
@@ -156,4 +156,4 @@ are tracked here:
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-10_
+_Last synced: 2026-09-11_
