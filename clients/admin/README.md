@@ -2,7 +2,7 @@
 
 Admin dashboard client app for the ModularMonolith starter kit — Next.js (App Router), TypeScript, Tailwind CSS v4.
 
-Real backend integration against both `src/Identity.Api` and `src/Notifications.Api` (each wired as its own named backend client): encrypted-cookie auth with proactive token refresh, full Users/Roles CRUD (incl. a custom-claims editor on role edit), real-time Notifications (SignalR) with a topbar bell and a two-pane inbox, and permission-gated navigation. The Home page (`/`) shows a session-backed profile summary plus the live notification inbox — no mock data.
+Real backend integration against all five backend modules — `src/Identity.Api`, `src/Notifications.Api`, `src/Organization.Api`, `src/Approval.Api`, `src/LeaveManagement.Api` (each wired as its own named backend client). Covers: encrypted-cookie auth with proactive token refresh; full Users/Roles CRUD (incl. a custom-claims editor); Organization administration (companies, a department/team hierarchy, employees, employee↔login linking); a generic multi-level Approvals workflow; self-service Leave requests with an approver picker; real-time Notifications (SignalR) with a topbar bell and a Home-page inbox; permission-gated navigation. No mock data.
 
 ## Getting Started
 

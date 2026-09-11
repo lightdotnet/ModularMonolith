@@ -1,1 +1,1 @@
-export { NotificationsPage as default } from "@/features/notifications";
+export { NotificationsPage as default } from "@/modules/notifications";

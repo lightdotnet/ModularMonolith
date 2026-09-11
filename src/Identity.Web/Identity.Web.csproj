@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+	<RootNamespace>StarterKit.Identity.Web</RootNamespace>
+	<AssemblyName>StarterKit.Identity.Web</AssemblyName>
+	<UserSecretsId>StarterKit.Identity.Web</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<ProjectReference Include="..\Identity.Api\Identity.Api.csproj" />
+	<ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

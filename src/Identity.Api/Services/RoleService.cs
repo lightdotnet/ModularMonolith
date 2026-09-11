@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using StarterKit.Identity.Api.Entities;
-using StarterKit.Identity.Api.Extensions;
 using StarterKit.Identity.Contracts;
 using StarterKit.Identity.Contracts.Services;
 using StarterKit.Shared.Extensions;

@@ -10,7 +10,7 @@ import { Brand } from "@/components/layout/brand";
 import { SearchBox } from "@/components/shared/search-box";
 import { ThemeToggle, AccentColorPicker } from "@/components/theme";
 import { UserMenu } from "@/components/layout/user-menu";
-import { NotificationBell } from "@/features/notifications/components/notification-bell";
+import { NotificationBell } from "@/modules/notifications/components/notification-bell";
 import type { ProfileData } from "@/types/session";
 
 export function TopBar({

@@ -15,10 +15,10 @@ public class RoleServiceTests
         // Arrange
         using var host = new IdentityTestHost();
         var service = new RoleService(host.RoleManager);
-        var request = new CreateRoleRequest { Name = "Admin", Description = "Administrators" };
 
         // Act
-        var result = await service.CreateAsync(request);
+        var result = await service.CreateAsync(
+            new CreateRoleRequest { Name = "Admin", Description = "Administrators" });
 
         // Assert
         Assert.True(result.IsSuccess);

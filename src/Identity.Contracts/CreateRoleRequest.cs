@@ -1,6 +1,6 @@
-﻿namespace StarterKit.Identity.Contracts;
+namespace StarterKit.Identity.Contracts;
 
-public class CreateRoleRequest
+public record CreateRoleRequest
 {
     public string Name { get; set; } = null!;
 

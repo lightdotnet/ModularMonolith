@@ -17,6 +17,8 @@ dotnet build StarterKit.slnx
 dotnet run --project src/StarterKit.WebApi/StarterKit.WebApi.csproj
 ```
 
+The default `http` launch profile binds plain HTTP on `http://localhost:5000`, which is the primary Development endpoint — `Program.cs` skips `UseHttpsRedirection()` when `IsDevelopment()`, so no HTTPS listener is needed for local work (this also lets a server-to-server client such as the Next.js admin BFF call the API without hitting the untrusted dev certificate). The `https` profile additionally binds `https://localhost:5001` (ASP.NET dev certificate) for anyone who wants it; outside Development the HTTPS redirect is active as normal.
+
 `src/StarterKit.WebApi/Program.cs` boots the host: configures Serilog, calls `ConfigureServices`, wires MVC/JSON options, then `ConfigurePipelines()` + `MapEndpoints(...)`. By default (`appsettings.json`) `DbProvider` is `MSSQL`, pointing `ConnectionStrings:DefaultConnection` at a local `(localdb)\mssqllocaldb` instance — switch to `InMemory`/`Sqlite`/`PostgreSQL` via `IConfiguration["DbProvider"]` (and matching `ConnectionStrings:DefaultConnection`, commented-out examples for PostgreSQL/Sqlite are already present in `appsettings.json`) if you don't have SQL Server LocalDB available. `AllowAnonymous` is `false` by default in `appsettings.json` (`appsettings.Development.json` does not override it) — requests need a valid JWT unless the endpoint is explicitly anonymous.
 
 ## Running Tests
@@ -59,4 +61,4 @@ No special setup needed — all current tests are unit tests using EF Core's InM
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-08-19_
+_Last synced: 2026-09-10_

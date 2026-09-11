@@ -4,7 +4,7 @@ namespace StarterKit.Identity.Contracts;
 
 public record CreateUserRequest
 {
-    public string? UserName { get; set; }
+    public string UserName { get; set; } = null!;
 
     public string? FirstName { get; set; }
 

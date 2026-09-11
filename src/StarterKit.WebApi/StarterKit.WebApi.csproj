@@ -10,15 +10,22 @@
   <ItemGroup>
 	<PackageReference Include="AspNetCore.HealthChecks.UI.Client" />
 	<PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+	<PackageReference Include="Lightsoft.AspNetCore.Extensions" />
 	<PackageReference Include="Lightsoft.AspNetCore.Swagger" />
+	<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
 	<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
 	<PackageReference Include="Spectre.Console" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Approval.Api\Approval.Api.csproj" />
     <ProjectReference Include="..\Identity.Api\Identity.Api.csproj" />
+	<ProjectReference Include="..\Identity.Web\Identity.Web.csproj" />
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\LeaveManagement.Api\LeaveManagement.Api.csproj" />
     <ProjectReference Include="..\Notifications.Api\Notifications.Api.csproj" />
+    <ProjectReference Include="..\Notifications.Contracts\Notifications.Contracts.csproj" />
+    <ProjectReference Include="..\Organization.Api\Organization.Api.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
 

@@ -130,7 +130,7 @@ public class UserServiceTests
         var reloaded = await host.UserManager.FindByIdAsync(user.Id);
         Assert.Equal("Jane", reloaded!.FirstName);
         Assert.Equal(ActiveStatus.State.Locked, reloaded.Status.Value);
-        Assert.Equal("AD", reloaded.AuthProvider);
+        Assert.Equal(AuthProvider.ActiveDirectory, reloaded.AuthProvider);
         var roles = await host.UserManager.GetRolesAsync(reloaded);
         Assert.Equal(["Admin"], roles);
         var claims = await host.UserManager.GetClaimsAsync(reloaded);
@@ -199,39 +199,6 @@ public class UserServiceTests
         // Assert
         Assert.True(result.IsSuccess);
         Assert.True(await host.UserManager.CheckPasswordAsync(user, "new-pass"));
-    }
-
-    [Fact]
-    public async Task SearchAsync_ShouldIgnoreShortSearchTerm()
-    {
-        // Arrange
-        using var host = new IdentityTestHost();
-        Assert.True((await host.UserManager.CreateAsync(new User { UserName = "alpha" })).Succeeded);
-        Assert.True((await host.UserManager.CreateAsync(new User { UserName = "beta" })).Succeeded);
-        var service = new UserService(host.UserManager);
-
-        // Act
-        var result = await service.SearchAsync(new SearchUserQuery { SearchValue = "a" }, 1, 10);
-
-        // Assert: a 1-char term is below the >=2 threshold, so the search is ignored and both records come back.
-        Assert.Equal(2, result.Data.TotalRecords);
-    }
-
-    [Fact]
-    public async Task SearchAsync_ShouldFilterAcrossUserFields()
-    {
-        // Arrange
-        using var host = new IdentityTestHost();
-        Assert.True((await host.UserManager.CreateAsync(new User { UserName = "alpha", Email = "alpha@example.com" })).Succeeded);
-        Assert.True((await host.UserManager.CreateAsync(new User { UserName = "beta", Email = "beta@example.com" })).Succeeded);
-        var service = new UserService(host.UserManager);
-
-        // Act
-        var result = await service.SearchAsync(new SearchUserQuery { SearchValue = "alpha" }, 1, 10);
-
-        // Assert
-        Assert.Equal(1, result.Data.TotalRecords);
-        Assert.Equal("alpha", result.Data.Records.Single().UserName);
     }
 
     [Fact]

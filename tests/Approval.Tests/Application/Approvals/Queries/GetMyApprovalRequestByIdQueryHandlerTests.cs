@@ -1,0 +1,140 @@
+using Approval.Tests.TestSupport;
+using StarterKit.Approval.Api.Application.Approvals.Queries;
+using StarterKit.Approval.Api.Domain.Approvals;
+using StarterKit.Approval.Contracts.Approvals;
+using Xunit;
+
+namespace Approval.Tests.Application.Approvals.Queries;
+
+public class GetMyApprovalRequestByIdQueryHandlerTests
+{
+    [Fact]
+    public async Task Handle_ShouldReturnNotFound_WhenRequestDoesNotExist()
+    {
+        // Arrange
+        using var host = new ApprovalTestHost();
+        var handler = new GetMyApprovalRequestByIdQueryHandler(host.Context);
+
+        // Act
+        var result = await handler.Handle(new GetMyApprovalRequestByIdQuery("missing", "user-1"), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnNotFound_WhenUserIsNeitherRequesterNorApprover()
+    {
+        // Arrange
+        using var host = new ApprovalTestHost();
+        var entity = ApprovalEntityBuilder.Request(
+            requestType: "Test",
+            requestId: "req-1",
+            requesterUserId: "requester",
+            title: "Title",
+            status: ApprovalStatus.Pending,
+            currentLevel: 1,
+            steps: [ApprovalEntityBuilder.Step(1, "approver-1", "approver-1")],
+            requesterEmployeeId: "requester");
+        await host.Context.ApprovalRequests.AddAsync(entity, TestContext.Current.CancellationToken);
+        await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var handler = new GetMyApprovalRequestByIdQueryHandler(host.Context);
+
+        // Act
+        var result = await handler.Handle(new GetMyApprovalRequestByIdQuery(entity.Id, "unrelated-user"), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnRequest_WhenUserIsTheRequester()
+    {
+        // Arrange
+        using var host = new ApprovalTestHost();
+        var entity = ApprovalEntityBuilder.Request(
+            requestType: "Test",
+            requestId: "req-1",
+            requesterUserId: "requester",
+            title: "Title",
+            status: ApprovalStatus.Pending,
+            currentLevel: 1,
+            steps: [ApprovalEntityBuilder.Step(1, "approver-1", "approver-1")],
+            requesterEmployeeId: "requester");
+        await host.Context.ApprovalRequests.AddAsync(entity, TestContext.Current.CancellationToken);
+        await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var handler = new GetMyApprovalRequestByIdQueryHandler(host.Context);
+
+        // Act
+        var result = await handler.Handle(new GetMyApprovalRequestByIdQuery(entity.Id, "requester"), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(entity.Id, result.Data.Id);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnRequest_WhenUserIsAnApproverOnSomeStep()
+    {
+        // Arrange
+        using var host = new ApprovalTestHost();
+        var entity = ApprovalEntityBuilder.Request(
+            requestType: "Test",
+            requestId: "req-1",
+            requesterUserId: "requester",
+            title: "Title",
+            status: ApprovalStatus.Pending,
+            currentLevel: 1,
+            steps:
+            [
+                ApprovalEntityBuilder.Step(1, "approver-1", "approver-1"),
+                ApprovalEntityBuilder.Step(2, "approver-2", "approver-2"),
+            ],
+            requesterEmployeeId: "requester");
+        await host.Context.ApprovalRequests.AddAsync(entity, TestContext.Current.CancellationToken);
+        await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var handler = new GetMyApprovalRequestByIdQueryHandler(host.Context);
+
+        // Act
+        var result = await handler.Handle(new GetMyApprovalRequestByIdQuery(entity.Id, "approver-2"), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(entity.Id, result.Data.Id);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldFlattenDocumentType_WhenRequestIsTagged()
+    {
+        // Arrange: this handler uses .Adapt() (not ProjectToType), so the .Include(DocumentType)
+        // is what makes DocumentTypeName resolve - guard it with a test.
+        using var host = new ApprovalTestHost();
+        var documentType = new ApprovalDocumentType { Name = "Purchase order", Code = "PO", IsActive = true };
+        await host.Context.ApprovalDocumentTypes.AddAsync(documentType, TestContext.Current.CancellationToken);
+        await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var entity = ApprovalEntityBuilder.Request(
+            requestType: "PO",
+            requestId: "req-1",
+            requesterUserId: "requester",
+            title: "Title",
+            status: ApprovalStatus.Pending,
+            currentLevel: 1,
+            steps: [ApprovalEntityBuilder.Step(1, "approver-1", "emp-1", approverName: "Approver One")],
+            requesterName: "Requester One",
+            documentTypeId: documentType.Id);
+        await host.Context.ApprovalRequests.AddAsync(entity, TestContext.Current.CancellationToken);
+        await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var handler = new GetMyApprovalRequestByIdQueryHandler(host.Context);
+
+        // Act
+        var result = await handler.Handle(
+            new GetMyApprovalRequestByIdQuery(entity.Id, "requester"), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(documentType.Id, result.Data.DocumentTypeId);
+        Assert.Equal("Purchase order", result.Data.DocumentTypeName);
+        Assert.Equal("Requester One", result.Data.RequesterName);
+        Assert.Equal("Approver One", result.Data.Steps.Single().ApproverName);
+    }
+}

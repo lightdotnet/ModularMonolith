@@ -1,0 +1,9 @@
+global using Light.Contracts;
+global using Light.Mediator;
+global using Light.Specification;
+global using Microsoft.EntityFrameworkCore;
+global using StarterKit.Organization.Contracts.Common;
+global using StarterKit.Organization.Contracts.Companies;
+global using StarterKit.Organization.Contracts.OrgUnits;
+global using StarterKit.Organization.Contracts.EmployeeLevels;
+global using StarterKit.Organization.Contracts.Employees;

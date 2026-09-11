@@ -14,16 +14,16 @@ internal class HubService : IHubService
 
     public Task NotifyAsync(CancellationToken cancellationToken = default) =>
         _hubContext.Clients.All.SendAsync(
-            NotificationConstants.SERVER_NOTIFICATION, cancellationToken);
+            NotificationConstants.ServerNotification, cancellationToken);
 
     public Task NotifyAsync(string userId, CancellationToken cancellationToken = default) =>
         _hubContext.Clients.User(userId).SendAsync(
-            NotificationConstants.SERVER_NOTIFICATION, cancellationToken);
+            NotificationConstants.ServerNotification, cancellationToken);
 
     public Task NotifyAsync(IEnumerable<string> userIds,
         CancellationToken cancellationToken = default) =>
         _hubContext.Clients.Users(userIds).SendAsync(
-            NotificationConstants.SERVER_NOTIFICATION, cancellationToken);
+            NotificationConstants.ServerNotification, cancellationToken);
 
     public Task SendAsync<T>(T data, CancellationToken cancellationToken = default) =>
         _hubContext.Clients.All.SendAsync(typeof(T).Name, data, cancellationToken);

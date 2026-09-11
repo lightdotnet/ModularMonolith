@@ -28,7 +28,7 @@ export function CommandPaletteProvider({ groups, children }: CommandPaletteProvi
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      if ((event.metaKey || event.ctrlKey) && event.key?.toLowerCase() === "k") {
         event.preventDefault();
         setOpen((previous) => !previous);
       }

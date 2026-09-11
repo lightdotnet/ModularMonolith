@@ -1,24 +1,21 @@
-﻿using Light.AspNetCore.Authorization;
+using Light.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StarterKit.Infrastructure.Endpoints;
-using StarterKit.Notifications.Api.SignalR;
+using StarterKit.Notifications.Api.Application.Notifications.Commands;
+using StarterKit.Notifications.Api.Application.Notifications.Queries;
 using StarterKit.Notifications.Contracts.Authorization;
-using StarterKit.Notifications.Contracts.Services;
 using StarterKit.Notifications.Contracts.SystemNotifications;
 
 namespace StarterKit.Notifications.Api.Controllers;
 
 [ApiExplorerSettings(GroupName = "push")]
-public class NotificationController(
-    IHubService hub,
-    INotificationService notificationService) : VersionedApiController
+public class NotificationController : VersionedApiController
 {
     [HttpGet]
     [MustHavePermission(NotificationPermissions.Read)]
     public async Task<IActionResult> GetAsync([FromQuery] NotificationLookup request)
     {
-        var res = await notificationService.GetAsync(request);
-        return Ok(res);
+        return Ok(await Mediator.Send(new SearchNotificationsQuery(request)));
     }
 
     [HttpPost]
@@ -29,11 +26,7 @@ public class NotificationController(
         string toUserId,
         [FromBody] SystemMessage request)
     {
-        await notificationService.SaveAsync(fromUserId, fromName, toUserId, request);
-
-        // send notify after save record for load notification entries from API when receive
-        // *** note: must send message include to WebClient for client consume
-        await hub.SendAsync(request, toUserId);
+        await Mediator.Send(new SendNotificationCommand(fromUserId, fromName, toUserId, request));
 
         return Ok();
     }
@@ -42,7 +35,7 @@ public class NotificationController(
     [MustHavePermission(NotificationPermissions.Send)]
     public async Task<IActionResult> ForceLogout([FromBody] ForceLogoutMessage request)
     {
-        await hub.SendAsync(request, request.UserId);
+        await Mediator.Send(new ForceLogoutCommand(request));
 
         return Ok();
     }

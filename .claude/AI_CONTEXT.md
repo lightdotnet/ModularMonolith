@@ -39,7 +39,8 @@ Always assume, until verified otherwise for the specific task at hand:
 
 Delegate to a specialized agent when:
 
-- The task maps directly to one agent's domain (backend architecture, EF Core, API design, frontend architecture, security, performance, testing, docs, dependencies).
+- The task maps directly to one agent's domain (backend architecture, strategic/tactical DDD, EF Core, API design, frontend architecture, security, performance, testing, docs, dependencies).
+- Implementing an approved plan of any real size — hand the code changes to `dotnet-developer` (backend) / `nextjs-developer` (client app) rather than editing inline.
 - The investigation would require reading many files whose contents don't need to stay in the main context.
 - A second, independent opinion is valuable (e.g. security or architecture review).
 
@@ -53,7 +54,7 @@ Do inline when:
 See `CLAUDE.md` §2.9. This is the standard lifecycle for any request that adds or modifies code (a feature, a fix, a refactor) — not just the big ones:
 
 1. **Plan → present → wait.** Write the plan, show it to the user, and stop. Do not open an editor on production code before the user has explicitly said to proceed. This holds even for changes that feel small — the user asked for this gate specifically so they control the pacing, not so Claude can judge "this one's obviously fine."
-2. **Implement using the normal toolbox.** Once approved, delegate to the relevant agents/skills/workflows exactly as `CLAUDE.md` §2.2/§4–§6 already describe — this gate doesn't change *how* work gets delegated, only *when* it's allowed to start.
+2. **Implement using the normal toolbox.** Once approved, delegate to the relevant agents/skills/workflows exactly as `CLAUDE.md` §2.2/§4–§6 already describe — the code changes themselves go to `dotnet-developer` (backend) / `nextjs-developer` (client app). This gate doesn't change *how* work gets delegated, only *when* it's allowed to start.
 3. **Present the result → wait again.** When the code change is done, stop and hand it back for review before doing anything else. Don't chain into running tests or updating docs as a "helpful" next step.
 4. **Tests and docs are separate, explicit asks.** Running the automated test suite (`dotnet test`, `npm test`/`vitest`/`playwright`, etc.) and updating documentation each need their own follow-up instruction from the user after they've reviewed the code. This holds even if the approved plan mentioned "add tests" or "update docs" as part of the work — writing test *code* can be part of implementation if the plan called for it, but *executing* the suite is a separate, explicit step.
 5. **Basic build sanity is not "running tests."** Confirming the code compiles (or a scaffold's dev server starts) as you go is fine and expected — it's not the same as running the project's test suite, which stays gated.

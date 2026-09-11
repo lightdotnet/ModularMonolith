@@ -1,6 +1,7 @@
 ﻿using Light.Domain;
 using Light.Domain.Entities.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using StarterKit.Identity.Contracts;
 using StarterKit.Shared;
 
 namespace StarterKit.Identity.Api.Entities;
@@ -15,7 +16,7 @@ public class User : IdentityUser, IEntity<string>, IAuditable, ISoftDelete
 
     public ActiveStatus Status { get; set; } = new();
 
-    public string? AuthProvider { get; set; }
+    public AuthProvider AuthProvider { get; set; } = AuthProvider.Local;
 
     public DateTimeOffset Created { get; set; }
 
@@ -44,12 +45,31 @@ public class User : IdentityUser, IEntity<string>, IAuditable, ISoftDelete
             Status.Update(status);
     }
 
-    public void ChangeAuthProvider(string? authProvider)
+    public void ChangeAuthProvider(AuthProvider provider)
     {
-        // auth user via other provider instead local password
-        AuthProvider = string.IsNullOrEmpty(authProvider)
-            ? null
-            : authProvider;
+        // authenticate the user via the given provider instead of a local password
+        AuthProvider = provider;
+    }
+
+    public static User ProvisionFromExternalIdentity(
+        string email,
+        string? firstName,
+        string? lastName,
+        AuthProvider provider)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(email);
+
+        return new User
+        {
+            UserName = email,
+            Email = email,
+            EmailConfirmed = true,
+            FirstName = firstName,
+            LastName = lastName,
+            AuthProvider = provider,
+            Status = new ActiveStatus(ActiveStatus.State.Active),
+        };
+        // PasswordHash stays null; caller uses UserManager.CreateAsync(user) (no-password overload).
     }
 
     public void Delete()
@@ -60,7 +80,7 @@ public class User : IdentityUser, IEntity<string>, IAuditable, ISoftDelete
         PhoneNumber = null;
         Email = null;
         PasswordHash = null;
-        AuthProvider = null;
+        AuthProvider = AuthProvider.Local;
         Status.Update(ActiveStatus.State.Locked);
     }
 }

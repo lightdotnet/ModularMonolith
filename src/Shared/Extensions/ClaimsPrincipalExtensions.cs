@@ -19,8 +19,11 @@ public static class ClaimsPrincipalExtensions
     public static string? GetUserName(this ClaimsPrincipal principal) =>
         principal?.FindFirstValue(ClaimTypeConstants.UserName);
 
-    public static string? GetFullName(this ClaimsPrincipal principal) =>
-        principal?.FindFirstValue(ClaimTypeConstants.FullName);
+    public static string? GetFullName(this ClaimsPrincipal principal)
+    {
+        var name = $"{principal.GetFirstName()} {principal.GetLastName()}".Trim();
+        return string.IsNullOrEmpty(name) ? null : name;
+    }
 
     public static string? GetFirstName(this ClaimsPrincipal principal) =>
         principal?.FindFirstValue(ClaimTypeConstants.FirstName);
@@ -33,6 +36,9 @@ public static class ClaimsPrincipalExtensions
 
     public static string? GetPhoneNumber(this ClaimsPrincipal principal) =>
         principal?.FindFirstValue(ClaimTypeConstants.PhoneNumber);
+
+    public static string? GetEmployeeId(this ClaimsPrincipal principal) =>
+        principal?.FindFirstValue(ClaimTypeConstants.EmployeeId);
 
     public static DateTimeOffset GetExpiration(this ClaimsPrincipal principal) =>
         DateTimeOffset.FromUnixTimeSeconds(

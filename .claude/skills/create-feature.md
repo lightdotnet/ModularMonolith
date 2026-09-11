@@ -20,14 +20,15 @@ Guide the addition of new functionality without assuming repo-wide impact, and w
 1. **Scope**: confirm which module(s) and/or client app(s) the feature touches. If it could plausibly need a new module vs. extending an existing one, ask.
 2. **Read minimally**: read only the files/projects directly relevant (target module, its direct dependencies, the relevant client app(s), existing similar features as reference).
 3. **Delegate design questions**:
-   - [dotnet-architect](../agents/dotnet-architect.md) for backend module/structural decisions.
+   - [dotnet-architect](../agents/dotnet-architect.md) for backend module/structural decisions and strategic DDD (bounded context, cross-module integration mechanism).
+   - [ddd-modeler](../agents/ddd-modeler.md) for the domain model of any backend feature that adds or reshapes one — aggregate boundaries, invariants, value objects, domain events. This is the default design step for backend domain work, not an afterthought.
    - [api-designer](../agents/api-designer.md) if new/changed backend API surface is involved.
    - [efcore-specialist](../agents/efcore-specialist.md) if data access is involved.
    - [nextjs-architect](../agents/nextjs-architect.md) for a client app's routing/data-fetching/state decisions.
 4. **Settle the contract first** if the feature spans both stacks: agree the API shape (routes, DTOs, error cases) before writing client code against it — treat it as a small design step, not an afterthought.
 5. **Produce a plan**: outline the approach, files to add/change on each side (naming which client app(s) if more than one is touched), and any API-contract implications. Present it before writing code (see [workflows/implement-feature.md](../workflows/implement-feature.md)).
 6. **Wait for explicit approval** before implementing — this gate applies to every add/modify/feature request, not just large ones (see root `CLAUDE.md` §2.9).
-7. **Implement incrementally**, delegating to relevant agents/skills/workflows: backend first (confirming it builds) then each client against the real contract, or vice versa — small, reviewable steps rather than one large change across the whole stack at once. If the plan included tests, write that test code as part of this step.
+7. **Implement incrementally**, delegating the code changes to [dotnet-developer](../agents/dotnet-developer.md) (backend) and [nextjs-developer](../agents/nextjs-developer.md) (client app), each only after the plan is approved: backend first (confirming it builds) then each client against the real contract, or vice versa — small, reviewable steps rather than one large change across the whole stack at once. If the plan included tests, write that test code as part of this step.
 8. **Present the implemented code back to the user for review.** Stop here — don't automatically proceed to running tests or updating docs.
 9. **Run tests / check coverage only when asked**: once the user has reviewed the code and explicitly requests it, run the automated test suite and/or use [testing-reviewer](../agents/testing-reviewer.md) to check coverage of edge cases.
 10. **Verify the contract holds, if asked**: if both sides changed and the user wants it checked, run [api-contract-reviewer](../agents/api-contract-reviewer.md) to confirm every affected client actually matches what the backend now exposes.

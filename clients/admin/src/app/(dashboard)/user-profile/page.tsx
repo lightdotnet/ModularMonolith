@@ -1,1 +1,1 @@
-export { UserProfilePage as default } from "@/features/user-profile";
+export { UserProfilePage as default } from "@/modules/identity/user-profile";

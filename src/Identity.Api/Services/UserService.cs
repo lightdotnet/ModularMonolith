@@ -1,10 +1,7 @@
-﻿using Light.Specification;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using StarterKit.Identity.Api.Entities;
-using StarterKit.Identity.Api.Extensions;
 using StarterKit.Identity.Contracts;
 using StarterKit.Identity.Contracts.Services;
-using StarterKit.Persistence.Extensions;
 using StarterKit.Shared;
 using StarterKit.Shared.Extensions;
 using System.Security.Claims;
@@ -14,34 +11,6 @@ namespace StarterKit.Identity.Api.Services;
 public class UserService(UserManager<User> userManager) : IUserService
 {
     protected UserManager<User> UserManager => userManager;
-
-    public virtual async Task<PagedResult<UserDto>> SearchAsync(SearchUserQuery search, int pageNumber, int pageSize)
-    {
-        // Only search once the value is within a sane length: too short (<2) is a near-universal
-        // match not worth the 5-column scan, too long (>256) is an unbounded-input guard.
-        var searchValue = search.SearchValue?.Trim();
-        var hasSearch = searchValue is { Length: >= 2 and <= 256 };
-
-        return await userManager.Users
-            .AsNoTracking()
-            // Contains() case-sensitivity depends on the active provider's default collation
-            // (case-insensitive on SQL Server, case-sensitive on PostgreSQL) - normalize
-            // explicitly (e.g. EF.Functions.ILike on PostgreSQL) if that needs to be consistent.
-            .WhereIf(
-                hasSearch,
-                x =>
-                    x.UserName!.Contains(searchValue!)
-                    || x.FirstName!.Contains(searchValue!)
-                    || x.LastName!.Contains(searchValue!)
-                    || x.Email!.Contains(searchValue!)
-                    || x.PhoneNumber!.Contains(searchValue!)
-                )
-            .OrderByDescending(x => x.Created)
-            .ThenBy(x => x.UserName)
-            .MapToDto()
-            .ToPagedResultAsync(pageNumber, pageSize)
-            .ConfigureAwait(false);
-    }
 
     public virtual async Task<IEnumerable<UserDto>> GetAllAsync()
     {
@@ -130,7 +99,7 @@ public class UserService(UserManager<User> userManager) : IUserService
             PhoneNumber = newUser.PhoneNumber,
             FirstName = newUser.FirstName,
             LastName = newUser.LastName,
-            AuthProvider = newUser.AuthProvider,
+            AuthProvider = AuthProviderWire.Parse(newUser.AuthProvider),
         };
 
         var identityResult = string.IsNullOrWhiteSpace(newUser.Password)
@@ -169,7 +138,7 @@ public class UserService(UserManager<User> userManager) : IUserService
         }
 
         // update auth provider
-        user.ChangeAuthProvider(updateUser.AuthProvider);
+        user.ChangeAuthProvider(AuthProviderWire.Parse(updateUser.AuthProvider));
 
         var updatedResult = await userManager
             .UpdateAsync(user)
@@ -238,5 +207,41 @@ public class UserService(UserManager<User> userManager) : IUserService
             .ConfigureAwait(false);
 
         return users.Select(s => s.MapToDto());
+    }
+
+    public virtual async Task<IResult> SetClaimAsync(string userId, string claimType, string? claimValue)
+    {
+        var user = await userManager
+            .FindByIdAsync(userId)
+            .ConfigureAwait(false);
+
+        if (user == null)
+            return Result.NotFound($"User {userId} not found");
+
+        var existingClaims = await userManager.GetClaimsAsync(user).ConfigureAwait(false);
+        var existingClaim = existingClaims.FirstOrDefault(c => c.Type == claimType);
+
+        IdentityResult identityResult;
+
+        if (string.IsNullOrEmpty(claimValue))
+        {
+            identityResult = existingClaim is null
+                ? IdentityResult.Success
+                : await userManager.RemoveClaimAsync(user, existingClaim).ConfigureAwait(false);
+        }
+        else if (existingClaim is null)
+        {
+            identityResult = await userManager
+                .AddClaimAsync(user, new Claim(claimType, claimValue))
+                .ConfigureAwait(false);
+        }
+        else
+        {
+            identityResult = await userManager
+                .ReplaceClaimAsync(user, existingClaim, new Claim(claimType, claimValue))
+                .ConfigureAwait(false);
+        }
+
+        return identityResult.ToResult();
     }
 }

@@ -29,6 +29,22 @@ function toTitleCase(segment: string) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Route params like `[id]` land here as raw identifiers with no nav label — a UUID, a long
+ * hex string, or a numeric id. Title-casing those produces noise, so show a generic label. */
+function isOpaqueId(segment: string) {
+  return (
+    UUID_PATTERN.test(segment) ||
+    /^[0-9a-f]{16,}$/i.test(segment) ||
+    /^\d+$/.test(segment)
+  );
+}
+
+function labelForSegment(segment: string) {
+  return isOpaqueId(segment) ? "Details" : toTitleCase(segment);
+}
+
 export function Breadcrumbs() {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
@@ -37,7 +53,7 @@ export function Breadcrumbs() {
     { href: "/", label: LABELS.get("/") ?? "Dashboard" },
     ...segments.map((segment, index) => {
       const href = "/" + segments.slice(0, index + 1).join("/");
-      return { href, label: LABELS.get(href) ?? toTitleCase(segment) };
+      return { href, label: LABELS.get(href) ?? labelForSegment(segment) };
     }),
   ];
 

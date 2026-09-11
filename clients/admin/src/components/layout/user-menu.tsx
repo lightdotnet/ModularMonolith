@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getDisplayName, getInitials } from "@/lib/shared/user-display";
-import { logoutAction } from "@/features/auth/api/logout-action";
+import { logoutAction } from "@/modules/identity/auth/api/logout-action";
 import type { ProfileData } from "@/types/session";
 
 export function UserMenu({ user }: { user: ProfileData | null }) {

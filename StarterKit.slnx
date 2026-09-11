@@ -4,22 +4,44 @@
     <File Path="Directory.Packages.props" />
   </Folder>
   <Folder Name="/src/">
-    <Project Path="src/Identity.Api/Identity.Api.csproj" />
-    <Project Path="src/Identity.Contracts/Identity.Contracts.csproj" />
-    <Project Path="src/Infrastructure/Infrastructure.csproj" />
-    <Project Path="src/Notifications.Api/Notifications.Api.csproj" />
-    <Project Path="src/Notifications.Contracts/Notifications.Contracts.csproj" />
-    <Project Path="src/Persistence/Persistence.csproj" />
-    <Project Path="src/Shared/Shared.csproj" />
     <Project Path="src/StarterKit.WebApi/StarterKit.WebApi.csproj" />
   </Folder>
-  <Folder Name="/src/migrations/">
+  <Folder Name="/src/approval-module/">
+    <Project Path="src/Approval.Api/Approval.Api.csproj" />
+    <Project Path="src/Approval.Contracts/Approval.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/identity-module/">
+    <Project Path="src/Identity.Api/Identity.Api.csproj" />
+    <Project Path="src/Identity.Contracts/Identity.Contracts.csproj" />
+    <Project Path="src/Identity.Web/Identity.Web.csproj" />
+  </Folder>
+  <Folder Name="/src/leave-management-module/">
+    <Project Path="src/LeaveManagement.Api/LeaveManagement.Api.csproj" />
+    <Project Path="src/LeaveManagement.Contracts/LeaveManagement.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/notification-module/">
+    <Project Path="src/Notifications.Api/Notifications.Api.csproj" />
+    <Project Path="src/Notifications.Contracts/Notifications.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/organization-module/">
+    <Project Path="src/Organization.Api/Organization.Api.csproj" />
+    <Project Path="src/Organization.Contracts/Organization.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/_framework/">
+    <Project Path="src/Infrastructure/Infrastructure.csproj" />
+    <Project Path="src/Persistence/Persistence.csproj" />
+    <Project Path="src/Shared/Shared.csproj" />
+  </Folder>
+  <Folder Name="/src/_migrations/">
     <Project Path="src/Migrations/MSSQL/MSSQL.csproj" />
     <Project Path="src/Migrations/PostgreSQL/PostgreSQL.csproj" />
     <Project Path="src/Migrations/Sqlite/Sqlite.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Approval.Tests/Approval.Tests.csproj" />
     <Project Path="tests/Framework.Tests/Framework.Tests.csproj" />
     <Project Path="tests/Identity.Tests/Identity.Tests.csproj" />
+    <Project Path="tests/LeaveManagement.Tests/LeaveManagement.Tests.csproj" />
+    <Project Path="tests/Organization.Tests/Organization.Tests.csproj" />
   </Folder>
 </Solution>

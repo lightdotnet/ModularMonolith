@@ -90,5 +90,20 @@ public class IdentityContextInitialiser(
 
             await userManager.CreateAsync(user, defaultPassword);
         }
+
+        await userManager.CreateAsync(new User
+        {
+            UserName = "sup",
+            FirstName = "Supervisor",
+            LastName = "User",
+        }, defaultPassword);
+
+
+        await userManager.CreateAsync(new User
+        {
+            UserName = "mgr",
+            FirstName = "Manager",
+            LastName = "User",
+        }, defaultPassword);
     }
 }

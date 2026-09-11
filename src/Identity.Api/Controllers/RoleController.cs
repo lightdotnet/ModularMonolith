@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using StarterKit.Identity.Api.Application.Roles.Commands;
 using StarterKit.Identity.Contracts;
 using StarterKit.Identity.Contracts.Services;
 using StarterKit.Infrastructure.Endpoints;
@@ -24,22 +25,24 @@ public class RoleController(IRoleService roleService) : VersionedApiController
 
     [HttpPost]
     [Authorize(Policy = IdentityPermissions.Roles.Manage)]
-    public async Task<IActionResult> CreateAsync([FromBody] CreateRoleRequest request)
+    public async Task<IActionResult> CreateAsync(
+        [FromBody] CreateRoleRequest request)
     {
-        return Ok(await roleService.CreateAsync(request));
+        return Ok(await Mediator.Send(new CreateRoleCommand(request)));
     }
 
     [HttpPut]
     [Authorize(Policy = IdentityPermissions.Roles.Manage)]
-    public async Task<IActionResult> UpdateAsync([FromBody] RoleDto request)
+    public async Task<IActionResult> UpdateAsync(
+        [FromBody] RoleDto request)
     {
-        return Ok(await roleService.UpdateAsync(request));
+        return Ok(await Mediator.Send(new UpdateRoleCommand(request)));
     }
 
     [HttpDelete("{id}")]
     [Authorize(Policy = IdentityPermissions.Roles.Manage)]
     public async Task<IActionResult> DeleteAsync([FromRoute] string id)
     {
-        return Ok(await roleService.DeleteAsync(id));
+        return Ok(await Mediator.Send(new DeleteRoleCommand(id)));
     }
 }

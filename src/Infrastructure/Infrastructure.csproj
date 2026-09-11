@@ -13,6 +13,7 @@
 	<PackageReference Include="AspNetCore.HealthChecks.UI.Client" />
     <PackageReference Include="Lightsoft.AspNetCore.Extensions" />
     <PackageReference Include="Lightsoft.AspNetCore.Modularity" />
+	<PackageReference Include="Lightsoft.Caching" />
 	<PackageReference Include="Lightsoft.FileGenerator" />
 	<PackageReference Include="Lightsoft.Serilog" />
   </ItemGroup>

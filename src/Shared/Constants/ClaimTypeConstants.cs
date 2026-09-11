@@ -30,4 +30,6 @@ public abstract class ClaimTypeConstants
     public const string Permission = "permission";
 
     public const string ImageUrl = "image_url";
+
+    public const string EmployeeId = "employee_id";
 }

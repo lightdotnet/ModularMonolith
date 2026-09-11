@@ -22,15 +22,20 @@ public class AuthenticationServiceTests
         var userManagerMock = CreateUserManagerMock();
         var sessionServiceMock = new Mock<IUserSessionService>();
         var domainServiceMock = new Mock<IActiveDirectoryService>();
-        var signingService = new JwtSigningService(TestJwtOptions.Create());
+        var options = TestJwtOptions.Create();
+        var signingService = new JwtSigningService(options);
+        var hubTokenIssuer = new HubTokenIssuer(
+            signingService,
+            options);
         var dateTime = new FakeDateTime();
 
         var service = new AuthenticationService(
-            TestJwtOptions.Create(),
+            options,
             sessionServiceMock.Object,
             userManagerMock.Object,
             domainServiceMock.Object,
             signingService,
+            hubTokenIssuer,
             dateTime);
 
         return (service, userManagerMock, sessionServiceMock, domainServiceMock, signingService);
@@ -125,7 +130,7 @@ public class AuthenticationServiceTests
     {
         // Arrange
         var (service, userManagerMock, sessionServiceMock, domainServiceMock, _) = CreateSut();
-        var user = new User { UserName = "ad.user", AuthProvider = AuthProvider.AD.ToString() };
+        var user = new User { UserName = "ad.user", AuthProvider = AuthProvider.ActiveDirectory };
         var expectedToken = new TokenDto("access-token", 3600, "refresh-token");
         userManagerMock.Setup(m => m.FindByNameAsync("ad.user")).ReturnsAsync(user);
         domainServiceMock.Setup(d => d.CheckPasswordSignInAsync("ad.user", "pwd")).ReturnsAsync(true);
@@ -190,5 +195,41 @@ public class AuthenticationServiceTests
         // Assert
         Assert.True(result.IsSuccess);
         Assert.Equal(expectedToken, result.Data);
+    }
+
+    [Fact]
+    public async Task IssueHubTokenAsync_ShouldReturnHubToken_WhenUserAndSessionAreValid()
+    {
+        // Arrange
+        var (service, userManagerMock, sessionServiceMock, _, _) = CreateSut();
+        var user = new User { UserName = "jane.doe" };
+        userManagerMock.Setup(m => m.FindByIdAsync(user.Id)).ReturnsAsync(user);
+        sessionServiceMock.Setup(s => s.IsTokenValidAsync("session-1")).ReturnsAsync(true);
+
+        // Act
+        var result = await service.IssueHubTokenAsync(user.Id, "session-1");
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(
+            TestJwtOptions.Create().Value.HubTokenExpirationSeconds,
+            result.Data!.ExpiresIn);
+        Assert.False(string.IsNullOrEmpty(result.Data.AccessToken));
+    }
+
+    [Fact]
+    public async Task IssueHubTokenAsync_ShouldReturnUnauthorized_WhenSessionIsRevoked()
+    {
+        // Arrange
+        var (service, userManagerMock, sessionServiceMock, _, _) = CreateSut();
+        var user = new User { UserName = "jane.doe" };
+        userManagerMock.Setup(m => m.FindByIdAsync(user.Id)).ReturnsAsync(user);
+        sessionServiceMock.Setup(s => s.IsTokenValidAsync("session-1")).ReturnsAsync(false);
+
+        // Act
+        var result = await service.IssueHubTokenAsync(user.Id, "session-1");
+
+        // Assert
+        Assert.False(result.IsSuccess);
     }
 }

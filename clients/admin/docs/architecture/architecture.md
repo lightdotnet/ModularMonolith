@@ -1,328 +1,316 @@
 # Architecture: admin
 
+Structure, boundaries, and dependency direction of the admin client. This file stays at the
+"stable shape" altitude — per-feature behaviour, the route table, and the endpoint list live in
+[overview.md](./overview.md); package references and the full barrel-bypass inventory live in
+[dependency-graph.md](./dependency-graph.md).
+
 ## Layering
 
-Observed folder organization (verified via directory listing) — everything lives under `clients/admin/src/`:
+Feature-folder layering, split across two top-level roots under `clients/admin/src/`:
 
 ```text
 src/
-  app/                      routing only — layout.tsx, globals.css, error.tsx (root error boundary, "use client":
-                             branches on isRecoverableDeploymentError — a deploy-induced stale-tab error renders
-                             DeploymentRecoveryNotice + the /api/health-gated auto-reload loop, anything else the
-                             bare centered Alert + retry Button; no AppShell), login/page.tsx,
-                             api/health/route.ts (GET -> 204 liveness probe, `export const dynamic = "force-dynamic"`,
-                             no auth — proxy.ts's matcher excludes /api), (dashboard)/{layout.tsx,page.tsx,error.tsx,
-                             loading.tsx,user-profile/page.tsx,identity/{users,roles}/page.tsx,notifications/page.tsx}
-                             (error.tsx the same branching shape as the root one but rendered inside AppShell, since
-                             the parent layout stays mounted above an error boundary; loading.tsx a centered Spinner,
-                             cascading to every nested dashboard route)
-  features/
-    auth/                   api/{token.api,login-action,logout-action,refresh-session-action,
-                             ensure-fresh-session-action}.ts, components/{login-page,login-form}.tsx, types/token.ts,
-                             index.ts (token.api.ts exports getToken/refreshToken; logout-action.ts — the barrel does
-                             not export it, see Dependency Direction; refresh-session-action.ts — a super-admin-gated
-                             manual token-rotation Server Action, uses the persistSessionCookie() helper, see
-                             Dependency Direction; ensure-fresh-session-action.ts — the near-expiry/failure-counting
-                             Server Action `components/layout/session-gate.tsx` drives, not exported from the barrel,
-                             see Dependency Direction and Key Design Patterns)
-    user-profile/           api/{user-profile.api,resolve-session}.ts, components/{user-profile-page,
-                             session-info-card,session-lifecycle,user-status-badge}.tsx, types/user-session.ts,
-                             index.ts (user-profile.api.ts exports getCurrentUser/listSessions/revokeSession;
-                             resolve-session.ts is deliberately separate — cookie-only, no backend call;
-                             session-info-card.tsx composes session-lifecycle.tsx, a live countdown to token/session
-                             expiry, plus an optional manual-refresh button)
-    home/                   components/{home-page,profile-summary-card}.tsx, constants/nav-item.ts
-                             (`HOME_NAV_ITEM`), index.ts. No `api/` of its own — `home-page.tsx` calls
-                             `resolveSession()` (via the user-profile barrel) and `getMyNotificationsAction()`
-                             (via a direct file import into notifications)
-    users/                  api/*.ts (8 files: users.api.ts exporting getAllUsers/getDomainUser/getUserById/
-                             searchUsers/createUser/updateUser/forcePassword/deleteUser, plus 7 "use server" action
-                             files — create-user-action, update-user-action, force-password-action,
-                             delete-user-action, get-user-detail-action, search-users-action, get-domain-user-action),
-                             components/{users-page,users-data-table,create-user-dialog,edit-user-dialog,delete-user-dialog}.tsx,
-                             constants/{permissions,nav-item,auth-provider}.ts (`USERS_PERMISSIONS`, `USERS_NAV_ITEM`,
-                             `AUTH_PROVIDER_SELECT_OPTIONS`, shared by create-user-dialog.tsx and edit-user-dialog.tsx),
-                             types/user.ts, index.ts
-    roles/                  api/*.ts (7 files: roles.api.ts exporting getAllRoles/getPermissions/getRoleById/
-                             createRole/updateRole/deleteRole, plus 6 "use server" action files —
-                             create-role-action, update-role-action, delete-role-action, get-role-detail-action,
-                             get-all-roles-action, get-permissions-action),
-                             components/{roles-page,roles-data-table,create-role-dialog,edit-role-dialog,delete-role-dialog}.tsx,
-                             constants/{permissions,nav-item}.ts (`ROLES_PERMISSIONS`, `ROLES_NAV_ITEM`), types/{role,permission-definition}.ts, index.ts
-    notifications/          api/*.ts (7 files: notifications.api.ts — the admin-facing `notification`-route
-                             functions getNotifications/sendNotification — and a separate user-notifications.api.ts
-                             — the self-service `user_notification`-route functions getMyNotifications/
-                             getUnreadCount/markNotificationRead — plus 5 "use server" action files —
-                             get-my-notifications-action, get-unread-count-action, mark-notification-read-action,
-                             send-notification-action, get-signalr-token-action), hooks/use-notifications.ts,
-                             context/notifications-provider.tsx (`NotificationsProvider`/`useNotificationsContext`),
-                             components/{notification-bell,notifications-page,notifications-data-table,
-                             send-notification-dialog,user-select,notification-inbox,notification-list,
-                             notification-detail}.tsx, constants/{permissions,nav-item}.ts, types/notification.ts, index.ts
+  app/                  routing only. Every page.tsx is a one-line re-export from a feature/module
+                         barrel — no logic in app/. Root + (dashboard) error.tsx boundaries branch on
+                         isRecoverableDeploymentError (deploy-stale-tab self-recovery); (dashboard)/
+                         loading.tsx is a centered spinner cascading to nested routes; api/health/
+                         route.ts is a static 204 liveness probe. /administration, /organization,
+                         /settings are nav-only placeholders with no page.tsx.
+  features/home/         the one feature not moved under modules/ — components/, constants/nav-item.ts,
+                         index.ts; no api/ of its own (calls other modules' barrels/actions).
+  modules/<domain>/<name>/
+                         identity/{auth,user-profile,users,roles}, notifications (flat, no nesting),
+                         organization/{companies,departments,employees}, approvals, leave-requests.
+                         Each owns: api/ (one consolidated <name>.api.ts + one file per *-action.ts
+                         Server Action), components/, optional types/ (single-consumer, or a
+                         barrel-re-exported feature DTO), optional constants/ ({permissions,nav-item}.ts),
+                         and an index.ts barrel — the only sanctioned cross-module import surface.
   components/
-    ui/                     shadcn-CLI-generated primitives (23 files) plus five hand-written/hand-modified
-                             additions: native-select.tsx (wraps a real `<select>`); popover.tsx (Radix `Popover`
-                             wrapper); command.tsx (`cmdk`-based filterable list); combobox.tsx — `Combobox<TValue>`,
-                             composing popover.tsx + command.tsx + button.tsx, the shadcn-style single-select
-                             building block (see Key Design Patterns); button-group.tsx — `ButtonGroup`/
-                             `ButtonGroupSeparator`, a shadcn-style primitive that visually connects adjacent
-                             buttons via shared borders and end-only rounding, composed with separator.tsx;
-                             consumed by `components/shared/data-table/data-table-buttons.tsx` — provenance
-                             (CLI-generated vs hand-written) is `unknown`, but it follows the same `data-slot`/`cn`
-                             conventions as the rest of this folder. 28 files total. `tabs.tsx`'s `TabsTrigger`
-                             has `cursor-pointer`, and `dialog.tsx`'s `DialogContent` has a `max-h`/`overflow-y-auto`
-                             scroll rule (see Key Design Patterns).
-    foundation/             use-listbox.ts, use-virtual-list.ts, floating-overlay.tsx — serve only
-                             components/command/* (Command Palette) plus, for use-virtual-list.ts,
-                             components/shared/data-table/data-table-virtual-body.tsx. portal-container.ts is
-                             unrelated to the rest of this folder — a small React Context
-                             (`usePortalContainer`/`PortalContainerProvider`) that lets components/ui/dialog.tsx
-                             hand its own DOM node to components/ui/popover.tsx so a Popover nested inside a
-                             Dialog scrolls correctly (see Key Design Patterns)
-    command/                command-palette.tsx, command-palette-provider.tsx, types.ts, index.ts;
-                             Cmd/Ctrl+K overlay. The `CommandPalette` component is wired into the app by
-                             components/shared/search-box.tsx (the topbar search trigger); the
-                             `CommandPaletteProvider` sibling has no consumer
-    layout/                 topbar, sidebar, sidebar-nav-item, brand, breadcrumbs, user-menu, app-shell,
-                             session-gate, session-loading-overlay, session-unreachable-overlay (the last three
-                             are `AppShell`'s session-freshness gate and its two full-page overlay states — see
-                             Key Design Patterns), deployment-recovery-notice (`DeploymentRecoveryNotice` — the
-                             deploy-recovery branch's inner UI for both error.tsx boundaries; carries no
-                             `"use client"` of its own, client-only via its importers)
-    theme/                  theme-provider, accent-color-provider, theme-toggle, accent-color-picker, use-has-mounted, index.ts (barrel)
-    shared/
-      search-box.tsx        `SearchBox({ permissions, userName })` — the topbar ⌘K/Ctrl+K trigger button; opens
-                             components/command's `CommandPalette` populated with the visible nav leaves
-                             (`buildVisibleMenu` + `flattenNavLeaves`) grouped by top-level section
-      access-denied.tsx     `AccessDenied({ permission })` — built on `components/ui/empty.tsx`; the shared
-                             "access denied" panel returned by `lib/server/require-permission.tsx`'s
-                             `requirePermission()` when the caller lacks the checked permission (see Key Design Patterns)
-      data-table/            types.ts, data-table-toolbar.tsx, data-table-buttons.tsx, data-table-pagination.tsx,
-                             data-table.tsx, data-table-virtual-body.tsx, index.ts (barrel); generic reusable
-                             list-table building block, no data-fetching of its own. `types.ts`/`data-table.tsx`
-                             support optional per-column client-side sorting (`sortable`/`sortValue`) and an
-                             optional `mode` prop (`"paginated"` default / `"virtualized"` / `"infinite"`, the
-                             latter two rendered via `data-table-virtual-body.tsx`) plus `onSortChange` for
-                             server-driven sort. `data-table-toolbar.tsx` renders three stacked sections (actions /
-                             search / an inserted `Separator` between rendered sections) and has
-                             `customSearch`/`onCustomSearch` props for a caller-supplied, apply-on-click
-                             multi-field filter UI; the Export/Refresh/Columns cluster is rendered by
-                             `data-table-buttons.tsx` (`DataTableButtons`, built on `components/ui/button-group.tsx`),
-                             which `data-table.tsx` composes itself and renders either inline (via the toolbar's
-                             `buttons` prop) or inside the table's own bordered content box when `customSearch` is used
-      object-viewer/         (additive — not yet used by any page) utils.ts, object-viewer-layout-context.tsx,
-                             column-resize-handle.tsx, object-viewer-row.tsx, object-viewer.tsx, index.ts;
-                             built on `components/ui/table` + `components/ui/input`, no `features/*` dependency
-    toast/                  toast-theme.ts, notify.ts, toaster.tsx, index.ts (barrel); wraps the `sonner` dependency
-  hooks/                    use-sidebar.tsx, use-scrolled.ts, use-guarded-action.ts, use-action-success-toast.ts
-                             (the last two centralize the toast/pending patterns each dialog would otherwise
-                             duplicate, see Key Design Patterns)
+    ui/                  shadcn-CLI primitives + a few hand-written/hand-modified additions
+                         (native-select, popover, command, combobox, button-group). Leaf layer.
+    foundation/          use-listbox / use-virtual-list / floating-overlay (serve components/command/*
+                         and the virtualized DataTable body) + portal-container.ts (React Context
+                         letting a Popover portal into an open Dialog's own DOM node).
+    command/             Cmd/Ctrl+K palette; reached via components/shared/search-box.tsx.
+                         CommandPaletteProvider has no consumer.
+    layout/             app chrome — topbar, sidebar, app-shell, breadcrumbs, user-menu, session-gate
+                         (+ session-loading / session-unreachable overlays), deployment-recovery-notice.
+    theme/             theme + accent-color providers/pickers, use-has-mounted.
+    shared/            cross-feature building blocks with no feature knowledge: data-table/,
+                         search-box.tsx, access-denied.tsx, local-date-time.tsx, object-viewer/ (unused).
+    toast/             themed sonner wrapper (notifySuccess / notifyError).
+  hooks/               use-sidebar, use-scrolled, use-guarded-action, use-action-success-toast.
   lib/
-    server/                 config.ts, http.ts, call-guard.ts, session-cookie.ts, session.ts, authorization.ts,
-                             token-cipher.ts, jwt.ts, build-session-claims.ts, refresh-session.ts, refetch-profile.ts,
-                             parse-session.ts, backend-api.ts, api-clients.ts, http-handlers/bearer-token-handler.ts,
-                             persist-session-cookie.ts, require-permission.tsx
-                             (session encryption/JWT/refresh chain; backend-api.ts/api-clients.ts/
-                             http-handlers/bearer-token-handler.ts decouple auth-token injection from http.ts into
-                             a handler pipeline; refetch-profile.ts extracts the profile-refetch-and-rebuild-claims
-                             logic `ensure-fresh-session-action.ts` calls, previously inline in `proxy.ts` — see
-                             Dependency Direction; persist-session-cookie.ts extracts the Server-Action-context
-                             cookie write (next/headers's cookies()), shared by refresh-session-action.ts and
-                             get-signalr-token-action.ts, see Key Design Patterns; require-permission.tsx is
-                             `requirePermission(permission)`, the shared page-level permission-gate helper
-                             composing `resolveSession()`, `authorization.ts`'s `hasPermission`, and
-                             `components/shared/access-denied.tsx`, see Key Design Patterns; every flat file
-                             plus http-handlers/bearer-token-handler.ts starts with `import "server-only";`, a
-                             compile-time guard, see Key Design Patterns. `require-permission.tsx` itself is a
-                             `.tsx` file — the one `lib/server/*` module that returns JSX)
-    shared/                 utils.ts, dedupe-claims.ts, user-display.ts, user-status.ts, menu.ts (buildVisibleMenu
-                             + flattenNavLeaves/NavLeaf), authorization.ts, deployment-recovery.ts ("use client" —
-                             the browser-only deploy-recovery loop the error.tsx boundaries call)
-  constants/                nav-items.ts (permission-string constants and nav item definitions both live
-                             per-feature rather than here — see `features/{home,users,roles,notifications}/constants/nav-item.ts`)
-  types/                    api.ts, claim.ts, nav.ts, session.ts
-  proxy.ts                  Next.js "proxy" convention file (successor to middleware.ts); a thin auth gate only —
-                             calls into `lib/server/{parse-session,session-cookie}.ts` (`token-cipher.ts` transitively
-                             via parse-session.ts) to enforce the hard 7-day session cap and keep `/login`
-                             unreachable once authenticated. No longer touches token refresh or profile freshness —
-                             that moved to `components/layout/session-gate.tsx` (see Key Design Patterns and
-                             overview.md's Auth Flow) — and no longer imports any feature api file directly, see
-                             Known Architectural Risks / Debt for an open question about which runtime this requires
+    server/            server-only (import "server-only" on line 1 of all 18 files): http.ts,
+                         call-guard.ts, config.ts, the session + cookie-codec + JWT + refresh chain,
+                         api-clients.ts / backend-api.ts (bearer-token handler pipeline),
+                         require-permission.tsx (the one .tsx module here — returns JSX).
+    shared/            client-safe helpers: utils.ts (cn), menu.ts, authorization.ts,
+                         dedupe-claims.ts, user-display.ts, deployment-recovery.ts ("use client").
+  constants/nav-items.ts  assembly only — imports each feature/module's own NavItem (by direct file
+                         path, not barrel — see Dependency Direction) and composes NAV_ITEMS.
+  types/               api.ts, claim.ts, nav.ts, session.ts.
+  proxy.ts             thin auth gate only — decrypt / validate / hydrate the session cookie(s),
+                         enforce the hard 7-day session cap, keep /login unreachable once authenticated.
+                         No token refresh, no feature/module imports.
 ```
 
-This is a **feature-folder** layering: `app/*` pages are pure re-exports from a feature's public API; `features/<name>/` owns its own `api/`, `components/`, and (when a type has exactly one consumer) `types/`, each exposed through an `index.ts` barrel; `components/layout/*` (app chrome) and `components/theme/*` compose `components/ui/*` plus `hooks/*`/`lib/shared/*`/`constants/*`/`types/*`; `components/ui/*` remains the leaf primitive layer. `components/shared/data-table/` and `components/toast/` are cross-feature building blocks sitting at the same layer as `components/shared/search-box.tsx`/`components/shared/access-denied.tsx` — presentational/utility, composed by features (or, for `access-denied.tsx`, by `lib/server/require-permission.tsx`) but with no feature-specific knowledge baked in.
+`app/*` pages are pure re-exports from a feature/module barrel; each feature/module owns its own
+`api/` + `components/` + optional `types/`/`constants/`, exposed through one `index.ts`.
+`components/layout/*` and `components/theme/*` (app chrome) compose `components/ui/*` +
+`hooks/*` + `lib/shared/*`; `components/shared/*` and `components/toast/*` are cross-feature,
+feature-agnostic building blocks at the same layer; `components/ui/*` is the leaf primitive layer.
 
-**`features/<name>/` may also own a `constants/`** — `permissions.ts` (`users`, `roles`, `notifications`) plus a `nav-item.ts` per nav-bearing feature, each exporting one `NavItem` constant for that feature's own entry — a deliberate move away from putting anything feature-specific in the top-level `constants/` folder. Top-level `constants/nav-items.ts` is purely an *assembly* file: it imports each feature's `NavItem` and composes the final `NAV_ITEMS` tree, only declaring the group node (below) and the "Settings" leaf directly since neither is owned by a single feature (Settings has no feature/page at all). The tree's first entry is `home`/`HOME_NAV_ITEM` (`@/features/home/constants/nav-item`). The group node is labeled **"Administration"** (`/administration`, icon `ShieldCog`) and its `children` array holds `USERS_NAV_ITEM`, `ROLES_NAV_ITEM`, and `NOTIFICATIONS_NAV_ITEM` — all three nav items keep their own `href`s (`/identity/users`, `/identity/roles`, `/notifications`), only the assembled tree's grouping/labeling lives in `nav-items.ts`. `/administration` itself has no `page.tsx` (same 404-if-followed shape as `/settings`).
+**Nav tree assembly**: each nav-bearing feature/module owns one `NavItem` in its `constants/nav-item.ts`
+(label, href, icon, and — where gated — the permission). `constants/nav-items.ts` only *assembles*
+these into `NAV_ITEMS`, declaring itself just the two group nodes (`/administration`, `/organization` —
+each spans multiple modules) and the `/settings` leaf (no owning feature). Final order:
+`[home, Administration group, Organization group, /approvals, /leave-requests, /settings]` — the last
+two are top-level leaves, not nested in either group. `Sidebar` and the topbar `SearchBox` both filter
+this same tree client-side via `lib/shared/menu.ts`'s `buildVisibleMenu(NAV_ITEMS, can)`.
 
 ## Dependency Direction
 
-Verified via actual `import` statements. See [dependency-graph.md](./dependency-graph.md) for the app's external package references and the circular-import check.
-
-Direction, low-level to high-level (an arrow means "is imported by," never the reverse):
+Verified via actual `import` statements. An arrow means "is imported by", never the reverse.
+See [dependency-graph.md](./dependency-graph.md#circular-references) for the full, current
+barrel-bypass exception list and rationale.
 
 ```text
-components/ui/*, components/foundation/*        leaf primitives. Never import components/layout/*,
-                                                 components/theme/*, or features/*. Two narrow exceptions:
-                                                 components/ui/{dialog,popover}.tsx also import
-                                                 components/foundation/portal-container.ts (a dependency-free
-                                                 React Context) — see Key Design Patterns.
+components/ui/*, components/foundation/*        leaf primitives. Never import layout/theme/* or a
+        ^                                        feature/module. One narrow exception: ui/{dialog,
+        |                                        popover}.tsx import foundation/portal-container.ts.
+components/shared/*, components/toast/*,        feature-agnostic building blocks. Consumed by every
+components/command/*                            feature/module + layout/*; import nothing from a
+        ^                                        feature/module themselves.
+        |
+lib/shared/*, lib/server/*                      pure helpers / server-only session+HTTP layer.
+        ^                                        Normally below every feature/module; two deliberate
+        |                                        reversals — lib/server/refresh-session.ts ->
+        |                                        identity/auth/api/token.api.ts, and
+        |                                        lib/server/refetch-profile.ts ->
+        |                                        identity/user-profile/api/user-profile.api.ts
+        |                                        (neither is a cycle — those modules don't import back).
+feature/module internals (api, components,     api/ owns backend calls; constants/ owns permission
+  constants, types)                            strings + nav metadata.
         ^
-components/shared/*, components/toast/*,        presentational/utility building blocks. Consumed by features/*
-components/command/*                            and components/layout/* (components/command/* only via
-                                                 components/shared/search-box.tsx); import nothing from features/*
-                                                 or components/layout|theme/* themselves.
-        ^
-lib/shared/*, lib/server/*                      pure helpers / server-only session+HTTP layer. lib/server/*
-                                                 normally sits below features/*; two reversals: lib/server/
-                                                 refresh-session.ts imports features/auth/api/token.api.ts
-                                                 directly, and lib/server/refetch-profile.ts imports
-                                                 features/user-profile/api/user-profile.api.ts directly
-                                                 (neither is a cycle — features/auth and features/user-profile
-                                                 don't import back). lib/shared/deployment-recovery.ts is
-                                                 "use client" and imported only by the error.tsx boundaries.
-        ^
-features/<name>/{api,components,constants,types}  feature-internal layers; api/ owns that feature's backend
-                                                   calls, constants/ owns its permission strings + nav metadata.
-        ^
-features/<name>/index.ts (barrel)               the only sanctioned cross-feature import surface. Seven narrow,
-                                                 reasoned exceptions bypass it via a direct file import instead
-                                                 — see dependency-graph.md's Circular References for the full
-                                                 list and rationale (all seven exist to avoid pulling a barrel's
-                                                 server-only Server Component exports into a client bundle).
-        ^
-components/layout/*, components/theme/*         app chrome — composes components/ui/*, hooks/*, lib/shared/*,
-                                                 constants/*, types/*; reaches into one feature directly in three
-                                                 of the seven exceptions above (topbar.tsx -> notification-bell.tsx,
-                                                 user-menu.tsx -> logout-action.ts, session-gate.tsx ->
-                                                 ensure-fresh-session-action.ts). topbar.tsx also renders
-                                                 components/shared/search-box.tsx, passing it permissions/userName.
-        ^
-app/**/page.tsx, app/**/layout.tsx,               routing — pure re-exports from a feature's barrel, or, for
-app/api/health/route.ts, src/proxy.ts             proxy.ts, direct lib/server/* calls only (parse-session.ts,
-                                                   session-cookie.ts) — no feature api file import anymore, that
-                                                   moved into lib/server/refetch-profile.ts (see above).
-                                                   api/health/route.ts imports nothing — a static 204.
+a feature/module's index.ts barrel             the only sanctioned cross-module import surface. A
+        ^                                        reasoned set of exceptions bypass it via direct file
+        |                                        import — mostly to keep a barrel's server-only exports
+        |                                        out of a client bundle, or because the target
+        |                                        (a Server Action, a few components) was never
+        |                                        barrel-exported. Full list in dependency-graph.md.
+components/layout/*, components/theme/*         app chrome. Reaches into three specific feature files
+        ^                                        directly (topbar -> notification-bell, user-menu ->
+        |                                        logout-action, session-gate -> ensure-fresh-session-action).
+app/**/{page,layout}.tsx, app/api/health,      routing — pure re-exports from a barrel, or (proxy.ts)
+src/proxy.ts                                    direct lib/server/* calls only.
 ```
 
-No cycles found — see [dependency-graph.md](./dependency-graph.md#circular-references) for the full analysis, including all barrel-bypass exceptions and the two `lib/server -> features` direction reversals.
+No cycles found among internal imports.
 
 ## Key Design Patterns
 
-- **Feature-folder + barrel-export convention**: each `features/<name>/` owns `api/` (one consolidated `<feature>.api.ts` file per feature, wrapping every backend call that feature makes; Server Actions remain one file per action), `components/`, optionally `types/` — either single-consumer (`features/roles/types/{role,permission-definition}.ts`, `features/user-profile/types/user-session.ts`) or feature-owned DTOs with multiple consumers inside and outside the feature, re-exported through the barrel for cross-feature use (`features/users/types/user.ts` — `UserDto`/`CreateUserRequest`/`SearchUsersParams`; `features/auth/types/token.ts` — `TokenDto`/`GetTokenRequest`/`RefreshTokenRequest`/`DeviceDto`; `features/notifications/types/notification.ts` — also home to `SendNotificationRequest`) — and optionally `constants/` (a feature-owned permission-string file, e.g. `features/users/constants/permissions.ts`, and a `nav-item.ts` per nav-bearing feature), and an `index.ts` that is the only sanctioned import surface for other features or `app/*`. **Seven narrow, deliberate exceptions** to the barrel-only rule exist (see dependency-graph.md's Circular References): `constants/nav-items.ts`, `components/layout/user-menu.tsx`, `components/layout/topbar.tsx`, `components/layout/session-gate.tsx` (imports `@/features/auth/api/ensure-fresh-session-action`), `features/users/components/edit-user-dialog.tsx` (imports `@/features/roles/api/get-all-roles-action`), `features/notifications/components/user-select.tsx` (imports `@/features/users/api/search-users-action`), and `features/home/components/home-page.tsx` (imports `@/features/notifications/components/notification-inbox` and `@/features/notifications/api/get-my-notifications-action` directly) each import one specific file directly rather than through a barrel, to avoid pulling a barrel's other, server-only exports (async Server Components, cookie-reading API functions) into a client bundle — `get-my-notifications-action` also simply isn't in the notifications barrel at all, and `ensure-fresh-session-action` isn't in the auth barrel either (same reason: the auth barrel also re-exports `LoginPage`, an async Server Component).
-- **One consolidated API file per feature, Server Actions kept separate**: every `features/<name>/api/` folder has a single `<feature>.api.ts` file wrapping every backend call that feature makes, rather than one file per endpoint — `features/auth/api/token.api.ts` (`getToken`, `refreshToken`), `features/users/api/users.api.ts` (8 functions), `features/roles/api/roles.api.ts` (6 functions), `features/notifications/api/notifications.api.ts` (the admin-facing `notification`-route functions, `getNotifications`/`sendNotification`) plus a separate `features/notifications/api/user-notifications.api.ts` (the self-service `user_notification`-route functions, `getMyNotifications`/`getUnreadCount`/`markNotificationRead`), and `features/user-profile/api/user-profile.api.ts` (`getCurrentUser`/`listSessions`/`revokeSession`). `features/user-profile/api/resolve-session.ts` is deliberately kept as its own file — it only reads the local session cookie, never calls the backend. `*-action.ts` Server Action files are one file per action.
-- **Each nav-bearing feature owns its own `NavItem` metadata**: `features/{home,users,roles,notifications}/constants/nav-item.ts` each export one `NavItem` (label, href, icon, and — where relevant — the permission that gates it), re-exported from that feature's barrel. `constants/nav-items.ts` imports these four constants **by direct file path**, not via each feature's barrel, and assembles them into `NAV_ITEMS` alongside two nodes it declares itself (a group node, since it spans multiple features — see below — and "Settings", which has no owning feature or page at all). The direct-file-path import is intentional, not an oversight: `nav-items.ts` is imported by the client-side `Sidebar` component, and `features/users/index.ts`/`features/roles/index.ts`'s barrels also re-export server-only code (`UsersPage`/`RolesPage`, async Server Components calling `resolveSession()`, which reads cookies via `next/headers`) — importing the full barrel from client code would drag that server-only chain into the client bundle. The `nav-item.ts` files themselves are plain data (an icon reference plus strings) with no server/client-bound dependency, so importing them directly is safe. `components/layout/sidebar.tsx` computes the permission-filtered menu client-side via `lib/shared/menu.ts`'s `buildVisibleMenu(NAV_ITEMS, can)`, where `can` is built from `lib/shared/authorization.ts` (`hasPermission`) using the `permissions`/`userName` props `AppShell` passes down from `resolveSession()`. The group node — declared directly in `nav-items.ts`, not owned by a feature — is labeled "Administration" (`/administration`, icon `ShieldCog`), and nests `NOTIFICATIONS_NAV_ITEM` inside its `children` array alongside `USERS_NAV_ITEM`/`ROLES_NAV_ITEM`.
-- **Topbar search is a permission-scoped command palette over the nav tree**: `components/shared/search-box.tsx` (`SearchBox`, a `<button>` trigger rendered in `TopBar` and handed `permissions`/`userName`) opens `components/command`'s `CommandPalette`. It `useMemo`-builds the `CommandGroup[]` from `buildVisibleMenu(NAV_ITEMS, can)` — the exact same call `Sidebar` makes, so the palette lists precisely the pages the sidebar shows — then `lib/shared/menu.ts`'s `flattenNavLeaves()`, which walks the filtered tree into `{ item, section }` leaves each tagged with its top-level section label; every leaf becomes a palette entry that `router.push`es its `href`, grouped under its section heading. `SearchBox` owns the `open` state and its own `⌘K`/`Ctrl+K` `keydown` listener — it deliberately does **not** use `components/command/command-palette-provider.tsx`'s `CommandPaletteProvider` (which stays unused): the palette has exactly one consumer, so a context wrapper buys nothing. The `CommandPalette` overlay itself is built on `components/foundation/*` + `@floating-ui/react` (not Radix `Dialog`) specifically so it doesn't lock body scroll.
-- **Deploy-induced stale-tab errors self-recover in the error boundaries**: a deploy rotates hashed asset filenames and — unless `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` is pinned (see [development-guide.md](../conventions/development-guide.md)) — all Server Action IDs, so a browser tab still running the previous build throws `UnrecognizedActionError` ("Failed to find Server Action"), `ChunkLoadError`, a mid-restart `TypeError: Failed to fetch`, or Next error `E394`. `lib/shared/deployment-recovery.ts` (`"use client"`) centralizes both recognizing these (`isRecoverableDeploymentError` — `name`/`__NEXT_ERROR_CODE`/message-regex checks) and recovering from them (`runDeploymentRecovery` — polls `/api/health` on a growing backoff `[2, 5, 10, 20, 30]s` and hard-reloads **only once the probe answers**, so a reload fired mid-deploy doesn't strand the tab on the browser's native "can't reach this page" screen; `peekDeploymentRecoveryExhausted` is the pure read the error UI uses during render). A `sessionStorage` counter caps it at 5 reloads per 5 minutes; once spent, `components/layout/deployment-recovery-notice.tsx`'s `DeploymentRecoveryNotice` drops the animated "reconnecting" treatment for a static "Reload now" card. Both `app/error.tsx` and `app/(dashboard)/error.tsx` branch on `isRecoverableDeploymentError(error)` before their generic destructive `Alert`. Backend-connectivity `Failed to fetch`s never reach this path — `guardCall` (`lib/server/call-guard.ts`) already turns those into a rendered `Result`, so the message-regex match here doesn't swallow them.
-- **Fetch full detail on dialog open, when the list endpoint's DTO is incomplete — generalized to self-fetching the picklist too**: both `edit-user-dialog.tsx` and `edit-role-dialog.tsx` call a dedicated `get-*-detail-action.ts` in a `useEffect` on mount rather than trusting the row data they were opened with. This exists because the backend's list-returning service methods (`UserService.SearchAsync`/`GetAllAsync`, `RoleService.GetAllAsync` — their shared `DataMapper.cs` projection) never populate `Roles`/`Claims`; only the single-record fetch (`GetByIdAsync`) does. Relying on the row data would silently produce an empty roles/claims checklist that, on save, would wipe out anything the record actually had. The same "fetch on open, don't trust what the list page preloaded" idea also covers the *picklist itself* — `users-page.tsx`/`roles-page.tsx` don't fetch the role catalog/permission catalog and pass them down as props; instead each edit dialog runs `Promise.all([<detail fetch>, <picklist fetch>])` on open (`getAllRolesAction()`/`getPermissionsAction()` respectively), so both list pages issue one fewer API call on page load.
-- **Role claims split into "known permissions" vs "other claims," editable independently**: `edit-role-dialog.tsx` classifies each of a role's fetched claims on load — a `permission`-type claim only counts as a known permission (rendered as a pre-checked checkbox in the existing Permissions list) if its value matches one of the fetched `PermissionDefinition`s; every other claim, including every `permission` claim when the permissions fetch itself fails, falls into an `otherClaims: ClaimDto[]` state instead of being silently dropped. An "Other claims" section lists these as delete-only `type: value` rows plus an "Add custom claim" row (Type/Value, validated non-empty + no exact duplicates) that deliberately still allows `type: "permission"` — letting a role be given an arbitrary/unrecognized permission claim by hand. The full `otherClaims` array serializes into a hidden `otherClaims` form field. `features/roles/api/update-role-action.ts` reads that field via `parseOtherClaims(raw, fallbackClaims)` — falling back to the unfiltered `current.data.claims` (from a `getRoleById(id)` call kept purely for existence-check/fallback) if the field is missing/malformed — and merges `[...otherClaims, ...permissionClaims]` through `dedupeClaims()` (`lib/shared/dedupe-claims.ts`) before submitting, collapsing any overlap between a manually-added `permission` claim and a checked checkbox. No backend/contract change — `RoleDto.claims: ClaimDto[]` is already generic.
-- **Shared `requirePermission`/`AccessDenied` pattern for page-level permission gating**: `lib/server/require-permission.tsx`'s `requirePermission(permission)` resolves the session (redirecting to `/login` if none, via `resolveSession()`/`redirect()`), checks `permission` via `lib/server/authorization.ts`'s `hasPermission`, and returns `{ session, denied }` — `denied` is `null` on success or a `components/shared/access-denied.tsx` (`AccessDenied`) element on failure. A page calls it once at the top and does `if (denied) return denied;` before its own data fetch. `users-page.tsx`, `roles-page.tsx`, and `notifications-page.tsx` all use this pattern and behave identically on a missing view permission (all three render the shared `AccessDenied` panel). `lib/server/authorization.ts`'s `hasPermission`/`hasAnyPermission`/`hasAllPermissions` take `(session, permission)` — no separate `userName` parameter, deriving it from `session.profile?.userName` internally; the underlying client-safe `lib/shared/authorization.ts` is unaffected. `lib/server/require-permission.tsx` is the one `lib/server/*` module that returns JSX (a `.tsx` file, unlike its flat-file siblings).
-- **On-demand user search, not a preloaded full user list**: `features/notifications/components/user-select.tsx` takes no `users` prop and does no client-side filtering over a preloaded list. It debounces (300ms) a call to `searchUsersAction({searchValue, pageNumber: 1, pageSize: 10})` once the trimmed query reaches a minimum length (`MIN_SEARCH_LENGTH = 3`), fetching only the first page of matches — never the whole user list. Its `onValueChange` hands back the full selected `UserDto`, not just an id, so a caller needing the display name too (`send-notification-dialog.tsx`'s "From" field) doesn't need a second lookup.
-- **On-demand domain-user (AD) lookup with silent-miss autofill**: `create-user-dialog.tsx`'s Username field backs a lookup against `get-domain-user-action.ts` (`GET user/get_domain_user/{userName}`, wrapping the backend's `IActiveDirectoryService.GetByUserNameAsync`; the underlying call lives in `users.api.ts`'s `getDomainUser`) — fired either by a small icon button merged into the input's own right edge (`SearchIcon`/`Spinner`, `size="icon-xs"`, absolutely positioned), or automatically on `onBlur` once the trimmed value is at least 3 characters and different from the last one looked up (tracked in a `useRef`, not a debounced `useEffect` — deliberately not per-keystroke, a different shape from `user-select.tsx`'s typeahead search above). A match autofills First/Last name, Email, Phone, sets a new `authProvider` field to `"AD"`, and shows an inline green message under the Username field (no toast — see the Toast notifications pattern below for the one deliberate exception); a miss is treated as "this will be a local account" rather than an error — it silently resets those same autofilled fields (including `authProvider`) back to blank, with no message shown at all. Password becomes conditionally optional as a result (`required={values.authProvider !== "AD"}` client-side), with `create-user-action.ts`'s own server-side validation matching (`!password && authProvider !== "AD"`). The options backing the Auth Provider field live in `features/users/constants/auth-provider.ts` (`AUTH_PROVIDER_SELECT_OPTIONS`), which represents Local as an **empty string** rather than the literal `"Local"` — matching the backend's actual convention (`User.ChangeAuthProvider` treats `""`/`null` as "local," and the `AuthProvider` enum itself only defines `AD`; see `src/Identity.Api/Entities/User.cs`/`src/Identity.Contracts/AuthProvider.cs`). `edit-user-dialog.tsx` uses this same shared constant — its default state and `isLocalAccount` check are `""`/`authProvider === ""`, avoiding a latent bug where saving an unchanged "Local" selection would have written the literal string `"Local"` into the backend's `AuthProvider` column instead of `null`.
-- **Routing files are pure re-exports**: every `app/**/page.tsx` is a one-line `export { X as default } from "@/features/<name>";` — no logic lives in `app/`. The sole exception is `app/api/health/route.ts`, a Route Handler returning a static `204`.
-- **Server-only API layer, one consolidated file per feature**: `lib/server/http.ts` (`requestJson`/`requestVoid`) is the single fetch wrapper; each `features/*/api/<feature>.api.ts` file wraps every backend call for that feature and returns a normalized result via `lib/server/call-guard.ts`'s `guardCall`/`guardResponseCall`/`guardRawCall` (chosen based on whether the backend endpoint returns a `Result<T>` envelope, a bare `ApiResponse`, or a raw value/array). A non-2xx response is thrown as a typed `HttpError` (`http.ts`, carries the HTTP `status`), which `call-guard.ts`'s `errorResponse()` maps to the backend's `ResultCode` vocabulary (401 → `"unauthorized"`, 400 → `"bad_request"`, else `"error"`) — this is what the refresh-failure pattern below relies on to distinguish a dead token from a network blip.
-- **Session-freshness check moved off blocking middleware into a client-driven overlay, with bounded auto-retry and force-logout**: `src/proxy.ts` only enforces the 7-day session cap and the `/login` redirect now (see Layering) — the token-refresh/profile-freshness work used to run inline in middleware, which blocks the entire navigation with no way to render a loading UI while it's in flight. That work moved to `components/layout/session-gate.tsx` (`SessionGate`, mounted in `(dashboard)/layout.tsx` wrapping `AppShell`) driving `features/auth/api/ensure-fresh-session-action.ts`'s `ensureFreshSessionAction()` (a Server Action). `SessionGate` is a state machine (`"checking" | "ready" | "unreachable"`): on mount (which — since nested layouts don't remount on soft navigation — only happens on a true hard reload) it shows `session-loading-overlay.tsx`'s `SessionLoadingOverlay` (full-page, blurred, spinner) while checking; a transient failure (network/5xx) retries up to 2 more times (1s/2s backoff) before falling back to `session-unreachable-overlay.tsx`'s `SessionUnreachableOverlay`, which polls every 5s until the backend answers again rather than silently giving up; on success it calls `router.refresh()` to re-render the Server Component tree with the freshly-persisted cookie. Once settled, a silent 60-second background interval keeps a long-open, soft-navigation-only session's token from going stale — no overlay, since it isn't gating anything the user is waiting on. See "Session near-expiry refresh..." below for the force-logout threshold this same action enforces.
-- **Session near-expiry refresh centralized into a shared helper, now with a distinguishable failure verdict**: `lib/server/refresh-session.ts`'s `refreshSessionIfNearExpiry(session)` — wraps `refreshSession()` (unconditional rotate), gated on `session.expiresAt - Date.now() <= REFRESH_LEAD_MS` — returns a `RefreshOutcome` discriminated union (`{status: "skipped"}` / `{status: "success", session}` / `{status: "failed", permanent: boolean}`) instead of the previous `SessionData | null`, so a caller can tell "not due yet" apart from "attempted and failed," and a transient failure (network/5xx — `permanent: false`) apart from a permanent one (401/400 — `permanent: true`, the refresh token itself is invalid/revoked). `features/auth/api/ensure-fresh-session-action.ts` (called by `SessionGate`, see above) is the primary caller now, not `proxy.ts`; it also tracks consecutive **permanent** failures in `SessionData.refreshFailureCount` (`lib/server/session-cookie.ts`) and force-logs-out (clears the cookie, `redirect("/login")`) once it reaches `MAX_REFRESH_FAILURES` (3) — a genuinely revoked/expired refresh token no longer silently rides out the full 7-day `sessionExpiresAt` cap. A transient failure never touches that counter, since it says nothing about the token's own validity. `features/notifications/api/get-signalr-token-action.ts` calls the same `refreshSessionIfNearExpiry()` too, proactively refreshing before handing an access token to the browser for the SignalR handshake — closing a gap where a session left open on one page (no navigation) could otherwise hand SignalR a stale token and get a 401; it does not participate in the failure-counting (only `ensureFreshSessionAction` does). `lib/server/persist-session-cookie.ts` (`persistSessionCookie(session)`) centralizes the Server-Action-context cookie write (`cookies()` from `next/headers`, `buildSessionCookieOptions()`), used by `get-signalr-token-action.ts`, `ensure-fresh-session-action.ts`, and `features/auth/api/refresh-session-action.ts` (the manual, super-admin-gated refresh action, which calls `refreshSession()` directly/unconditionally rather than the near-expiry-gated helper, since it's an explicit user-triggered rotate, not a proactive one) — deliberately not importable from `proxy.ts`, whose middleware/Edge-adjacent context uses `NextRequest`/`NextResponse` cookie APIs instead of `next/headers` (moot now that `proxy.ts` no longer writes the session cookie at all).
-- **Permissions/roles decoded from the JWT, never trusted from the profile API**: `lib/server/jwt.ts` decodes the access token's payload (no signature verification — safe here since the token was just issued by this app's own backend) and extracts the `permission`/`role` claim types; `lib/server/build-session-claims.ts` unions those with the profile API's own claims for display purposes only. Both `loginAction` and `refreshSession()` independently re-derive `permissions`/`roles` this way on every token issuance.
-- **Context-provider-per-concern for client state**: `SidebarProvider`/`useSidebar`, `AccentColorProvider`/`useAccentColor`, and `next-themes`' provider (wrapped in `components/theme/theme-provider.tsx`) each own one slice of persisted UI state via a throwing custom hook. `features/notifications/context/notifications-provider.tsx`'s `NotificationsProvider`/`useNotificationsContext` follows the same shape (call the underlying hook exactly once, expose its return value via Context, throw from the consumer hook if called outside the provider), but unlike the other three it isn't persisted to `localStorage` — its "state" is live server data plus an open SignalR connection, not client UI preference. Mounted once in `components/layout/app-shell.tsx` (nested inside `SidebarProvider`) so `notification-bell.tsx` (topbar) and `notification-inbox.tsx` (Home page) share one connection/`unreadCount` instead of each opening its own. (`components/shared/search-box.tsx` is the counter-example — a single-consumer palette that keeps its state local rather than adopting the available `CommandPaletteProvider`.)
-- **Owned, CLI-generated UI primitives**: `components/ui/*` (23 shadcn-CLI-generated files, style `"radix-nova"`) follows the `data-slot="<name>"` + `cva()` convention. `button.tsx` retains hand-modification beyond CLI output: a `loading` prop (renders `Spinner`, sets `aria-busy`/`disabled`) plus a `cursor-pointer` utility baked into `buttonVariants`. `native-select.tsx` is the one hand-written exception in this folder — see the next pattern for why it and the rest of the select-related components aren't CLI/Radix-based. `tabs.tsx`'s `TabsTrigger` carries the same `cursor-pointer` treatment `button.tsx` has, since Tailwind's Preflight resets `<button>` to `cursor: default` and `TabsTrigger` had never been given the override (used by `edit-user-dialog.tsx`, `notification-inbox.tsx`, `notification-bell.tsx`). `dialog.tsx`'s `DialogContent` has `max-h-[calc(100vh-2rem)] overflow-y-auto` so a dialog taller than a short viewport (e.g. `EditUserDialog`'s tabs + roles + claims) scrolls as a whole (header + body + footer together) instead of overflowing off-screen — a deliberately simpler scope than a sticky-footer redesign.
-- **Single-select goes through a shadcn-style `Combobox`**: `components/ui/combobox.tsx` (`Combobox<TValue>`) composes `components/ui/{button,popover,command}.tsx` — `popover.tsx` is a Radix `Popover` wrapper (`data-slot`/`cn` conventions matching the rest of `ui/`), `command.tsx` wraps the `cmdk` dependency for the filterable list. `Command`'s built-in search input covers both a button-triggered picklist and a text-filterable one, so the two consumers (`edit-user-dialog.tsx`'s status/authProvider, `features/notifications/user-select.tsx`) need no special-casing. `components/command/*` (Command Palette) builds directly on `components/foundation/*`/`@floating-ui/react`, unrelated to `Combobox` — it reuses `floating-overlay.tsx` rather than Radix `Dialog` specifically because Radix `Dialog` locks body scroll by default and the Palette's overlay explicitly must not (`FloatingOverlay`'s `lockScroll={false}`). It is now reached in the app through the topbar `SearchBox` (see "Topbar search is a permission-scoped command palette" above).
-- **A Popover nested inside a Dialog portals into the Dialog's own DOM node, not `document.body`**: Radix `Dialog`'s modal scroll lock (`react-remove-scroll`, active while the dialog is open) only treats content that is an actual DOM descendant of `DialogContent`'s own node as "inside" the locked region; anything portaled elsewhere — which is what `Popover.Portal` does by default (`document.body`) — would have its wheel/touch scroll blocked as if it were page background, even though it renders visually on top and in the right place. Two things in `components/ui/dialog.tsx` make the nested case work: (1) `DialogContent` centers via a `flex items-center justify-center` wrapper `div` instead of a `transform` (`-translate-x-1/2 -translate-y-1/2`) on the content node itself — a `transform` on an ancestor creates a new CSS containing block for `position: fixed` descendants, which would break a nested Popover's floating-position math the moment its portal target moved inside `DialogContent`; the wrapper is `pointer-events-none` with `pointer-events-auto` on the content itself, so backdrop clicks still reach `DialogOverlay` exactly as before. (2) `DialogContent` captures its own DOM node (`ref={setPortalNode}`) and provides it through `components/foundation/portal-container.ts` context (`PortalContainerProvider`/`usePortalContainer`); `components/ui/popover.tsx`'s `PopoverContent` reads that context and passes it as `Popover.Portal`'s `container` prop, falling back to Radix's own `document.body` default outside a Dialog. This is automatic for any future `Combobox`/`Popover` nested in a `Dialog` — no per-call-site wiring needed.
-- **A sidebar nav group containing the active route can be manually collapsed — "default" is separate from "explicit override"**: `hooks/use-sidebar.tsx` stores explicit per-href overrides in a `Map<string, boolean>` (`expandedOverrides`) rather than a plain expanded-`Set`; `isExpanded(href)` returns `boolean | undefined` (`undefined` = no override yet, so the group still auto-expands to reveal the active route by default), and `toggleExpanded(href, current)` writes an explicit `!current`, which wins over `branchActive` (whether a descendant route is the current page) once set — `sidebar-nav-item.tsx` computes `expanded = hasChildren && (isExpanded(item.href) ?? branchActive)`. `expandedOverrides` does not persist to `localStorage` — a manually collapsed/expanded group resets to the default (auto-expand-active-route) on every reload; `hidden`/`HIDDEN_KEY` persistence is unaffected. The `SidebarContext.Provider`'s `value` object and its `toggleSidebar`/`isExpanded`/`toggleExpanded` functions are wrapped in `useMemo`/`useCallback` to avoid unnecessary consumer re-renders.
-- **Single-CSS-variable theming** and **runtime accent swap via DOM attribute + localStorage**: `--primary` drives themed surfaces, `AccentColorProvider` sets `data-accent` on `<html>`. `ACCENT_COLORS` includes a `black` preset — the one preset with no Tailwind shade scale (just the flat `--color-black`/`--color-white` tokens), so unlike every other preset (which steps one shade lighter for dark mode, e.g. `-600` light / `-500` dark) it inverts across themes instead (`--color-black` light / `--color-white` dark), per rules in `globals.css`. `accent-color-picker.tsx` has a `swatchColor(value)` helper to render its dropdown swatch accordingly — `var(--color-black)` for the `black` preset, `var(--color-${value}-600)` for every other preset.
-- **Hydration-safe browser-state restoration**: `hydrated` flag + `useEffect`, `eslint-disable react-hooks/set-state-in-effect`, in `SidebarProvider` and `AccentColorProvider`; `components/theme/use-has-mounted.ts` (`useSyncExternalStore`) guards `ThemeToggle`. `SidebarProvider`'s mount-time restoration only covers `hidden` (`HIDDEN_KEY`) — `expandedOverrides` is never restored from/persisted to `localStorage` (see the sidebar-collapse pattern above).
-- **Mobile drawer closes on route change via render-time state adjustment**: in `hooks/use-sidebar.tsx`.
-- **Generic, presentational `DataTable<TData>` building block**: `components/shared/data-table/` composes a toolbar (actions + search + a caller-rendered buttons node), a table body (skeleton-loading rows, an `Empty` state, or an `Alert`-based error state that replaces the body and hides pagination), and a windowed-pagination footer (`getPageWindow()` always keeps page 1/last visible plus siblings around the current page). It takes no dependency on any feature or data-fetching library — fully controlled via props (`data`, `columns`, `isLoading`, `error`, callbacks); `UsersDataTable` (server-driven search via URL params), `RolesDataTable` (local client-side filtering — there's no backend search endpoint for roles), and `NotificationsDataTable` (a custom multi-field filter UI, see below) reuse it as-is with different search wiring. `isLoading` takes priority over a stale `error` — an in-flight refetch (e.g. clicking Refresh) always shows the table's own skeleton-row loading state rather than a leftover error from a previous failed load. Optional per-column client-side sorting (`DataTableColumn.sortable`/`sortValue`) — a sortable header renders as a `<button>` cycling asc → desc → unsorted with `ArrowUp`/`ArrowDown`/`ArrowUpDown` icons, and the table body sorts a `useMemo`-derived copy of `data`; explicitly scoped to callers holding the full result set client-side — `RolesDataTable` uses it (name/description columns), `UsersDataTable` deliberately does not, since it paginates via the backend and only ever holds one page of `data` at a time. An optional `mode` prop (`"paginated"` default / `"virtualized"` / `"infinite"`) switches the row/header markup to an ARIA-grid div layout rendered via `data-table-virtual-body.tsx` (a native `<table>` can't virtualize its rows cleanly); an optional `onSortChange` lets a caller take over sorting server-side instead of the default client-side sort, a prerequisite for `"virtualized"`/`"infinite"` modes against a large or streamed dataset — both additive, no existing caller (`UsersDataTable`, `RolesDataTable`, `NotificationsDataTable`) passes either, so all three keep today's exact `"paginated"` behavior. `data-table-toolbar.tsx` renders three stacked sections (actions / search / an inserted `Separator` between rendered sections) instead of one combined row, and has a `customSearch?: React.ReactNode` prop for a caller-supplied multi-field filter UI plus `onCustomSearch?: () => void`, which renders an explicit "Search" button — custom filters apply on click, unlike the built-in single-field text search, which stays auto-debounced (400ms). The toolbar does not build the Export/Refresh/Columns cluster itself; `data-table-buttons.tsx` (`DataTableButtons`) does, wrapped in `components/ui/button-group.tsx` (`ButtonGroup`). `data-table.tsx` computes this buttons node and either passes it to the toolbar as `buttons` (default layout) or, when `customSearch` is used, renders it itself inside the table's own bordered content box (right-aligned, above the content) — the content box (`rounded-md border border-border`) always wraps the table/empty/error/virtualized body, not just in the `customSearch` case. `NotificationsDataTable` is the only current consumer of `customSearch` — its status + recipient filter dropdowns sit in this slot, holding local "pending" state applied to the URL only when "Search" is clicked, rather than auto-navigating on every change.
-- **Controlled form state alongside `useActionState`, for Server Action forms that can fail**: dialogs bound to a mutation Server Action keep their own `useState<FormValues>` in parallel with `useActionState(...)`. This is deliberate, not redundant — React resets *uncontrolled* form fields once a Server Action settles, regardless of success or failure, which would silently wipe user input after a validation error; controlled state survives that reset.
-- **Force-remount via a bumped `key` to reset `useActionState`**: `useActionState` has no imperative "clear this error/state" API, so each `*DataTable` bumps a per-dialog key counter on every open (`createDialogKey`, `editDialogKey`, ...) and passes it as that dialog's React `key`, forcing a fresh component instance (fresh action state, fresh controlled form state, and — for the edit dialogs — a fresh detail-fetch) each time it's opened.
-- **Toast notifications via a themed `sonner` wrapper**: `components/toast/` never exposes `sonner`'s `toast` directly — call sites use `notifySuccess`/`notifyError` (`notify.ts`), and the visual theme (`saturatedToastOptions`, `withToastProgress()`) is centralized in `toast-theme.ts` so every toast in the app looks consistent without each call site repeating class names. **One deliberate exception**: `create-user-dialog.tsx`'s domain-lookup "found" result renders as an inline message under the Username field instead of a toast — the result is directly tied to that field's own state (and needs to clear itself the moment the username changes again), not a fire-and-forget action result like every other success path in this app.
-- **Backend error messages surfaced through the shared `send()` wrapper**: `lib/server/http.ts`'s `extractErrorMessage()` centralizes turning a non-2xx response body into a human-readable string (envelope message → validation-errors map → `ProblemDetails.title` → generic fallback), so every `features/*/api/*.ts` call gets real error text without each call site parsing the body itself.
-- **Real-time push via SignalR, browser-authenticated with a short-lived, action-issued access token; direct browser-to-backend connection with retry**: `use-notifications.ts` opens a `HubConnection` directly from the browser to `process.env.NEXT_PUBLIC_SIGNALR_HUB_URL` — an absolute backend URL, not proxied same-origin through `next.config.ts` (which has no `rewrites()`); the browser depends on backend CORS being configured for the admin origin (assumed, not verified). Authenticated via `accessTokenFactory` calling `getSignalRTokenAction()` — a Server Action that hands the browser a short-lived access token specifically for this handshake, since the real session token stays in an httpOnly cookie the browser can't read otherwise (proactively refreshing it first if near expiry — see the session-refresh-helpers pattern above). On any `SystemMessage` push it calls `refresh(statusRef.current)` (refetches the list, scoped to whichever status filter is currently active, plus the unread count) rather than merging the pushed payload into state, because the payload is the raw backend `SystemMessage`, not a full `NotificationDto`. `connectSignalR` is a retryable inner function — a failed `connection.start()` logs a sanitized error via `sanitizeSignalRErrorMessage()` (strips the raw HTML negotiate-failure response body the SignalR client embeds in its own error message) and retries after 30 seconds via `setTimeout`, cleared on unmount alongside the existing connection teardown. `.configureLogging(LogLevel.Critical)` is added to the `HubConnectionBuilder` chain — this app has no `not-found.tsx` anywhere under `app/`, so navigating to an unmatched route unmounts the entire `(dashboard)/layout.tsx` subtree via Next.js's default 404, which intentionally stops any open connection mid-flight; the browser surfaces that as an abnormal WebSocket closure (code 1006), which SignalR's own client would otherwise log via `console.error` at its default `LogLevel.Error` even though the disconnect is expected. The hook's own explicit `console.error` inside `connection.start()`'s catch block (for genuine connect failures) is untouched by this.
-- **Server-side notification tab filtering, shared across two consumers via one Context**: both `notification-bell.tsx` (topbar) and `notification-inbox.tsx` (Home page) offer an All/Unread/Archived `Tabs` filter, and neither filters client-side over an already-fetched batch — `notification-bell.tsx` calls the shared `refresh(status)`, `notification-inbox.tsx` calls `getMyNotificationsAction({pageNumber, status})` directly. This keeps the tab filter and the unread-count badge (from the separate true-total `getUnreadCountAction()`) always in agreement, since neither is derived from a client-side slice of one fetched page. Both consumers read `unreadCount`/`markAsRead` from the shared `NotificationsContext` (see the Context-provider-per-concern pattern above) rather than each owning their own copy, so marking a notification read from either place updates both immediately.
-- **Every backend API response is envelope-wrapped — never assume a bare value**: every endpoint in this backend wraps its response in the `Result`/`ApiResponse` envelope; `guardRawCall` (assuming a bare value/array) is almost never the correct `call-guard.ts` helper for this backend — verify against a sibling endpoint's actual response shape rather than assuming.
-- **Auth-token injection lives in a request-handler pipeline, decoupling the API layer from sessions**: `lib/server/http.ts`'s `RequestOptions` has no `accessToken` field — it takes `handlers?: HttpRequestHandler[]` (`(context: HttpRequestContext) => Promise<void> | void`, `context.headers` a mutable `Record<string, string>`) run in order by `send()` before `fetch()` — `http.ts` itself never imports or knows about sessions. `lib/server/backend-api.ts` exports a `createBackendApiClient(client: ApiClientName)` factory, pre-wiring `requestJson`/`requestVoid` with `handlers: [bearerTokenHandler, ...]` and a fixed `client`; two instances built from it, `identityApi`/`notificationsApi`, cover the app's two backend modules (`lib/server/api-clients.ts`'s `ApiClients` registry has `Identity`/`Notifications`). Most `features/*/api/<feature>.api.ts` files call `identityApi.requestJson(...)`/`notificationsApi.requestJson(...)` (or the `requestVoid` equivalents) rather than a single shared `requestJson`, and those functions take no `accessToken` parameter. `lib/server/http-handlers/bearer-token-handler.ts` exports `bearerTokenHandler` (reads the ambient session via `getSession()`) and `explicitBearerTokenHandler(accessToken)`, a factory used by the pre-session-cookie call sites — `token.api.ts`'s `getToken`/`refreshToken` (via `login-action.ts`) and `user-profile.api.ts`'s `getCurrentUser` (called from `login-action.ts` and `lib/server/refetch-profile.ts`) — which call `http.ts` directly, passing `client: ApiClients.Identity` explicitly. Every mutation `*-action.ts` Server Action reads `resolveSession()` only for the "session expired" early-exit UX message, not to extract/pass a token.
-- **Client-side toast/pending feedback centralized into two small hooks**: `hooks/use-guarded-action.ts`'s `useGuardedAction()` (`[pending, run]`, built on `useTransition`) wraps the "run an imperative action, toast the result, track pending" pattern for non-form calls — applied to `delete-user-dialog.tsx`/`delete-role-dialog.tsx` (their confirm-dialog UI itself is untouched by this, a deliberate scope decision). `hooks/use-action-success-toast.ts`'s `useActionSuccessToast(state, successMessage, onSuccess?)` is a `useEffect` wrapper that toasts and runs `onSuccess` once a `useActionState`-bound result's `.success` turns true — applied at 6 call sites across 5 form dialogs (`create-user-dialog.tsx`, `create-role-dialog.tsx`, `send-notification-dialog.tsx`, `edit-role-dialog.tsx`, `edit-user-dialog.tsx` — 2 call sites, the update form and the password-reset form).
-- **`server-only` compile-time guard on every `lib/server/*` module handling sessions/tokens**: all 17 files under `lib/server/` — the 16 flat files plus `http-handlers/bearer-token-handler.ts` — start with `import "server-only";` on line 1, so a Client Component that accidentally imports one of them fails at build time with a clear error, instead of silently bundling server-only code into the client or failing confusingly at runtime. `src/proxy.ts` (Next.js middleware/Edge runtime) transitively imports 2 of these (`parse-session.ts`, `session-cookie.ts`, plus `token-cipher.ts` transitively via `parse-session.ts`) — far fewer than before, now that the refresh/persist/profile-refetch chain moved to `ensure-fresh-session-action.ts`; a `pnpm build`/`pnpm start` pass together with a live exercise of the full `parseSessionCookie` → `token-cipher.decrypt` path (`/login` returning 200, an unauthenticated `/` returning a 307 redirect to `/login`) confirmed this doesn't break at runtime.
-- **Server Actions that change list-page data self-invalidate via `revalidatePath`**: `features/roles/api/{create-role-action,update-role-action,delete-role-action}.ts` call `revalidatePath("/identity/roles")`, `features/users/api/{create-user-action,update-user-action,delete-user-action}.ts` call `revalidatePath("/identity/users")`, `features/notifications/api/send-notification-action.ts` calls `revalidatePath("/notifications")`, and `features/auth/api/refresh-session-action.ts` calls `revalidatePath("/user-profile")` — each placed right after the `!result.isSuccess` early-return, right before `return { success: true }`. Deliberately **not** applied to `features/notifications/api/mark-notification-read-action.ts` (called only from the client-only notification bell/inbox hook, which manages its own state — no Server-Component page depends on route cache there, so it would be a no-op) or to the on-demand detail/picklist reads (`force-password-action.ts`, `get-user-detail-action.ts`, `get-role-detail-action.ts`) — a deliberate scope decision, not an oversight.
+- **Feature/module folder + barrel export.** Every feature/module owns `api/`, `components/`, and
+  optionally `types/`/`constants/`, exposed through a single `index.ts` that is the only sanctioned
+  cross-module import. A reasoned set of direct-file-import exceptions exists — see
+  [dependency-graph.md](./dependency-graph.md#circular-references).
 
-## External Dependencies
+- **One consolidated API file per feature/module; Server Actions kept separate.** Each `api/` has one
+  `<name>.api.ts` wrapping every backend call that feature makes (not one file per endpoint); each
+  `*-action.ts` Server Action is its own file, including read-only actions a Client Component needs but
+  can't fetch itself (e.g. `get-approver-candidates-action.ts`). `resolve-session.ts` is deliberately
+  its own file — cookie-only, no backend call.
 
-From `package.json` `dependencies`:
+- **Server-only API layer with normalized envelopes.** `lib/server/http.ts` (`requestJson`/`requestVoid`)
+  is the single fetch wrapper; every `<name>.api.ts` returns a normalized result via `call-guard.ts`'s
+  `guardCall`/`guardResponseCall`/`guardRawCall`. A non-2xx throws a typed `HttpError` carrying the
+  status, which `call-guard.ts` maps to the backend's `ResultCode` vocabulary — this is what lets the
+  refresh flow tell a dead token (401/400) from a network blip. **Every backend response is
+  envelope-wrapped** — `guardRawCall` is almost never correct here.
 
-- **`next` 16.3.0, `react`/`react-dom` 19.2.4** — framework/runtime.
-- **`radix-ui` ^1.6.7** — unified Radix primitives, base for `components/ui/*`.
-- **`class-variance-authority` ^0.7.1** — variant class composition.
-- **`clsx` ^2.1.1 + `tailwind-merge` ^3.6.0** — combined in `lib/shared/utils.ts`'s `cn()`.
-- **`lucide-react` ^1.31.0** — icon set.
-- **`next-themes` ^0.4.6** — theme switching; also drives `components/toast/toaster.tsx`'s light/dark toast theme.
-- **`qrcode` ^1.5.4** — generates the data-URI QR code of the user ID on `/user-profile` (`features/user-profile/components/user-profile-page.tsx`).
-- **`server-only` ^0.0.1** — compile-time marker forcing a build error if any `lib/server/*` module using it is ever imported into a Client Component; present (as `import "server-only";` on line 1) in all 17 files under `lib/server/` — the 16 flat files plus `http-handlers/bearer-token-handler.ts`.
-- **`sonner` ^2.0.8** — toast notifications, wrapped by `components/toast/` (`AppToaster`, `notifySuccess`/`notifyError`); called from the Users and Roles create/edit/delete dialogs' success paths.
-- **`shadcn` ^4.18.0** — CLI + runtime stylesheet import (`app/globals.css` imports `shadcn/tailwind.css`).
-- **`tw-animate-css` ^1.4.0** — animation utility classes.
-- **`@microsoft/signalr` ^10.0.11** — real-time push client; used only by `features/notifications/hooks/use-notifications.ts`.
-- **`@floating-ui/react` ^0.27.20** — positioning + interaction primitives (`useFloating`, `useListNavigation`, `useTypeahead`, `useDismiss`, `useRole`, `FloatingPortal`, `FloatingFocusManager`). Only `components/foundation/{use-listbox,use-virtual-list,floating-overlay}.ts(x)` and the Command Palette (`components/command/*`, reached in the app via the topbar `SearchBox`) depend on it.
-- **`@tanstack/react-virtual` ^3.14.9** — headless list virtualization; used by `components/foundation/use-virtual-list.ts` for the DataTable's `"virtualized"`/`"infinite"` modes and the Command Palette's result list past 50 items.
-- **`cmdk` ^1.1.1** — the filterable-list primitive behind `components/ui/command.tsx`, itself the base of `components/ui/combobox.tsx`.
+- **Auth-token injection via a request-handler pipeline.** `http.ts` has no `accessToken` option — it
+  takes `handlers` run before `fetch`. `lib/server/backend-api.ts`'s `createBackendApiClient(client)`
+  factory pre-wires `bearerTokenHandler` (reads the ambient session) and a fixed backend client; five
+  instances (`identityApi`/`notificationsApi`/`organizationApi`/`approvalApi`/`leaveManagementApi`)
+  cover the five backend modules. Pre-session call sites pass `explicitBearerTokenHandler(token)`
+  instead. `http.ts` never imports sessions.
 
-From `devDependencies`: `@tailwindcss/postcss` ^4.3.3, `tailwindcss` ^4, `eslint` ^9, `eslint-config-next` 16.3.0, `prettier` ^3.9.6 + `prettier-plugin-tailwindcss` ^0.8.1 (no `.prettierrc*`/`format` script — see Known Architectural Risks / Debt), `typescript` ^5, `@types/node` ^20, `@types/react` ^19, `@types/react-dom` ^19, `@types/qrcode` ^1.5.6.
+- **Session freshness moved off blocking middleware into a client-driven gate.** `proxy.ts` now only
+  enforces the 7-day cap and the `/login` redirect. `components/layout/session-gate.tsx` (mounted in
+  `(dashboard)/layout.tsx`) drives `ensureFreshSessionAction()` — a state machine
+  (`checking`/`ready`/`unreachable`) showing a full-page overlay while checking on hard navigation,
+  retrying a transient failure up to 2× (then polling every 5s), and force-logging-out after
+  `MAX_REFRESH_FAILURES` (3) consecutive *permanent* refresh failures rather than riding out the
+  7-day cap. A silent 60s background interval keeps a long-open soft-nav-only session fresh.
 
-## Relationship to Other Client Apps
+- **Near-expiry refresh centralized with a distinguishable failure verdict.**
+  `lib/server/refresh-session.ts`'s `refreshSessionIfNearExpiry(session)` returns a `RefreshOutcome`
+  union (`skipped` / `success` / `failed{permanent}`) so callers separate "not due" from "attempted
+  and failed", and transient (network/5xx) from permanent (401/400 — refresh token itself invalid).
+  `ensureFreshSessionAction` and `get-signalr-token-action.ts` both call it; only the former does the
+  failure-counting.
 
-`clients/admin` is still the only subfolder under `clients/` (verified). It remains fully independent — `pnpm-workspace.yaml` only configures pnpm build-script approval, it is not a multi-app monorepo workspace root. Nothing is shared with a sibling app because none exists yet.
+- **Minimal encrypted cookie storage, hydrated on every read.** The `admin_session` cookie persists
+  only `StoredSession` (tokens, expiries, profile, `refreshFailureCount`, `extraClaims`) —
+  `claims`/`permissions`/`roles` are dropped and re-derived from the access-token JWT on every read.
+  `cookie-codec.ts` splits the encrypted payload across numbered chunk cookies past `MAX_CHUNK_BYTES`
+  as a backstop against the browser's silent ~4096-byte per-cookie limit; every write clears the
+  cookie names it isn't using.
 
-## Shared Kernel / Common Building Blocks Used
+- **Permissions/roles decoded from the JWT, never trusted from the profile API.** `lib/server/jwt.ts`
+  extracts the `permission`/`role` claim types from the access token (no signature check — issued by
+  this app's own backend); `build-session-claims.ts` unions with the profile API's claims for display
+  only. Both `loginAction` and `refreshSession()` re-derive on every token issuance.
 
-- `components/ui/*` — the app's own primitive layer.
-- `components/ui/combobox.tsx` (plus its `popover.tsx`/`command.tsx` primitives) — the shadcn-style single-select building block. Only one consumer feature — `features/users` (edit dialog, status/authProvider). `features/notifications/components/user-select.tsx` doesn't use it (a bespoke on-demand-search component; see Key Design Patterns).
-- `components/foundation/` — `use-listbox.ts`/`use-virtual-list.ts`/`floating-overlay.tsx` (serving only `components/command/*` and, for `use-virtual-list.ts`, `components/shared/data-table/data-table-virtual-body.tsx`) plus `portal-container.ts` (serving `components/ui/{dialog,popover}.tsx`, see Key Design Patterns). Does not back any select/combobox component.
-- `components/command/*` — Command Palette (Cmd/Ctrl+K). The `CommandPalette` component is consumed by `components/shared/search-box.tsx` (topbar page search); the `CommandPaletteProvider` sibling has no consumer.
-- `components/shared/data-table/` — generic list-table building block (toolbar, `data-table-buttons.tsx` for the Export/Refresh/Columns cluster, built on `components/ui/button-group.tsx` — pagination, loading/empty/error states, optional per-column sort, optional virtualized/infinite modes via `data-table-virtual-body.tsx`, and an optional `customSearch`/`onCustomSearch` slot for a caller-supplied, apply-on-click multi-field filter UI); consumed by `features/users`, `features/roles`, and `features/notifications` (with different search/sort strategies — see Key Design Patterns), designed with no feature-specific knowledge baked in.
-- `components/shared/search-box.tsx` — the topbar ⌘K page-search trigger (`SearchBox({ permissions, userName })`); composes `components/command`'s `CommandPalette` over the permission-filtered nav tree. No feature dependency, but reaches wider than the other `components/shared/*` pieces (imports `@/constants/nav-items`, `@/lib/shared/menu`, `@/lib/shared/authorization`).
-- `components/shared/access-denied.tsx` — the shared "access denied" panel (`AccessDenied({ permission })`), built on `components/ui/empty.tsx`; not consumed directly by feature code — it's returned by `lib/server/require-permission.tsx`'s `requirePermission()`, which `users-page.tsx`/`roles-page.tsx`/`notifications-page.tsx` all call (see Key Design Patterns).
-- `components/shared/object-viewer/` — additive; a recursive read-only object/table renderer built on `components/ui/table` + `components/ui/input`, no `features/*` dependency. Not yet consumed by any page.
-- `components/toast/` — toast notification wrapper around `sonner`; mounted once at the root layout, called from feature code via `notifySuccess`/`notifyError`.
-- `lib/shared/utils.ts` (`cn`), `lib/shared/dedupe-claims.ts`, `lib/shared/user-display.ts`, `lib/shared/user-status.ts` — cross-cutting helpers consumed by 2+ features or by layout chrome (`dedupe-claims.ts`'s consumers include `features/roles/api/update-role-action.ts`, `lib/server/build-session-claims.ts`, and `user-profile-page.tsx`). `lib/shared/menu.ts` (`buildVisibleMenu` + `flattenNavLeaves`/`NavLeaf`, consumed by `Sidebar` and `components/shared/search-box.tsx`) and `lib/shared/authorization.ts` (`hasPermission`/`hasAnyPermission`/`hasAllPermissions`/`isSuperAdminUser`, safe for both server and client — consumed directly by `Sidebar`/`SearchBox` and, via `lib/server/authorization.ts`'s thin wrapper, by `UsersPage`/`RolesPage`/`NotificationsPage`). `lib/shared/deployment-recovery.ts` (`"use client"`) is the outlier in this folder — browser-only (`window`/`sessionStorage`/`fetch`), consumed solely by the `error.tsx` boundaries.
-- `lib/server/*` — the server-only building blocks every feature's `api/` layer is built on: `http.ts`, `call-guard.ts`, `config.ts`, `session.ts`, `session-cookie.ts`, `authorization.ts` (a thin wrapper over `lib/shared/authorization.ts`, deriving `userName` from the session rather than taking it as a separate parameter), `require-permission.tsx` (the shared page-level permission-gate helper, composing `resolveSession()`, `authorization.ts`, and `components/shared/access-denied.tsx`), plus the session-encryption/refresh chain — `token-cipher.ts`, `jwt.ts`, `build-session-claims.ts`, `parse-session.ts`, `refresh-session.ts` (exports both `refreshSession()` and `refreshSessionIfNearExpiry()`, both returning a `RefreshOutcome`), `refetch-profile.ts` (the profile-refetch-and-rebuild-claims helper, extracted from `proxy.ts`), and `persist-session-cookie.ts` — used by `src/proxy.ts` (just `parse-session.ts`/`session-cookie.ts` now), `features/auth/api/{login,logout,refresh-session,ensure-fresh-session}-action.ts`, and `features/notifications/api/get-signalr-token-action.ts`.
-- Permission-string constants are **not** a shared kernel piece — per-feature `features/{users,roles,notifications}/constants/permissions.ts` (`USERS_PERMISSIONS`, `ROLES_PERMISSIONS`, `NOTIFICATIONS_PERMISSIONS`), each mirroring the backend's own permission-string constants for that module. Nav metadata follows the same per-feature-ownership pattern (`features/{home,users,roles,notifications}/constants/nav-item.ts`), assembled (not owned) by the top-level `constants/nav-items.ts`. `features/users/constants/auth-provider.ts` follows the same per-feature-ownership pattern, not promoted to a shared location — its two consumers (`create-user-dialog.tsx`, `edit-user-dialog.tsx`) both live inside `features/users`, consistent with "only promote once 2+ features need it".
-- `features/notifications/components/user-select.tsx` is a **feature-owned** reusable component (on-demand searchable user picker, built on a bespoke `components/ui/{button,popover,command}.tsx` composition, see Key Design Patterns), not promoted to `components/shared/` — consumed by two components within the same feature, not yet by a second feature.
-- `hooks/*`, `components/theme/*` — cross-cutting building blocks consumed by layout components.
-- No package or code is shared with another client app — `clients/` still contains only `admin`.
+- **Shared `requirePermission` / `AccessDenied` page gate.** `lib/server/require-permission.tsx`
+  resolves the session (redirecting to `/login` if none), checks the permission, and returns
+  `{ session, denied }`; a page does `if (denied) return denied;` before its own fetch. Every gated
+  page uses this. `modules/leave-requests` is the deliberate exception — its pages call
+  `resolveSession()` directly (no view permission exists); `LEAVE_REQUESTS_PERMISSIONS.Manage` is
+  checked ad hoc to branch UI, not to gate the route.
 
-## Module/Route Boundaries
+- **Fetch full detail on dialog open — list DTOs are incomplete.** `UserService`/`RoleService` list
+  projections never populate `Roles`/`Claims`; only `GetByIdAsync` does. Edit dialogs re-fetch full
+  detail on open (via a `get-*-detail-action.ts`) rather than trusting the row they were opened with,
+  which would silently wipe those arrays on save. The picklist itself is fetched the same way (on
+  open, not preloaded as a page prop). **Lazy tab-scoped variant**: `edit-employee-dialog.tsx` fetches
+  the org-unit tree / level picklists only the first time the "Departments & Teams" tab is activated.
 
-Two route groups/areas exist:
-- `(dashboard)` — wraps `/`, `/user-profile`, `/identity/users`, `/identity/roles`, and `/notifications` with `resolveSession()` + `SessionGate` + `AppShell` (top bar, sidebar).
-- `login` (ungrouped) — `/login`, rendered under the root layout only, no `AppShell`/session resolution.
+- **Three feature-owned duplicates of the on-demand user-search combobox, by design.**
+  `notifications`, `organization/employees`, and `approvals` each re-implement the same
+  debounced (300ms), min-3-char `searchUsersAction`-backed picker rather than sharing one — all three
+  need a Server Action from `identity/users`, and `components/shared/*` may not depend on a
+  feature/module. `leave-requests`'s approver picker is a different shape (a plain `NativeSelect` over
+  a small pre-fetched candidate list), not a fourth instance.
 
-There is also one non-page route, `app/api/health/route.ts` (`GET /api/health` → `204`), excluded from the `proxy.ts` auth matcher and used by the client-side deploy-recovery loop.
+- **Controlled form state alongside `useActionState`; force-remount via a bumped `key`.** Mutation
+  dialogs keep their own `useState<FormValues>` in parallel — React resets *uncontrolled* fields once
+  a Server Action settles, which would wipe input after a validation error. `useActionState` has no
+  imperative reset, so each table/tree bumps a per-dialog key counter on open, forcing a fresh
+  instance (fresh action state, fresh form state, fresh detail fetch).
 
-`constants/nav-items.ts` declares `/administration` (a group node nesting `/notifications` alongside `/identity/users`/`/identity/roles` as `children` entries, rather than `/notifications` being a separate top-level item), `/identity/users`, `/identity/roles`, `/notifications`, and `/settings`. `/identity/users`, `/identity/roles`, and `/notifications` all have real routes and pages, gated on `USERS_PERMISSIONS.View`/`ROLES_PERMISSIONS.View`/`NOTIFICATIONS_PERMISSIONS.Read` respectively (the "Send" action on `/notifications` is additionally gated on `NOTIFICATIONS_PERMISSIONS.Send`); `/administration` and `/settings` both have no corresponding route/`page.tsx`. The same `NAV_ITEMS` tree feeds both `Sidebar` and the topbar ⌘K palette (`components/shared/search-box.tsx`), each filtering it via `buildVisibleMenu` — so an ungated dead route like `/settings` shows in both.
+- **Generic presentational `DataTable<TData>`.** `components/shared/data-table/` composes a toolbar,
+  a body (skeleton / empty / error states), and a windowed-pagination footer — fully prop-controlled,
+  no dependency on any feature or data-fetching library, every prop beyond `columns`/`data`/`rowKey`
+  optional. Consumers range from full server-driven search+pagination (Users, Companies, Employees) to
+  local client-side filtering (Roles) to a static pre-fetched `records` array with no real pagination
+  (the Approvals tabs, `LeaveRequestsDataTable`). Optional per-column client-side sort and
+  `virtualized`/`infinite` modes are additive; no current caller uses them.
 
-Feature isolation is enforced by convention (barrel-only cross-feature imports): `features/auth/api/login-action.ts` and `features/users/components/users-page.tsx`/`api/create-user-action.ts` all import from `@/features/user-profile`'s barrel, not its internals. `features/users/components/users-page.tsx` does not import `@/features/roles` at all (it doesn't fetch the role catalog), and `features/notifications/components/notifications-page.tsx` does not import `@/features/users` at all (it doesn't fetch `getAllUsers`) — each cross-feature need is instead a component-level, direct-file edge: `features/users/components/edit-user-dialog.tsx` imports `@/features/roles/api/get-all-roles-action` directly, and `features/notifications/components/user-select.tsx` imports `@/features/users/api/search-users-action` directly — both are two of the seven barrel-bypass exceptions listed in Key Design Patterns / dependency-graph.md, not barrel imports. Two more, lower-level exceptions exist at the `lib/server` tier: `lib/server/refresh-session.ts` imports `features/auth/api/token.api.ts` directly (bypassing the `@/features/auth` barrel, which does export `refreshToken`), and `lib/server/refetch-profile.ts` imports `features/user-profile/api/user-profile.api.ts` directly (bypassing the `@/features/user-profile` barrel, which does export `getCurrentUser`) — both reversals of the usual `features/* -> lib/server/*` dependency direction (here, `lib/server` reaches into a feature's `api/` file), unlike the other exceptions which stay within the normal direction. `lib/server/require-permission.tsx` follows the normal direction (it reaches down into `features/user-profile`'s barrel for `resolveSession`, the same way ordinary page code does), not a further exception.
+- **Context-provider-per-concern for client state.** `SidebarProvider`, `AccentColorProvider`, the
+  `next-themes` wrapper, and `NotificationsProvider` each own one slice via a throwing custom hook
+  (call the underlying hook once, expose via Context, throw if consumed outside the provider). The
+  first three persist to `localStorage`; `NotificationsProvider` wraps live server data + one shared
+  SignalR connection instead. `SearchBox` is the counter-example — a single-consumer palette keeping
+  state local rather than adopting the unused `CommandPaletteProvider`.
+
+- **Toast via a themed `sonner` wrapper.** Call sites use `notifySuccess`/`notifyError` (`notify.ts`),
+  never `sonner`'s `toast` directly; the visual theme is centralized in `toast-theme.ts`. Two small
+  hooks (`use-guarded-action.ts`, `use-action-success-toast.ts`) centralize the run-action-then-toast
+  and toast-on-`useActionState`-success patterns each dialog would otherwise duplicate. One deliberate
+  exception: `create-user-dialog.tsx`'s domain-lookup result renders inline, not as a toast.
+
+- **Deploy-induced stale-tab errors self-recover in the error boundaries.**
+  `lib/shared/deployment-recovery.ts` (`"use client"`) recognizes a rotated Server Action ID / dropped
+  chunk / mid-restart fetch failure / Next `E394`, then polls `/api/health` on a growing backoff and
+  hard-reloads *only once the probe answers*, capped at 5 reloads / 5 min via `sessionStorage`. Both
+  `error.tsx` boundaries branch on `isRecoverableDeploymentError(error)` before the generic alert.
+  Backend-connectivity failures never reach this path — `guardCall` already turns those into a
+  rendered `Result`.
+
+- **Real-time push via SignalR — browser-direct, dedicated hub token, server-resolved hub URL.**
+  `use-notifications.ts` opens a `HubConnection` straight from the browser to an absolute backend URL
+  (not proxied). Both the hub URL and the handshake token come from `getSignalRTokenAction()` on every
+  (re)connect (via an `accessTokenFactory`, so `withAutomaticReconnect()` always re-mints) —
+  `SIGNALR_HUB_URL` is a server-only env var, not `NEXT_PUBLIC_`-inlined, so changing it needs only a
+  server restart. The token is **not the session JWT**: the action calls `POST auth/token/hub`
+  (`signalr.api.ts`) for a purpose-built ~120s token scoped to the hub audience (`uid`+`jti` only),
+  which the backend rejects on `/api`. It first refreshes a near-expiry session so the (authenticated)
+  mint call succeeds. This is one of two deliberate exceptions to the httpOnly-cookie invariant — the
+  other being the super-admin-gated "Session tokens" card on `/user-profile` that renders the raw
+  session tokens for inspection. Failed connects retry after 30s; logging is pinned to
+  `LogLevel.Critical` to silence expected 1006 closures on route-away.
+
+- **A Popover nested inside a Dialog portals into the Dialog's own node, not `document.body`.**
+  `dialog.tsx` centers via a flex wrapper (not a `transform`, which would break a nested Popover's
+  fixed-position math) and hands its DOM node down through `foundation/portal-container.ts`;
+  `popover.tsx` reads that context for `Popover.Portal`'s `container`, so Radix's modal scroll lock
+  treats the Popover as inside the dialog. Automatic for any future `Combobox`/`Popover` in a `Dialog`.
+
+- **List-mutating Server Actions self-invalidate via `revalidatePath`.** Each create/update/delete
+  action for Users, Roles, Notifications, Companies, Approvals, and Leave requests calls
+  `revalidatePath` for its list route right before returning success. Deliberately not applied to
+  client-managed reads (notification mark-read) or on-demand detail/picklist fetches; the Approvals
+  tables and `LeaveRequestsDataTable` use a client-side `router.refresh()` / per-tab refetch instead.
+
+- **Multiple login entry points converge on one `establishSession()`.** Password login
+  (`login-action.ts`) and the Microsoft PKCE relay (`app/login/microsoft/callback/route.ts`) both call
+  the same extracted `establish-session.ts` once they have a `TokenDto`, so the resulting session is
+  identical regardless of how the token was obtained — see [overview.md § Auth Flow](./overview.md#auth-flow).
+
+## Module / Route Boundaries
+
+Two route areas: `(dashboard)` (wraps every authenticated page with `resolveSession()` + `SessionGate`
++ `AppShell`) and the ungrouped `/login` (root layout only, no shell). One non-page route,
+`app/api/health/route.ts`, is excluded from the `proxy.ts` matcher.
+
+Every leaf under the "Administration"/"Organization" groups and `/approvals` is gated on that feature's
+own `View`/`Read` permission via `requirePermission()`. `/leave-requests` (and `/leave-requests/[id]`)
+is deliberately ungated — only a valid session; `leave.requests.manage` is checked ad hoc inside the
+page to unlock the "All requests" tab and delete-any, never as a route gate. `/administration`,
+`/organization`, `/settings` have no `page.tsx` and 404 if followed; being ungated, they still appear
+in the sidebar and ⌘K palette.
+
+Feature/module isolation is enforced by convention (barrel-only cross-module imports) with a reasoned
+exception set — see [dependency-graph.md](./dependency-graph.md#circular-references). A genuine
+`import type`-only sibling dependency exists between `organization/departments` and
+`organization/employees` (erased at compile time, no runtime cycle).
+
+## Shared Kernel / Common Building Blocks
+
+- `components/ui/*` — the app's own primitive layer; `combobox.tsx` (+ `popover`/`command`) is the
+  shadcn-style single-select, currently used only by `identity/users`' edit dialog.
+- `components/foundation/*` — serve only `components/command/*`, the virtualized DataTable body, and
+  (`portal-container.ts`) the Dialog/Popover nesting fix.
+- `components/shared/data-table/*` — the generic list-table block; consumed by every list-bearing
+  module with different search/sort/pagination wiring.
+- `components/shared/{search-box,access-denied,local-date-time}.tsx`, `components/shared/object-viewer/*`
+  (unused), `components/toast/*` — feature-agnostic; `access-denied.tsx` is returned by
+  `require-permission.tsx`, not imported by feature code.
+- `lib/shared/*` — client-safe helpers (`cn`, `menu.ts`, `authorization.ts`, `dedupe-claims.ts`,
+  `user-display.ts`); `deployment-recovery.ts` is the browser-only outlier.
+- `lib/server/*` — the server-only building blocks every `api/` layer sits on (`http.ts`,
+  `call-guard.ts`, `config.ts`, the session/refresh chain, `require-permission.tsx`).
+- Permission-string constants and `NavItem` metadata are **not** shared kernel — each lives in its
+  owning feature/module's `constants/`, assembled (not owned) by `constants/nav-items.ts`.
+
+`clients/admin` is still the only app under `clients/` — nothing is shared with a sibling app because
+none exists. `pnpm-workspace.yaml` only configures build-script approval, not a multi-app workspace.
 
 ## Known Architectural Risks / Debt
 
 | Finding | Severity | Notes |
 |---|---|---|
-| `proxy.ts`'s call chain uses Node's `crypto` module directly, with no explicit runtime pin | Low–Medium (verify) | `token-cipher.ts` (imported transitively via `parse-session.ts`, `proxy.ts`'s only remaining `lib/server/*` dependency alongside `session-cookie.ts`) uses `createCipheriv`/`createDecipheriv` from Node's built-in `crypto`, which the traditional Edge Runtime does not support. `proxy.ts` has no `export const runtime = "nodejs"` (or similar) declaration; the current behavior is consistent with Next.js's `proxy.ts` convention defaulting to the Node.js runtime (unlike the old edge-only `middleware.ts`), but this is inferred from the code, not confirmed via an explicit config — worth pinning explicitly if that assumption is ever wrong for a deployment target that still expects edge middleware. |
-| SignalR connects directly to the backend from the browser, bypassing the Next.js server entirely | Medium (unverified) | `use-notifications.ts`'s `SIGNALR_HUB_URL` is `process.env.NEXT_PUBLIC_SIGNALR_HUB_URL!` (an absolute backend URL, the only `NEXT_PUBLIC_`-prefixed env var in this app), not proxied via `next.config.ts` (no `rewrites()`). This assumes backend CORS is configured for the admin app's origin — not verified, and not checked anywhere in this client's own code. If CORS isn't configured backend-side, the WebSocket handshake fails and is silently retried every 30s (`connectSignalR`) rather than surfaced to the user. |
-| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` must be present at build time and constant across every deploy | Low (mitigated) | If unset, Next.js mints a fresh key per `next build`, so every deploy rotates all Server Action IDs and open tabs on the previous build hit "Failed to find Server Action". The deploy scripts (`clients/deploy-nssm.ps1`/`deploy-pm2.ps1`) hoist it from the preserved `standalone/.env`, and `lib/shared/deployment-recovery.ts` recovers gracefully when a churn does happen, but the key still has to be generated once per server (`openssl rand -base64 32`) and never changed. See [development-guide.md](../conventions/development-guide.md). |
-| Nav item references a route with no `page.tsx` (`/settings`, `/administration`) | Low | `/identity/users` and `/identity/roles` both have real pages. `/settings` 404s if followed; the assembled nav tree's group node (labeled "Administration"/`/administration`) also has no `page.tsx` of its own, same shape as `/settings`. Neither is permission-gated, so both surface in the sidebar **and** the topbar ⌘K command palette (which flattens the same tree). |
-| Backend list endpoints never populate `Roles`/`Claims` on the DTO | Low (worked around, but worth remembering) | `UserService.SearchAsync`/`GetAllAsync` and `RoleService.GetAllAsync` all use a `DataMapper.cs` projection that only maps scalar fields; only the single-record fetch (`GetByIdAsync`) populates `Roles`/`Claims`. Both edit dialogs correctly re-fetch full detail on open to work around this (see Key Design Patterns), but any future feature reading a list endpoint for role/claim data would silently get empty arrays if it forgot to do the same. |
-| No `not-found.tsx` anywhere under `app/` | Low (cosmetic) | Navigating to an unmatched route renders Next.js's default 404 within the root layout only, unmounting the entire `(dashboard)/layout.tsx` subtree (`AppShell`, `TopBar`, `NotificationBell`, and — if the current page is `/` — `NotificationInbox`), which intentionally stops any open SignalR connection mid-flight. This surfaces as an abnormal WebSocket closure (code 1006); `use-notifications.ts` adds `.configureLogging(LogLevel.Critical)` to silence that specific SignalR client noise (see Key Design Patterns), but the underlying missing-`not-found.tsx` fact itself is unchanged — worth adding a real one if a friendlier 404 experience is ever needed, independent of this logging fix. |
-| `prettier` + `prettier-plugin-tailwindcss` installed but no config file/`format` script | Low | Still `unknown` whether formatting is enforced anywhere. |
-| No automated test suite | Low (by design at this stage) | No `*.test.*`/`*.spec.*` files, no test runner in `package.json`. Notable given real auth/session logic — including the `SessionGate`/`ensureFreshSessionAction` retry/force-logout state machine and the `deployment-recovery.ts` reload loop — plus full Users and Roles CRUD flows, all exist untested. |
-| `components/ui/button.tsx` hand-modified beyond shadcn CLI output (`loading` prop, `cursor-pointer`) | Low | Re-running the shadcn CLI would silently drop these customizations unless done carefully. `tabs.tsx` (`cursor-pointer` on `TabsTrigger`) and `dialog.tsx` (`max-h`/`overflow-y-auto` on `DialogContent`, plus `relative`/portal-container additions) carry the same kind of hand-modification risk. |
-| `DataTable`'s `onExport` prop has no caller yet | Low | `components/shared/data-table/data-table-buttons.tsx` already renders an Export button when `onExport` is passed, but no current feature (including `UsersDataTable`/`RolesDataTable`/`NotificationsDataTable`) passes one — dead capability until a consumer needs it. |
-| `components/shared/object-viewer/` has no consumer yet | Low (by design) | Purely additive, ported from an external export spec and adapted to this project's design tokens/`components/ui/*` primitives, but not imported by any page or dialog. Dead code until something wires it in. |
-| `components/command/command-palette-provider.tsx` (`CommandPaletteProvider`) is unused | Trivial | The `CommandPalette` component itself is now wired into the topbar via `components/shared/search-box.tsx` (see Key Design Patterns), but `SearchBox` manages its own open state + `⌘K` shortcut rather than going through the `CommandPaletteProvider` context wrapper — which therefore has no consumer. |
-| `components/ui/combobox.tsx` does not virtualize its option list | Low (by design) | `cmdk`'s `Command` has no built-in virtualization, and the current two consumers (a small static enum, a client-filtered user list) don't need it. Revisit if a future consumer needs a large option list. |
-| `eslint.config.mjs`'s `react-hooks/refs` override glob still lists `src/components/select/**/*.tsx` | Trivial | That directory doesn't exist; the glob entry is a no-op (matches nothing) rather than a functional problem, but is stale and should be removed the next time `eslint.config.mjs` is touched. |
-| The SignalR handshake token intentionally narrows the "JWT never leaves the httpOnly cookie" invariant | Low (deliberate) | `getSignalRTokenAction()` hands the browser a real, short-lived access token so `use-notifications.ts` can authenticate the WebSocket handshake — the one place in the app where the access token is readable by browser JS. A deliberate trade-off (SignalR can't attach a cookie/header the way `fetch` can), not an oversight, but worth keeping in mind if the token's blast radius ever needs to shrink further. |
+| `modules/approvals` doc coverage lags the module's current shape | Medium (doc debt) | Prose above still describes the pre-split module (single `/approvals` page, no document-type catalog, no `/approvals/requests/{id}` detail page or `ApprovalTimeline`, `approver-select` searching Identity users rather than linked employees). The api-file split (`approvals.api.ts` / `user-approvals.api.ts`) and lazy `ApprovalsTabs` loading *are* reflected; the rest needs a dedicated `analyze-client` pass. |
+| `proxy.ts` uses Node's `crypto` with no explicit runtime pin | Low–Medium (verify) | `token-cipher.ts` (transitive via `cookie-codec.ts`) uses `createCipheriv`/`createDecipheriv`, unsupported on the classic Edge runtime. `proxy.ts` has no `export const runtime = "nodejs"`; behaviour is consistent with the `proxy.ts` convention defaulting to Node, but that's inferred, not pinned. |
+| SignalR connects browser→backend directly, bypassing Next entirely | Medium (unverified) | Assumes backend CORS is configured for the admin origin — not verified anywhere in this client's code. If misconfigured, the handshake fails and retries silently every 30s. |
+| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` must be constant across deploys | Low (mitigated) | Unset ⇒ a fresh key per `next build` ⇒ every deploy rotates all Server Action IDs and open tabs hit "Failed to find Server Action". Deploy scripts hoist it from the preserved `standalone/.env`; `deployment-recovery.ts` recovers when churn happens; still must be generated once per server and never changed. |
+| Nav items reference routes with no `page.tsx` (`/settings`, `/administration`, `/organization`) | Low | Group/placeholder nodes 404 if followed; ungated, so they surface in the sidebar and ⌘K palette. `/leave-requests` is ungated *by design*, not omission, and has a real page. |
+| Detail-route breadcrumb shows a generic label for the id segment | Low (cosmetic) | `breadcrumbs.tsx` is path-based against `NAV_ITEMS`; `isOpaqueId()` renders `"Details"` for a UUID/hex/numeric segment. No channel for a detail page to inject a real crumb label. |
+| Localized timestamps use the hydration-safe `LocalDateTime` only in `approvals`/`notifications`/`leave-requests` | Low | Other client-rendered `toLocaleString()` sites (`session-lifecycle.tsx`, `object-viewer/utils.ts`) still use the bare form. |
+| Backend list endpoints never populate `Roles`/`Claims` on the DTO | Low (worked around) | Only `GetByIdAsync` populates them. Both edit dialogs re-fetch on open; any future list-reading feature would silently get empty arrays if it forgot to. |
+| No `not-found.tsx` anywhere under `app/` | Low (cosmetic) | An unmatched route renders Next's default 404 in the root layout only, unmounting the whole `(dashboard)` subtree (and any open SignalR connection). |
+| `prettier` + `prettier-plugin-tailwindcss` installed, no config file / `format` script | Low | Unknown whether formatting is enforced anywhere. |
+| No automated test suite | Low (by design at this stage) | No test runner in `package.json`. Notable given the `SessionGate`/`ensureFreshSessionAction` state machine, the `deployment-recovery.ts` loop, and every CRUD/decision flow are untested. |
+| `components/ui/{button,tabs,dialog}.tsx` hand-modified beyond shadcn CLI output | Low | Re-running the CLI would silently drop the customizations (`button` `loading` prop + `cursor-pointer`, `tabs` `cursor-pointer`, `dialog` `max-h`/`overflow-y-auto` + portal-container). |
+| `DataTable`'s `onExport` prop, `components/shared/object-viewer/*`, `CommandPaletteProvider` — all unused | Low / Trivial | Dead capability until a consumer needs it. |
+| `eslint.config.mjs`'s `react-hooks/refs` override glob lists a non-existent `src/components/select/**` | Trivial | No-op glob; remove next time the file is touched. |
+| `LeaveRequestsPage`'s "All requests" tab resolves employee names via one unscoped, capped fetch | Low | `searchEmployees({ pageSize: 200 })` with no filter; an org over 200 employees, or a manager lacking `organization.employees.view`, falls back to the raw id (marked best-effort in code). |
 
 ## Notes
 
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-03_
+_Last synced: 2026-09-11_

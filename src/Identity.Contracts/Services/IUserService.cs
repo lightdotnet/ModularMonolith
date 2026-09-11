@@ -3,11 +3,6 @@
 public interface IUserService
 {
     /// <summary>
-    /// Search users with pagination
-    /// </summary>
-    Task<PagedResult<UserDto>> SearchAsync(SearchUserQuery search, int pageNumber, int pageSize);
-
-    /// <summary>
     /// Get all users
     /// </summary>
     Task<IEnumerable<UserDto>> GetAllAsync();
@@ -46,4 +41,12 @@ public interface IUserService
     /// Get users who have the claim
     /// </summary>
     Task<IEnumerable<UserDto>> GetUsersHasClaimAsync(string claimType, string claimValue);
+
+    /// <summary>
+    /// Set (or clear, when <paramref name="claimValue"/> is null) a single-valued claim on a user,
+    /// replacing any existing claim of the same type. Used by other modules to stamp an opaque
+    /// cross-module reference (e.g. Organization's employee id) onto a user without Identity
+    /// needing to know what the claim represents.
+    /// </summary>
+    Task<IResult> SetClaimAsync(string userId, string claimType, string? claimValue);
 }

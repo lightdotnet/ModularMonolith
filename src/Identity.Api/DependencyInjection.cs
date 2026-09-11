@@ -4,7 +4,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StarterKit.Identity.Api.Data;
 using StarterKit.Identity.Api.Entities;
+using StarterKit.Identity.Api.ExternalLogin;
 using StarterKit.Identity.Api.Services;
+using StarterKit.Identity.Contracts.ExternalLogin;
 using StarterKit.Identity.Contracts.Services;
 using StarterKit.Persistence;
 using System.Runtime.InteropServices;
@@ -28,24 +30,29 @@ public static class DependencyInjection
 
                 // Password settings
                 options.Password.RequireDigit = false;
-                options.Password.RequiredLength = 3;
+                options.Password.RequiredLength = 8;
                 options.Password.RequireNonAlphanumeric = false;
                 options.Password.RequireUppercase = false;
                 options.Password.RequireLowercase = false;
 
                 // Lockout settings
-                //options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromDays(1);
-                //options.Lockout.MaxFailedAccessAttempts = 10;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+                options.Lockout.AllowedForNewUsers = true;
 
                 // User settings
-                options.User.RequireUniqueEmail = false;
+                //options.User.RequireUniqueEmail = true;
             })
             .AddRoles<Role>()
             .AddEntityFrameworkStores<IdentityDbContext>()
             .AddDefaultTokenProviders();
 
+        services.AddOptions<ExternalLoginOptions>().BindConfiguration("Authentication:Microsoft");
+
         services.AddTransient<IUserService, UserService>();
         services.AddTransient<IRoleService, RoleService>();
+        services.AddScoped<IExternalLoginService, ExternalLoginService>();
+        services.AddScoped<IExternalLoginAuthCodeStore, ExternalLoginAuthCodeStore>();
         //services.AddTransient<IServiceClaimService, ServiceClaimService>();
 
         return identityBuilder;

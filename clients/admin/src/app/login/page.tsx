@@ -1,1 +1,1 @@
-export { LoginPage as default } from "@/features/auth";
+export { LoginPage as default } from "@/modules/identity/auth";

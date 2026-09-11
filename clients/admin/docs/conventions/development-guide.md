@@ -1,113 +1,106 @@
 # Development Guide: admin
 
+How to set up, run, and make common changes to `clients/admin`. Architectural background is in
+[../architecture/overview.md](../architecture/overview.md) and
+[../architecture/architecture.md](../architecture/architecture.md) — this guide stays task-oriented.
+
 ## Prerequisites
 
-- **Node.js**: version not pinned anywhere — no `"engines"` field in `package.json`, no `.nvmrc`/`.node-version`. `@types/node` is `^20`, suggesting Node 20.x is the target, but this is inferred, not enforced — `unknown`/unverified.
-- **pnpm**: required — `pnpm-lock.yaml` is the only lockfile present. Exact pnpm version is `unknown` (no `packageManager` field in `package.json`). `pnpm-workspace.yaml` only configures build-script approval (`allowBuilds`/`ignoredBuiltDependencies` for `sharp`, `unrs-resolver`) — no effect on the install/run flow.
-- **Backend must be reachable**: this app makes real calls to the backend for login and profile data. There is no single `API_BASE_URL` — `IDENTITY_API_BASE_URL` and `NOTIFICATIONS_API_BASE_URL` must each point at a running instance (currently the same co-hosted backend, `http://localhost:5000`) for auth/profile/notification pages to work. The SignalR notification hub also needs the backend reachable **directly from the browser** (not just server-side) — `NEXT_PUBLIC_SIGNALR_HUB_URL` must resolve, and the backend must allow CORS for the admin app's origin.
+- **Node.js**: `.nvmrc` pins `26.8.2`; `package.json` `engines` requires `node >=26.8.2`.
+  `@types/node` is `^26.5.1`.
+- **pnpm**: required (`pnpm-lock.yaml` is the only lockfile). Version not pinned (no `packageManager`).
+- **A reachable backend**: login, profile, notifications, and every feature page make real HTTP calls.
+  All five `*_API_BASE_URL` vars must point at a running instance (currently one co-hosted backend).
+  SignalR notifications additionally need the backend reachable **directly from the browser**
+  (`SIGNALR_HUB_URL` resolvable + backend CORS allowing the admin origin).
 
-## Building
-
-Verified from `package.json` scripts:
-
-```bash
-pnpm build   # runs `next build` (output: "standalone", per next.config.ts)
-```
-
-## Running Locally
+## Scripts
 
 ```bash
-pnpm dev     # runs `next dev`
+pnpm dev     # next dev — default port 3000
+pnpm build   # next build — output: "standalone" (per next.config.ts)
+pnpm start   # next start — serves a prior pnpm build
+pnpm lint    # eslint (eslint.config.mjs)
 ```
 
-No `--turbopack` flag is set explicitly, and `next.config.ts` has no bundler override — which bundler `next dev` uses by default for this Next.js version is `unknown` from repo config alone.
+Local dev talks to the backend over plain HTTP (`http://localhost:5000`): the backend disables
+HTTPS redirection in Development, so the server-side `fetch` calls in `lib/server/*` reach it
+directly without tripping over the untrusted self-signed ASP.NET dev certificate. The backend's
+`https` launch profile still exposes `https://localhost:5001` for anyone who needs it. Set the
+`*_API_BASE_URL` / `SIGNALR_HUB_URL` vars to match (see `.env.example`). The `next dev` bundler is
+not pinned (no `--turbopack` flag, no config override).
 
-The dev server listens on Next.js's default port (3000) — no custom port configured.
+## Environment
 
-```bash
-pnpm start   # runs `next start` (serves a production build made via `pnpm build`)
-```
+`.gitignore` ignores `.env*` except the committed `.env.example`, which is the template. All vars are
+server-only (never `NEXT_PUBLIC_`):
+
+| Var | Purpose |
+|---|---|
+| `IDENTITY_API_BASE_URL`, `NOTIFICATIONS_API_BASE_URL`, `ORGANIZATION_API_BASE_URL`, `APPROVAL_API_BASE_URL`, `LEAVE_MANAGEMENT_API_BASE_URL` | Base URL per backend module. Must include the full path prefix (e.g. `api/v1/`) and a trailing slash — `lib/server/http.ts` prepends nothing. Configured independently even though they currently share one host. |
+| `TOKEN_ENCRYPTION_KEY` | 32-byte base64 key (`openssl rand -base64 32`). AES-256-GCM key for the `admin_session` cookie. `lib/server/config.ts` throws if unset; read on every request. |
+| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | Base64 AES key Next.js uses at **build time** to salt Server Action IDs. Not read by app code. If unset, a fresh key per build ⇒ every deploy breaks open tabs with "Failed to find Server Action". Optional locally; must be set and **constant forever** on deployed servers. |
+| `SIGNALR_HUB_URL` | Absolute URL to the backend SignalR hub. Read server-side and handed to the browser at connect time by a Server Action (not inlined), so it's a runtime setting — change it by editing the server `.env` and restarting, no rebuild. |
 
 ## Deploying
 
-Three PowerShell scripts at the `clients/` level (repo, not `clients/admin/`) deploy this app's standalone build to a Windows host:
+Three PowerShell scripts at `clients/` (not `clients/admin/`) deploy the standalone build to a
+Windows host:
 
-- `clients/deploy-nssm.ps1` — full deploy to an IIS + NSSM-Windows-Service host: `pnpm install --frozen-lockfile` → `pnpm run build` → copy `.next/standalone` (+ `.next/static`, `public/`) into the live service folder, preserving any deployed `.env*` → stop/start the IIS app pool, site, and Windows service. Wipes only the `standalone/` subfolder each run. Requires the IIS `WebAdministration` module and a pre-registered NSSM service.
-- `clients/deploy-pm2.ps1` — the PM2-process-manager variant of the same flow.
+- `clients/deploy-nssm.ps1` — IIS + NSSM Windows Service. `pnpm install --frozen-lockfile` →
+  `pnpm build` → copy `.next/standalone` (+ `.next/static`, `public/`) into the live folder,
+  preserving deployed `.env*` → cycle the app pool, site, and service. Wipes only `standalone/`.
+- `clients/deploy-pm2.ps1` — the PM2 variant of the same flow.
 - `clients/init-nssm.ps1` — one-time NSSM service registration.
 
-Both deploy scripts run `Get-ServerActionsEncryptionKey` first, hoisting `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` out of the preserved deployed `standalone/.env` into the build environment before `pnpm run build`, so Server Action IDs stay stable across deploys (a missing key only warns). Generate a real key once per server (`openssl rand -base64 32`), put it in the deployed `standalone/.env`, and never change it.
+Both deploy scripts run `Get-ServerActionsEncryptionKey` first, hoisting
+`NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` from the preserved `standalone/.env` into the build environment
+before `pnpm build`. Generate it once per server, put it in `standalone/.env`, never change it.
 
-## Running Tests
+## Testing
 
-None — no test runner is installed (`package.json` has no `test` script, no Jest/Vitest/Playwright dependency), and no `*.test.*`/`*.spec.*` files exist under `clients/admin` outside `node_modules`.
-
-## Local Setup
-
-- `.gitignore` ignores `.env*` wholesale except `.env.example`, which is committed and documents five env vars — three required server-only (runtime), one build-time, one client-exposed:
-  - `IDENTITY_API_BASE_URL` — base URL for the Identity backend module (e.g. `http://localhost:5000/api/v1/`); must include its own full path prefix and a trailing slash — `lib/server/http.ts` does not prepend `api/v1/` itself, so the base URL owns that prefix; never expose via `NEXT_PUBLIC_`.
-  - `NOTIFICATIONS_API_BASE_URL` — base URL for the Notifications backend module (e.g. `http://localhost:5000/api/v1/`), same full-prefix/trailing-slash requirement as above; currently points at the same co-hosted backend as `IDENTITY_API_BASE_URL` but is configured independently, since Identity.Api and Notifications.Api are modeled as two separate backend modules; never expose via `NEXT_PUBLIC_`.
-  - `TOKEN_ENCRYPTION_KEY` — a 32-byte base64 key (generate with `openssl rand -base64 32`, per `.env.example`'s own comment); `lib/server/config.ts`'s `getTokenEncryptionKey()` throws if it's unset, and it's read on every request — `lib/server/token-cipher.ts` uses it to AES-256-GCM encrypt/decrypt the `admin_session` cookie, exercised by `features/auth/api/login-action.ts` (encrypt, on login), `src/proxy.ts` (decrypt on every request), and `features/auth/api/ensure-fresh-session-action.ts` (re-encrypt via `persistSessionCookie()` after a token refresh or profile refetch). The app fails at runtime without a valid key set.
-  - `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` — a base64 AES key Next.js uses at **build time** to salt Server Action IDs and encrypt action closure variables. Not read by any app code — Next.js reads it, and the deploy scripts hoist it into the build env (see Deploying above). If unset, Next.js mints a fresh random key per build, so every deploy rotates all Server Action IDs and open tabs on the previous build hit "Failed to find Server Action" until reloaded (the deploy-recovery flow in `lib/shared/deployment-recovery.ts` handles that case gracefully, but a stable key avoids it). Optional for local dev; must be set and constant on deployed servers.
-  - `NEXT_PUBLIC_SIGNALR_HUB_URL` — absolute URL to the backend's SignalR hub (e.g. `http://localhost:5000/signalr-hub`), the one `NEXT_PUBLIC_`-prefixed var in this app. `use-notifications.ts` connects the browser directly to it, bypassing the Next.js server entirely.
-- A `.env.local` file exists locally (gitignored) — not read for this doc since it may contain real values; use `.env.example` as the template.
-- `pnpm lint` runs ESLint per `eslint.config.mjs`.
+None — no test runner installed, no `*.test.*`/`*.spec.*` files.
 
 ## Common Tasks
 
 | Task | How |
 |---|---|
-| Add a backend migration | Not applicable to this client app — see `../../../../src/docs/conventions/development-guide.md` (out of scope for this doc). |
-| Run the API locally | Not applicable to this client app — but note the dev server depends on it being reachable at `IDENTITY_API_BASE_URL`/`NOTIFICATIONS_API_BASE_URL` for login/profile/notifications to function. |
-| Run this client app's dev server | `cd clients/admin && pnpm install && pnpm dev` (copy `.env.example` to `.env.local` first and fill in `IDENTITY_API_BASE_URL`/`NOTIFICATIONS_API_BASE_URL`/`TOKEN_ENCRYPTION_KEY`) |
-| Deploy this client app | Run `clients/deploy-nssm.ps1` (or `deploy-pm2.ps1`) from a Windows host with the right IIS/NSSM prerequisites — see Deploying above. Ensure `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` is in the deployed `standalone/.env` first. |
-| Add a new backend endpoint call | Add a function to the relevant feature's consolidated `<feature>.api.ts` (e.g. `features/users/api/users.api.ts`) — create that file if the feature doesn't have one yet — wrapping `requestJson`/`requestVoid` from whichever named instance `lib/server/backend-api.ts` exports for the endpoint's backend module (`identityApi` or `notificationsApi`, both pre-wired with bearer-token auth — do **not** import from `lib/server/http.ts` directly unless you're one of the pre-session-cookie exceptions, see "Server-only API plumbing" below) via `guardCall`/`guardResponseCall`/`guardRawCall` (`lib/server/call-guard.ts`); export it from the feature's `index.ts` barrel. |
-| Add a new feature | Create `features/<name>/` with `api/`, optionally `components/`/`types/`, and an `index.ts` barrel; add a route under `src/app/` that re-exports the feature's page component as `default`. |
-| Gate a page on a permission | Call `lib/server/require-permission.tsx`'s `requirePermission(permission)` at the top of the page's async Server Component, then `if (denied) return denied;` before the page's own data fetch — see `users-page.tsx`/`roles-page.tsx`/`notifications-page.tsx` for the reference shape. Don't inline a fresh `resolveSession()`/permission-check/`Empty` block per page; that's the pattern this helper replaced. |
-| Add a new list/table page | Reuse `components/shared/data-table` (`DataTable<TData>`) — define `DataTableColumn<TData>[]`, pass `data`/`isLoading`/`error`/pagination props/callbacks. Three reference patterns exist: `features/users/components/{users-page,users-data-table}.tsx` (server-driven search via URL params + `useTransition`) for a single text-field search against a backend search endpoint; `features/roles/components/{roles-page,roles-data-table}.tsx` (client-side filtering over a full list) when there's no backend search endpoint; `features/notifications/components/notifications-data-table.tsx` for a custom multi-field filter UI (e.g. multiple selects) via `DataTable`'s `customSearch`/`onCustomSearch` props — the filters hold local "pending" state and only apply (via a "Search" button) on click, unlike the built-in single-field text search which stays auto-debounced. |
-| Show a toast notification | Call `notifySuccess`/`notifyError` from `@/components/toast` — don't import `sonner` directly; `AppToaster` is already mounted once in `app/layout.tsx`. |
-| Add an imperative (non-form) action with toast + pending feedback | Use `hooks/use-guarded-action.ts`'s `useGuardedAction()` (`[pending, run]`) instead of hand-rolling `useTransition` + manual `notifyError`/`notifySuccess` branching — see `delete-user-dialog.tsx`/`delete-role-dialog.tsx`. |
-| Add a form dialog bound to a mutation Server Action | Bind `useActionState` to the action as usual, then call `hooks/use-action-success-toast.ts`'s `useActionSuccessToast(state, successMessage, onSuccess?)` instead of a hand-written `useEffect` — see any of the 5 create/edit dialogs (`create-user-dialog.tsx`, `create-role-dialog.tsx`, `edit-role-dialog.tsx`, `edit-user-dialog.tsx`, `send-notification-dialog.tsx`). |
-| Add a new shadcn UI primitive | `npx shadcn@latest add <component>` from `clients/admin/` (`components.json`: style `radix-nova`, base color `neutral`, icon library `lucide`, `css: "src/app/globals.css"`, `utils` alias `@/lib/shared/utils`) — `components/ui/button.tsx` has manual edits (`loading` prop, `cursor-pointer`) a regeneration could overwrite; diff before committing after any CLI regen. `popover.tsx`/`command.tsx` were instead hand-written to match this repo's conventions (`data-slot`, `cn`, the `radix-ui` unified-package import style) rather than run through the CLI — worth following that precedent for a primitive the CLI doesn't cleanly support out of the box. |
-| Add a new nav item | If it belongs to an existing nav-bearing feature, add/update that feature's `constants/nav-item.ts` and re-export it from the feature's `index.ts` barrel; then reference it from `src/constants/nav-items.ts` (`NAV_ITEMS`) **by direct file path**, not via the barrel (see [architecture.md](../architecture/architecture.md#key-design-patterns) for why — the barrel also carries server-only code that must not reach the client-side `Sidebar`). For a brand-new nav-bearing feature, create `features/<name>/constants/nav-item.ts` following the same pattern. Group/no-owning-feature nodes (currently "Administration", "Settings") are declared directly in `nav-items.ts`. Note: adding a nav entry does not create its route — a matching `src/app/**/page.tsx` is still needed. The entry also automatically appears in the topbar ⌘K search (via `flattenNavLeaves`), gated by the same permission. |
-| Lint the app | `pnpm lint` |
-| Regenerate this client's typed API client (if applicable) | Not applicable — this app hand-writes its backend calls under `features/*/api/` (one consolidated file per feature, one function per backend endpoint within that file), it doesn't generate a client from an OpenAPI spec. |
+| Run the dev server | `cd clients/admin && pnpm install && pnpm dev` (copy `.env.example` → `.env.local` and fill the base URLs + `TOKEN_ENCRYPTION_KEY` first) |
+| Deploy | Run `clients/deploy-nssm.ps1` (or `deploy-pm2.ps1`) from a prepared Windows host; ensure `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` is in the deployed `standalone/.env` first |
+| Add a backend endpoint call | Add a function to the feature/module's `<name>.api.ts` (create it if missing), wrapping `requestJson`/`requestVoid` from the right `lib/server/backend-api.ts` instance via a `call-guard.ts` helper; export it from `index.ts` |
+| Add a feature/module | Create `src/modules/<domain>/<name>/` with `api/`, optional `components/`/`types/`/`constants/`, and an `index.ts` barrel; add a re-export `page.tsx` under `src/app/`. Don't add new `src/features/*` |
+| Gate a page on a permission | `requirePermission(permission)` at the top, then `if (denied) return denied;` before the data fetch — see `users-page.tsx` |
+| Add a list/table page | Reuse `components/shared/data-table` (`DataTable<TData>`). Reference wirings: `users` (server-driven URL-param search), `roles` (client-side filter, no backend search), `notifications` (`customSearch` multi-field filter), the `approvals` tabs / `leave-requests` (pre-fetched array, minimal pagination) |
+| Show a toast | `notifySuccess`/`notifyError` from `@/components/toast` — never import `sonner` directly |
+| Imperative action + toast/pending | `useGuardedAction()` (`hooks/use-guarded-action.ts`) — see `delete-user-dialog.tsx` |
+| Form dialog on a mutation action | `useActionState` + `useActionSuccessToast(state, msg, onSuccess?)` (`hooks/use-action-success-toast.ts`) — see any create/edit dialog |
+| Add a shadcn primitive | `npx shadcn@latest add <component>` from `clients/admin/` (`components.json`: style `radix-nova`, base `neutral`, icons `lucide`). `button.tsx` has manual edits — diff after any regen |
+| Add a nav item | Add/update the feature's `constants/nav-item.ts`, re-export from its `index.ts`, then reference it in `src/constants/nav-items.ts` **by direct file path** (not the barrel — it carries server-only code the client-side `Sidebar` must not pull in). Adding a nav entry does not create the route |
 
 ## Where to Look for X
 
-- **App shell / global layout**: `src/app/layout.tsx` (fonts, `ThemeProvider`, `AccentColorProvider`, `TooltipProvider`).
-- **Dashboard-group layout (session resolution + top bar/sidebar)**: `src/app/(dashboard)/layout.tsx` → `components/layout/app-shell.tsx`.
-- **Routes**: `src/app/(dashboard)/page.tsx` (`/`), `src/app/(dashboard)/user-profile/page.tsx` (`/user-profile`), `src/app/login/page.tsx` (`/login`) — all one-line re-exports; real UI lives in the corresponding `features/*` folder. The one non-page route is `src/app/api/health/route.ts` (`GET /api/health` → `204`).
-- **Login flow**: `features/auth/` — `api/token.api.ts` (backend call, exports `getToken`/`refreshToken`), `api/login-action.ts` (server action: login, decode JWT permissions/roles, encrypt + set session cookie, redirect to `?redirect=<path>` or `/`), `components/{login-page,login-form}.tsx`.
-- **Logout flow**: `features/auth/api/logout-action.ts` (deletes the session cookie, redirects to `/login?redirect=<path>` or `/login`; note it is **not** exported from the `features/auth` barrel — `components/layout/user-menu.tsx` imports it directly), `components/layout/user-menu.tsx` ("Log out" menu item, passes the current path so login can redirect back).
-- **Session cookie handling (encryption + refresh)**: `lib/server/session-cookie.ts` (cookie name + `SESSION_TTL_MS`/`REFRESH_LEAD_MS`/`MAX_REFRESH_FAILURES`/`buildSessionCookieOptions`), `lib/server/token-cipher.ts` (AES-256-GCM `encrypt`/`decrypt`, keyed by `TOKEN_ENCRYPTION_KEY`), `lib/server/parse-session.ts` (decrypt + validate), `lib/server/session.ts` (`getSession()` — reads the cookie, no fetch), `lib/server/jwt.ts` (decode permissions/roles/claims from the JWT), `lib/server/build-session-claims.ts`, `lib/server/refresh-session.ts` (`refreshSession()` unconditional rotate + `refreshSessionIfNearExpiry()` near-expiry-gated, both returning a `RefreshOutcome`), `lib/server/refetch-profile.ts` (profile refetch + claims rebuild), `lib/server/persist-session-cookie.ts` (`persistSessionCookie()` — the Server-Action-context cookie write), `features/user-profile/api/resolve-session.ts` (thin passthrough to `getSession()`). **`src/proxy.ts` is now only a thin auth gate** — decrypt/validate the cookie, enforce the hard 7-day `sessionExpiresAt` cap, keep `/login` unreachable once authenticated; it no longer refreshes tokens or refetches the profile. That orchestration moved to `components/layout/session-gate.tsx` (`SessionGate`, wrapping `AppShell`) driving `features/auth/api/ensure-fresh-session-action.ts` — see [overview.md](../architecture/overview.md#auth-flow) for the full flow.
-- **Deploy-induced stale-tab recovery**: `lib/shared/deployment-recovery.ts` (`isRecoverableDeploymentError`/`runDeploymentRecovery`/`peekDeploymentRecoveryExhausted`), `components/layout/deployment-recovery-notice.tsx` (`DeploymentRecoveryNotice`), wired into both `src/app/error.tsx` and `src/app/(dashboard)/error.tsx`; polls `src/app/api/health/route.ts`.
-- **Profile page**: `features/user-profile/components/user-profile-page.tsx` (account details, QR code via `qrcode`, roles/claims).
-- **Session management API (no UI yet)**: `features/user-profile/api/user-profile.api.ts`'s `listSessions`/`revokeSession`.
-- **User management UI (`/identity/users`)**: `features/users/components/users-page.tsx` (Server Component: session/permission gate via `lib/server/require-permission.tsx`'s `requirePermission()`, fetches via `users.api.ts`'s `searchUsers`), `features/users/components/users-data-table.tsx` (client wrapper around the shared `DataTable`, owns the create/edit/delete dialogs' open state), `features/users/components/create-user-dialog.tsx` (create form, plus a domain-user/AD lookup via `get-domain-user-action.ts`), `edit-user-dialog.tsx` (edit + password reset, fetches full detail on open via `get-user-detail-action.ts` — and also self-fetches the role catalog via `get-all-roles-action.ts` on open, since `users-page.tsx` doesn't preload and pass it down), `delete-user-dialog.tsx` (confirm + delete). All of `users-page.tsx`'s and the dialogs' underlying backend calls go through one consolidated `features/users/api/users.api.ts`.
-- **Role management UI (`/identity/roles`)**: `features/roles/components/roles-page.tsx` (Server Component: permission gate via `requirePermission()`, fetches all roles via `roles.api.ts`'s `getAllRoles`), `roles-data-table.tsx` (client wrapper, client-side search filter — no backend search endpoint), `create-role-dialog.tsx` (name/description only — the backend accepts no claims on create), `edit-role-dialog.tsx` (name/description + a permissions checklist, fetches full role detail on open via `get-role-detail-action.ts` — and also self-fetches the permission catalog via `get-permissions-action.ts` on open, rather than it being sourced from the page), `delete-role-dialog.tsx`. All of these dialogs' underlying backend calls go through one consolidated `features/roles/api/roles.api.ts`.
-- **Real-time notifications (topbar bell)**: `features/notifications/hooks/use-notifications.ts` (SignalR connection, refresh-on-push), `features/notifications/components/notification-bell.tsx` (bell icon, unread badge/ring animation, All/Unread/Archived tab filter).
-- **Notification management UI (`/notifications`)**: `features/notifications/components/notifications-page.tsx` (Server Component: permission gate via `requirePermission()`, converged on the same shared `AccessDenied` behavior as Users/Roles, fetches via `notifications.api.ts`'s `getNotifications`), `notifications-data-table.tsx` (status + recipient filter dropdowns wired to URL params), `send-notification-dialog.tsx` (the "Send" action, gated separately on `NOTIFICATIONS_PERMISSIONS.Send`), `user-select.tsx` (recipient/sender picker shared by both — an on-demand search component backed by `search-users-action.ts`, rather than a shared picker over page-preloaded data). Admin-facing calls (`getNotifications`/`sendNotification`) live in `features/notifications/api/notifications.api.ts`; self-service calls used by the bell/inbox (`getMyNotifications`/`getUnreadCount`/`markNotificationRead`) live in a separate `features/notifications/api/user-notifications.api.ts`.
-- **Select / combobox input**: `components/ui/combobox.tsx` (`Combobox<TValue>`, a Popover+Command single-select) plus its `components/ui/{popover,command}.tsx` primitives. Consumed only by `features/users/components/edit-user-dialog.tsx` (status/authProvider) — `features/notifications/components/user-select.tsx` uses a bespoke `components/ui/{button,popover,command}.tsx` composition instead. Nested inside a `Dialog`, `Combobox`'s `Popover` portals into the Dialog's own DOM node via `components/foundation/portal-container.ts` rather than `document.body` — see `components/ui/dialog.tsx` if extending this pattern to another Radix overlay.
-- **Command palette (⌘K page search)**: `components/command/command-palette.tsx` (`CommandPalette`, built on `components/foundation/*` + `@floating-ui/react`), wired into the app by `components/shared/search-box.tsx` in the topbar — which owns the open state, the global keydown listener, and builds the entries from `buildVisibleMenu(NAV_ITEMS, can)` + `flattenNavLeaves`. The sibling `components/command/command-palette-provider.tsx` (`CommandPaletteProvider`) is an unused alternative.
-- **Reusable list/table building block**: `components/shared/data-table/` (`DataTable`, toolbar, `data-table-buttons.tsx` for the Export/Refresh/Columns cluster — built on `components/ui/button-group.tsx` — pagination, `types.ts` — including optional per-column client-side sort via `sortable`/`sortValue`, and an optional `customSearch`/`onCustomSearch` slot for a caller-supplied, apply-on-click multi-field filter UI, used by `NotificationsDataTable`) — generic, no feature knowledge; used by `features/users`, `features/roles`, and `features/notifications`.
-- **Reusable read-only object/table viewer (not yet wired into any page)**: `components/shared/object-viewer/` (`ObjectViewer`, plus `object-viewer-row.tsx`, `column-resize-handle.tsx`, `object-viewer-layout-context.tsx`, `utils.ts`) — purely additive, built on `components/ui/table`/`components/ui/input`, no `features/*` dependency.
-- **Toast notifications**: `components/toast/` (`AppToaster` mounted in `app/layout.tsx`, `notifySuccess`/`notifyError`, saturated color theme in `toast-theme.ts`).
-- **Permission checks**: `lib/shared/authorization.ts` (`hasPermission`/`hasAnyPermission`/`hasAllPermissions`, `isSuperAdminUser`, `SUPER_ADMIN_USERNAMES` bypass list — takes `permissions: string[]`/`userName` directly, safe for both server and client) is the actual logic; `lib/server/authorization.ts` is a thin server-only wrapper that derives `userName` from `session.profile?.userName` internally and is called as `hasPermission(session, permission)`/`hasAnyPermission(session, permissions)`/`hasAllPermissions(session, permissions)` — used by `UsersPage`/`RolesPage`/`NotificationsPage`. `lib/server/require-permission.tsx`'s `requirePermission(permission)` is the higher-level, sanctioned entry point for gating an entire page — see "Gate a page on a permission" above and `components/shared/access-denied.tsx` for the panel it renders. `components/layout/sidebar.tsx` and `components/shared/search-box.tsx` both call `lib/shared/authorization.ts` directly (client-side, no `lib/server/*` involved). Permission-string constants live per-feature: `features/users/constants/permissions.ts` (`USERS_PERMISSIONS`), `features/roles/constants/permissions.ts` (`ROLES_PERMISSIONS`), `features/notifications/constants/permissions.ts` (`NOTIFICATIONS_PERMISSIONS` — `notification.read`/`notification.send`) — each mirrors its module's own backend permission-string constants.
-- **Home page (session-backed profile summary + notification inbox)**: `features/home/` — `components/home-page.tsx` (async Server Component: resolves the session, redirects to `/login` if absent, renders `ProfileSummaryCard` plus an `Inbox` card wrapping `NotificationInbox`, whose initial page is fetched server-side via `getMyNotificationsAction()`), `components/profile-summary-card.tsx` (account summary: avatar initials, display name, `@username`, status/role badges). Routed at `/` (`src/app/(dashboard)/page.tsx`). No mock/sample data — both the profile summary and the inbox come from the real session and the live `user_notification` endpoint.
-- **Top bar**: `components/layout/topbar.tsx` (brand, breadcrumbs, the ⌘K search trigger — `SearchBox`, passed `permissions`/`userName` — accent picker, theme toggle, notifications, user menu).
-- **Sidebar (nav + show/hide + mobile drawer)**: `components/layout/sidebar.tsx` (also computes the permission-filtered menu via `lib/shared/menu.ts`'s `buildVisibleMenu()`), `components/layout/sidebar-nav-item.tsx`, state in `hooks/use-sidebar.tsx`. Only the sidebar's `hidden` state persists to `localStorage` — the nav-group expand/collapse overrides (`expandedOverrides`) always reset to the auto-expand-active-route default on reload.
-- **Nav structure/labels**: each nav-bearing feature owns its own entry — `features/{home,users,roles,notifications}/constants/nav-item.ts` (`HOME_NAV_ITEM`/`USERS_NAV_ITEM`/`ROLES_NAV_ITEM`/`NOTIFICATIONS_NAV_ITEM`); `src/constants/nav-items.ts` (typed via `types/nav.ts`) assembles those into `NAV_ITEMS`, only declaring the "Administration" group and "Settings" leaf itself. `lib/shared/menu.ts` exposes `buildVisibleMenu` (permission filter, used by both `Sidebar` and `SearchBox`) and `flattenNavLeaves` (leaf-with-section list, used by `SearchBox`).
-- **SignalR direct connection (real-time push)**: `use-notifications.ts` opens a WebSocket directly from the browser to the backend via `NEXT_PUBLIC_SIGNALR_HUB_URL` (an absolute URL); `next.config.ts` has no `rewrites()` proxy, so this requires the backend to allow CORS for the admin app's origin. `features/notifications/api/get-signalr-token-action.ts` hands the browser the short-lived access token needed for the handshake, proactively refreshing a near-expiry session first via `refreshSessionIfNearExpiry()`. A failed handshake retries every 30s (`connectSignalR`), logging a sanitized error instead of the SignalR client's raw HTML-embedding one.
-- **Theming (light/dark, accent color)**: `components/theme/` (`theme-provider.tsx`, `accent-color-provider.tsx`, `theme-toggle.tsx`, `accent-color-picker.tsx`, `use-has-mounted.ts`); design tokens in `src/app/globals.css`'s `@theme inline` block and `:root`/`.dark[data-accent=...]` variable declarations.
-- **shadcn-generated UI primitives**: `components/ui/*` — configured via `components.json`.
-- **Server-only API plumbing**: `lib/server/http.ts` (fetch wrapper, `handlers`/`HttpRequestHandler` pipeline run before `fetch()` — not session-aware itself; does not hardcode an `api/v1/` prefix — the configured base URL owns its full path prefix), `lib/server/backend-api.ts` (exports a `createBackendApiClient(client)` factory plus two ready instances, `identityApi`/`notificationsApi` — the entry points most `features/*/api/*.ts` files use; each wraps `http.ts` with bearer-token auth + its own fixed `client` pre-wired), `lib/server/api-clients.ts` (the `ApiClients` named-backend registry, two entries, `Identity`/`Notifications`), `lib/server/http-handlers/bearer-token-handler.ts` (`bearerTokenHandler`, reads the ambient session; `explicitBearerTokenHandler(accessToken)`, for the pre-session-cookie exceptions — `features/auth/api/token.api.ts` (`getToken`/`refreshToken`) and `features/user-profile/api/user-profile.api.ts` (`getCurrentUser`), both passing `client: ApiClients.Identity` explicitly), `lib/server/call-guard.ts` (error-envelope normalization), `lib/server/config.ts` (env access, per-client via `getApiBaseUrl(client)` — `client` is a required parameter, no default), `lib/server/require-permission.tsx` (`requirePermission(permission)` — the shared page-level permission gate, see "Permission checks" above).
-- **Cross-cutting helpers**: `lib/shared/utils.ts` (`cn`), `lib/shared/dedupe-claims.ts`, `lib/shared/user-display.ts`, `lib/shared/user-status.ts`, `lib/shared/menu.ts` (`buildVisibleMenu`/`flattenNavLeaves`), `lib/shared/deployment-recovery.ts` (`"use client"` — the deploy-recovery loop for the error boundaries).
-- **Backend/client shared shapes**: `types/api.ts` (`Result`/`ApiResponse`/`Paged`/`PagedResult`, mirroring the backend envelope), `types/{session,claim,nav}.ts` (`TokenDto`/`UserDto`/etc. live per-feature — `features/auth/types/token.ts`, `features/users/types/user.ts` — re-exported via their owning feature's barrel, not in a global `types/` file).
+Routing and per-feature responsibilities are in [../architecture/overview.md § Key Routes/Areas](../architecture/overview.md#key-routesareas)
+and the auth flow in [§ Auth Flow](../architecture/overview.md#auth-flow). Beyond those:
+
+| Concern | Location |
+|---|---|
+| App shell / global providers | `src/app/layout.tsx`, `src/app/(dashboard)/layout.tsx` → `components/layout/app-shell.tsx` |
+| Login / logout | `modules/identity/auth/api/{login,logout}-action.ts` (`logout-action.ts` is imported directly by `user-menu.tsx`, not barrel-exported) |
+| Session cookie: crypto, chunking, refresh | `lib/server/{session-cookie,token-cipher,stored-session,cookie-codec,session,jwt,build-session-claims,refresh-session,refetch-profile,persist-session-cookie}.ts` |
+| Session freshness gate | `components/layout/session-gate.tsx` → `modules/identity/auth/api/ensure-fresh-session-action.ts`. `src/proxy.ts` is only the 7-day cap + `/login` redirect |
+| Deploy-stale-tab recovery | `lib/shared/deployment-recovery.ts`, `components/layout/deployment-recovery-notice.tsx`, both `error.tsx` boundaries, `app/api/health/route.ts` |
+| Server-only API plumbing | `lib/server/{http,backend-api,api-clients,call-guard,config}.ts`, `lib/server/http-handlers/bearer-token-handler.ts`. `http.ts` emits `[api]` request traces to the console **in development only** (never bodies/query/headers — those carry tokens) |
+| Permission checks | `lib/shared/authorization.ts` (logic), `lib/server/authorization.ts` (wrapper), `lib/server/require-permission.tsx` (page gate), `components/shared/access-denied.tsx` |
+| Real-time notifications | `modules/notifications/hooks/use-notifications.ts`, `context/notifications-provider.tsx`, `components/{notification-bell,notification-inbox}.tsx`, `api/{get-signalr-token-action,signalr.api}.ts` |
+| Reusable list/table block | `components/shared/data-table/` |
+| Command palette (⌘K) | `components/command/*`, wired via `components/shared/search-box.tsx` |
+| Nav structure | each feature/module's `constants/nav-item.ts` + `src/constants/nav-items.ts` (assembly), `lib/shared/menu.ts` |
+| Theming | `components/theme/*`, tokens in `src/app/globals.css` |
+| Backend/client shared shapes | `types/api.ts` (envelope), per-feature `types/*.ts` (DTOs, barrel-re-exported) |
 
 ## Notes
 
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-03_
+_Last synced: 2026-09-10_

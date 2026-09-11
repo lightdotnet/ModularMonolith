@@ -51,11 +51,14 @@ Specialized agents live in [.claude/agents/](.claude/agents/). Prefer delegating
 | Agent | Use for |
 |---|---|
 | [architecture-reviewer](.claude/agents/architecture-reviewer.md) | Backend layering, module boundaries, dependency direction within/between modules under `src/` |
-| [dotnet-architect](.claude/agents/dotnet-architect.md) | Backend project/module structure, framework choices, new module shape |
+| [dotnet-architect](.claude/agents/dotnet-architect.md) | Backend project/module structure, strategic DDD (bounded contexts, context mapping, cross-module integration mechanism), framework choices, new module shape |
+| [ddd-modeler](.claude/agents/ddd-modeler.md) | Tactical DDD inside a module's domain layer — aggregate boundaries/invariants, entities vs. value objects, domain events, anemic-model detection |
 | [efcore-specialist](.claude/agents/efcore-specialist.md) | EF Core models, migrations, query performance, DbContext design per module |
 | [api-designer](.claude/agents/api-designer.md) | Backend REST API contract design, versioning, DTO shape |
+| [dotnet-developer](.claude/agents/dotnet-developer.md) | Implementing an approved backend change under `src/` — writes C# to convention, build-sanity only (never runs the test suite) |
 | [code-reviewer](.claude/agents/code-reviewer.md) | General C#/.NET backend code quality review |
 | [nextjs-architect](.claude/agents/nextjs-architect.md) | Next.js/React/TypeScript structure for a given client app — routing, data fetching, state management, component architecture |
+| [nextjs-developer](.claude/agents/nextjs-developer.md) | Implementing an approved change under `clients/admin/` — writes Next.js 16/React 19/TS to convention, lint/build-sanity only |
 | [frontend-code-reviewer](.claude/agents/frontend-code-reviewer.md) | React/TypeScript code quality review for a given client app |
 | [api-contract-reviewer](.claude/agents/api-contract-reviewer.md) | Consistency between backend API contracts and how a given client consumes them; drift detection |
 | [security-reviewer](.claude/agents/security-reviewer.md) | Vulnerabilities, secrets, auth/authz gaps — backend and any client app |
@@ -71,6 +74,7 @@ Rule of thumb: if a task maps cleanly to one row above, delegate to that agent i
 Reusable playbooks live in [.claude/skills/](.claude/skills/) — see each file for purpose, inputs, workflow, and best practices:
 
 - [create-feature](.claude/skills/create-feature.md) — full-stack feature (backend module change + client UI + contract), [refactor](.claude/skills/refactor.md)
+- [ddd-modeling](.claude/skills/ddd-modeling.md) — tactical domain model for a backend module, [clean-architecture-split](.claude/skills/clean-architecture-split.md) — the (as-yet-unused) single-project → 4-project module split
 - [review-code](.claude/skills/review-code.md), [review-architecture](.claude/skills/review-architecture.md)
 - [generate-docs](.claude/skills/generate-docs.md), [sync-docs](.claude/skills/sync-docs.md)
 - [analyze-solution](.claude/skills/analyze-solution.md) (backend), [analyze-module](.claude/skills/analyze-module.md), [analyze-project](.claude/skills/analyze-project.md)
@@ -118,10 +122,12 @@ Session- and task-level workflows live in [.claude/workflows/](.claude/workflows
 | "Sync documentation" | [.claude/workflows/sync-documentation.md](.claude/workflows/sync-documentation.md) |
 | "Review architecture" | [.claude/skills/review-architecture.md](.claude/skills/review-architecture.md) |
 | "Review code" | [.claude/skills/review-code.md](.claude/skills/review-code.md) |
+| "Design a domain model / aggregate" / "where should this rule live" | [.claude/skills/ddd-modeling.md](.claude/skills/ddd-modeling.md) |
+| "Split a module into Clean Architecture layers" | [.claude/skills/clean-architecture-split.md](.claude/skills/clean-architecture-split.md) |
 | "Implement a feature" | [.claude/workflows/implement-feature.md](.claude/workflows/implement-feature.md) |
 | "Update CLAUDE documentation" | [.claude/skills/sync-docs.md](.claude/skills/sync-docs.md), scoped to `.claude/` docs only |
 | "Run a ROT review of .claude" / "check for stale agents/skills" | [.claude/ROT.md](.claude/ROT.md) |
 | "Load backend/frontend/full context" | `/context-backend`, `/context-frontend`, or `/context-full` ([.claude/commands/](.claude/commands/)) |
 
 ---
-_Last synced: 2026-08-22_
+_Last synced: 2026-09-07_

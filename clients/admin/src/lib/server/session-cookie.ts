@@ -2,6 +2,27 @@ import "server-only";
 
 export const SESSION_COOKIE_NAME = "admin_session";
 
+/**
+ * Max chars (== bytes; payload is ASCII base64) for a single cookie's value
+ * before splitting into numbered chunk cookies. The browser rejects a cookie
+ * whose whole `name=value; attrs` string exceeds ~4096 bytes, silently —
+ * this leaves generous room for the name/attributes/per-cookie overhead.
+ */
+export const MAX_CHUNK_BYTES = 3072;
+
+/** Hard ceiling on chunk count — a guard against a pathologically large session. */
+export const MAX_CHUNKS = 8;
+
+export function chunkName(index: number): string {
+  return `${SESSION_COOKIE_NAME}.${index}`;
+}
+
+/** Every cookie name the session could ever occupy — the base name plus every possible chunk slot. */
+export const ALL_SESSION_COOKIE_NAMES: readonly string[] = [
+  SESSION_COOKIE_NAME,
+  ...Array.from({ length: MAX_CHUNKS }, (_, i) => chunkName(i)),
+];
+
 /** Hard cap on session lifetime, counted from login — not extended by refresh. */
 export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 

@@ -1,4 +1,4 @@
-﻿using StarterKit.Identity.Api.Entities;
+using StarterKit.Identity.Api.Entities;
 
 namespace StarterKit.Identity.Api.Data;
 
@@ -19,6 +19,8 @@ internal static class EntityBuilderExtensions
             // Configure a relationship where the ActiveStatus is owned by (or part of) User.
             entity.OwnsOne(o => o.Status).Property(p => p.Value).HasColumnName("Status");
             entity.Navigation(emp => emp.Status).IsRequired();
+
+            // AuthProvider is a non-nullable enum; EF maps it to a non-nullable int column by default.
         });
 
         builder.Entity<UserRole>().ToTable(name: Tables.UserRoles);

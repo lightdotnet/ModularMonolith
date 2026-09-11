@@ -1,1 +1,1 @@
-export { UsersPage as default } from "@/features/users";
+export { UsersPage as default } from "@/modules/identity/users";

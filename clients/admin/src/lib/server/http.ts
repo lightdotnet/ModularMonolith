@@ -66,6 +66,23 @@ async function extractErrorMessage(response: Response, path: string): Promise<st
   return `Backend request to ${path} failed with status ${response.status}.`;
 }
 
+/** Dev-only request tracing — never logs bodies, query, or headers (they carry bearer tokens). */
+function logApi(message: string): void {
+  if (process.env.NODE_ENV !== "development") return;
+  console.log(`[api] ${message}`);
+}
+
+/**
+ * Node's `fetch` reports network/DNS/TLS failures as a generic
+ * `TypeError: fetch failed` and hides the real reason on `error.cause`
+ * (e.g. `DEPTH_ZERO_SELF_SIGNED_CERT`, `ECONNREFUSED`) — pull it back out.
+ */
+function extractCause(error: unknown): string | undefined {
+  if (!(error instanceof Error) || !(error.cause instanceof Error)) return undefined;
+  const causeCode = (error.cause as unknown as { code?: string }).code;
+  return causeCode ?? error.cause.message;
+}
+
 async function send(path: string, options: RequestOptions): Promise<Response> {
   const context: HttpRequestContext = {
     headers: { "Content-Type": "application/json" },
@@ -74,16 +91,32 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
     await handler(context);
   }
 
-  const response = await fetch(buildUrl(path, options.query, options.client), {
-    method: options.method ?? "GET",
-    headers: context.headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-  });
+  const method = options.method ?? "GET";
+  logApi(`→ ${method} ${options.client} ${path}`);
 
-  if (!response.ok) {
-    throw new HttpError(response.status, await extractErrorMessage(response, path));
+  let response: Response;
+  try {
+    response = await fetch(buildUrl(path, options.query, options.client), {
+      method,
+      headers: context.headers,
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    });
+  } catch (error) {
+    const cause = extractCause(error);
+    logApi(`✗ ${method} ${path} — fetch failed ${cause ? `(cause: ${cause})` : ""}`);
+    throw new Error(
+      cause ? `fetch failed: ${cause}` : error instanceof Error ? error.message : "fetch failed",
+      { cause: error },
+    );
   }
 
+  if (!response.ok) {
+    const message = await extractErrorMessage(response, path);
+    logApi(`✗ ${response.status} ${method} ${path} — ${message}`);
+    throw new HttpError(response.status, message);
+  }
+
+  logApi(`← ${response.status} ${method} ${path}`);
   return response;
 }
 

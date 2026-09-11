@@ -1,7 +1,7 @@
 import { SidebarProvider } from "@/hooks/use-sidebar";
 import { Sidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/topbar";
-import { NotificationsProvider } from "@/features/notifications/context/notifications-provider";
+import { NotificationsProvider } from "@/modules/notifications/context/notifications-provider";
 import type { ProfileData } from "@/types/session";
 
 export function AppShell({

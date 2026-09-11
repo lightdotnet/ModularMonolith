@@ -1,100 +1,198 @@
 # Client App Overview: admin
 
-## Purpose
+Internal admin console for the ModularMonolith starter template — the first and only client app
+(`clients/` has no other subfolder). Layering, dependency direction, and design patterns are in
+[architecture.md](./architecture.md); this file covers what the app *does* — functional areas,
+routes, backend contract surface, and the auth flow.
 
-Internal admin console for the ModularMonolith starter template. Per `src/app/layout.tsx` metadata: "Admin Dashboard" / "Admin dashboard for the ModularMonolith starter kit." This is the **first and only client app** in this template repo (`clients/web` does not exist — verified via directory listing of `clients/`).
+## Functional Areas
 
-The app covers three functional areas plus its own session/chrome layer:
-
-- **Identity administration** (`/identity/users`, `/identity/roles`): full CRUD for users and roles against `Identity.Api`, including a domain-user (Active Directory) lookup on user creation, a permissions checklist plus a free-form "other claims" editor on role editing, and force-password-reset.
-- **Notifications** (`/notifications` plus a topbar bell and a Home-page inbox): a permission-gated admin management page with a "Send" action, a live SignalR-backed unread-count/tab-filtered feed shared between the topbar bell and the Home page's two-pane inbox.
-- **Home** (`/`, `features/home/`): a lightweight landing page — a `ProfileSummaryCard` plus the notifications inbox. It is a real Server Component that resolves the session and fetches the caller's own notifications; it does not render any mock/sample data.
-- **Auth/session** (`lib/server/*`, `features/auth/`, `components/layout/session-gate.tsx`, `proxy.ts`): an encrypted, proactively-refreshed cookie session — see Auth Flow below.
-- **Deploy-resilience** (`src/app/error.tsx`, `src/app/(dashboard)/error.tsx`, `lib/shared/deployment-recovery.ts`, `src/app/api/health/route.ts`): both error boundaries recognize deploy-induced stale-tab errors — a rotated Server Action ID, a dropped chunk, a fetch that hit the server mid-restart, Next error `E394` — and, instead of the generic error card, show a "new version available / reconnecting" notice that polls `/api/health` on a growing backoff and hard-reloads once the server answers, capped at 5 reloads per 5 minutes via `sessionStorage`.
-
-Each nav-bearing feature (`home`, `users`, `roles`, `notifications`) owns its own `NavItem` metadata via a `constants/nav-item.ts`, assembled into `NAV_ITEMS` by the top-level `constants/nav-items.ts`; `Sidebar` computes the visible, permission-filtered menu client-side via `lib/shared/menu.ts` (`buildVisibleMenu`) and `lib/shared/authorization.ts` — see architecture.md for the deliberate barrel-bypass this requires. The topbar `SearchBox` reuses the same `buildVisibleMenu(NAV_ITEMS, can)` result (via `lib/shared/menu.ts`'s `flattenNavLeaves`) to populate a ⌘K/Ctrl+K command palette that jumps between pages.
+- **Identity administration** (`/identity/users`, `/identity/roles`) — full CRUD against `Identity.Api`:
+  users (with an Active Directory lookup on create, force-password-reset), roles (a permissions
+  checklist plus a free-form "other claims" editor).
+- **Notifications** (`/notifications` + a topbar bell + a Home inbox) — a permission-gated admin
+  send/browse page, plus a live SignalR-backed unread-count/tab-filtered feed shared between the bell
+  and the Home page.
+- **Organization administration** (`/organization/{companies,departments,employees}`) against
+  `Organization.Api` — company CRUD; a company-scoped department/team hierarchy (`OrgUnit`, unified
+  via a `Type` discriminator) as a recursive tree with add/edit/move/delete + a read-only "View
+  managers" dialog, plus a company-scoped Employee Levels panel; employee CRUD with a tabbed edit
+  dialog (Details / Departments & Teams / Login) covering membership assignment (level, primary,
+  `Current`/`Acting` status, manager flag) and creating or linking an Identity login.
+- **Approvals** (`/approvals`) against `Approval.Api` — a generic multi-level approval workflow: the
+  caller's pending decisions and own requests, plus (for `approval.requests.view_all`) an admin
+  view-all and a "Create test request" harness that builds an arbitrary-length approver chain.
+- **Leave requests** (`/leave-requests`, `/leave-requests/[id]`) against `LeaveManagement.Api` —
+  self-service submission/tracking of the caller's own requests (no permission gate, only a session);
+  create/edit/delete restricted to the viewer's own requests in an editable status, each requiring a
+  real department approver picked from a `GET leave_request/approvers` fetch. A caller with
+  `leave.requests.manage` also gets an "All requests" tab (delete-only over every employee's
+  requests). The detail page links out to `/approvals/requests/{id}` — decisions happen there, not
+  here.
+- **Home** (`/`) — a `ProfileSummaryCard` plus the notification inbox; a real Server Component
+  resolving the session and fetching the caller's notifications.
+- **Auth/session** — an encrypted, proactively-refreshed cookie session, reached via password login or
+  a Microsoft PKCE relay (see Auth Flow).
+- **Deploy resilience** — both `error.tsx` boundaries recognize deploy-induced stale-tab errors and
+  show a health-probe-gated auto-reload notice instead of the generic error card.
 
 ## Structure
 
-- **Router**: App Router, rooted at `src/app/` — verified via directory listing; no `pages/` directory exists.
-- **Package manager**: pnpm — verified via `pnpm-lock.yaml`. `pnpm-workspace.yaml` only configures pnpm's build-script approval (`allowBuilds`/`ignoredBuiltDependencies` for `sharp`, `unrs-resolver`) — it does not define a multi-package workspace; `clients/admin` is a single, independent app.
-- **Data fetching approach**: server-only, hand-written per feature. Each `features/<name>/api/` folder holds one consolidated `<feature>.api.ts` file wrapping every backend call for that feature — `features/auth/api/token.api.ts`, `features/users/api/users.api.ts`, `features/roles/api/roles.api.ts`, `features/notifications/api/notifications.api.ts` (admin-facing `notification` routes) plus a separate `features/notifications/api/user-notifications.api.ts` (self-service `user_notification` routes), and `features/user-profile/api/user-profile.api.ts` (`getCurrentUser`/`listSessions`/`revokeSession`) — each normalized through `lib/server/call-guard.ts`. Server Action files (`*-action.ts`) are one file per action, not consolidated. Nearly all of the consolidated files get `requestJson`/`requestVoid` from `lib/server/backend-api.ts`, which pre-wires the bearer-token handler and a named backend client (see Backend Integration below); the pre-session-cookie exceptions — `features/auth/api/token.api.ts` (`getToken`, `refreshToken`) and `features/user-profile/api/user-profile.api.ts`'s `getCurrentUser` — import `requestJson`/`requestVoid` from `lib/server/http.ts` directly, passing an explicit token via `explicitBearerTokenHandler` and `client: ApiClients.Identity` (`user-profile.api.ts` is a hybrid file: `getCurrentUser` uses `lib/server/http.ts` this way, while `listSessions`/`revokeSession` in the same file use the ordinary `lib/server/backend-api.ts` path). Whole-list reads happen in async Server Components (`user-profile-page.tsx`, `(dashboard)/layout.tsx`, `features/users/components/users-page.tsx`, `features/roles/components/roles-page.tsx`); writes happen via a Next.js Server Action — 8 of them, all `"use server"`, same `(prevState, formData) => Promise<{error?, success?}>` shape: `features/auth/api/login-action.ts`, `features/users/api/{create,update,force-password,delete}-user-action.ts`, `features/roles/api/{create,update,delete}-role-action.ts`. Five more Server Actions serve a third purpose — an on-demand *read* triggered from a Client Component when a list row's own data isn't complete enough, or when a picklist itself isn't preloaded by the page (see [architecture.md](./architecture.md) for why): `features/users/api/get-user-detail-action.ts` and `features/roles/api/get-role-detail-action.ts` fetch a single record's full detail on dialog open; `features/roles/api/get-all-roles-action.ts` and `features/roles/api/get-permissions-action.ts` (both a plain `() => Promise<{data, error?}>`) let `edit-user-dialog.tsx`/`edit-role-dialog.tsx` fetch their own role/permission picklists on open; and `features/users/api/search-users-action.ts` (`(params: SearchUsersParams) => Promise<{data: Paged<UserDto> | null, error?}>`) backs the on-demand recipient search in `features/notifications/components/user-select.tsx`. No client-side data-fetching library (no React Query/SWR in `package.json`) for HTTP requests. `features/notifications` is the one exception to "server-only fetching": a persistent WebSocket (`@microsoft/signalr`) opened directly from the browser (`use-notifications.ts`), authenticated with a short-lived, server-issued token.
-- **State management**: local component state + React Context, no global state library:
-  - `hooks/use-sidebar.tsx` (`SidebarProvider`/`useSidebar`) — sidebar hidden/expanded/mobile-open state. Only `hidden` persists to `localStorage` (`HIDDEN_KEY`); nav-group expand/collapse overrides (`expandedOverrides`) always reset to the auto-expand-active-route default on reload.
-  - `components/theme/accent-color-provider.tsx` (`AccentColorProvider`/`useAccentColor`) — accent color selection, persisted to `localStorage`, applied via `data-accent` on `<html>`.
-  - `components/theme/theme-provider.tsx` — thin wrapper around `next-themes`' `ThemeProvider`.
-  - `components/shared/search-box.tsx` (`SearchBox`) — owns the ⌘K command palette's `open` state and a global keydown listener; `useMemo`-builds the `CommandGroup[]` (nav leaves grouped by top-level section) from the `permissions`/`userName` it's handed by `TopBar`.
-  - `features/auth/components/login-form.tsx` — `useActionState` bound to the `loginAction` Server Action; owns the full `Card` markup and derives a `pending` boolean to render a dimmed, centered `Spinner` overlay (`aria-busy` on the `Card`) plus a `<fieldset disabled={pending}>` around the username/password inputs while the login action is in flight.
-  - `components/layout/session-gate.tsx` — `SessionGate` owns a `"checking" | "ready" | "unreachable"` status state plus the initial-check retry/backoff and background keep-alive interval driving it — see Auth Flow below.
-  - `features/users/components/users-data-table.tsx` — drives search/pagination through URL `searchParams` via `router.push`/`router.refresh()` wrapped in `useTransition`; owns open/selected-row state for all three dialogs (create/edit/delete) plus a per-dialog remount-key counter used to force-remount each on every open.
-  - `features/users/components/{create,edit}-user-dialog.tsx` — `useActionState` bound to their respective Server Actions, plus a parallel controlled `useState<FormValues>` for the form fields (deliberate — see [architecture.md](./architecture.md) for why). `edit-user-dialog.tsx` additionally holds its own `roles: RoleDto[]` state and, on open, runs `Promise.all([getUserDetailAction(user.id), getAllRolesAction()])` in a `useEffect` — fetching both the full user record (the list endpoint's DTO doesn't carry `roles`/`claims`) and the role picklist itself. `create-user-dialog.tsx` additionally holds `isLookingUp`/`lookupFound` state plus a `lastLookedUpRef` (the last username a domain lookup ran for) backing its blur-triggered/manual domain-user lookup — see Backend Integration below and [architecture.md](./architecture.md) for the pattern.
-  - `features/users/components/delete-user-dialog.tsx` — uses `hooks/use-guarded-action.ts`'s `useGuardedAction()` (`[pending, run]`, wraps `useTransition` with toast/pending handling) wrapping a direct (non-form) call to `deleteUserAction`.
-  - `features/roles/components/roles-data-table.tsx` — same shape as `users-data-table.tsx`, but drives search via local `useState` + client-side `.filter()` instead of URL params, since `RoleController` has no search/pagination endpoint.
-  - `features/roles/components/edit-role-dialog.tsx` — same "fetch full detail on open" pattern as `edit-user-dialog.tsx`, via `getRoleDetailAction`; also holds its own `permissions: PermissionDefinition[]` state and, on open, runs `Promise.all([getRoleDetailAction(role.id), getPermissionsAction()])`. Also holds local `otherClaims: ClaimDto[]`/`newClaimType`/`newClaimValue`/`claimError` state for the "Other claims" section alongside the Permissions checklist. On load, a `permission`-type claim is only classified as a known permission (checked checkbox) if its value matches a fetched `PermissionDefinition`; every other claim — including all `permission` claims when the permissions fetch fails — falls into `otherClaims` instead of being silently dropped. Each listed claim has a delete-only button; an "Add custom claim" row (Type + Value inputs) validates non-empty and rejects exact duplicates, and deliberately allows `type: "permission"` too (a manually-added, unrecognized permission claim). The full array is serialized into a hidden `otherClaims` form field.
-  - `features/notifications/components/user-select.tsx` — owns its own `open`/`query`/`options`/`loading`/`selectedLabel` state. A debounced (300ms) `useEffect` calls `searchUsersAction` for page 1 of matches once the trimmed query reaches the minimum search length.
-  - `components/shared/data-table/data-table-toolbar.tsx` — local debounced search-text state (400ms) before calling the `onSearchChange` prop; owns no button-cluster state — Export/Refresh/Columns live in `data-table-buttons.tsx`, driven by `data-table.tsx`'s own `hiddenColumnIds` state. `data-table-pagination.tsx` — local page-jump input state, committed on blur/Enter.
-  - `features/notifications/components/notifications-data-table.tsx` — local "pending" status/recipient filter state (`pendingStatus`/`pendingToUserId`), applied to the URL only when the `customSearch` slot's "Search" button is clicked; re-synced from props when the URL changes externally, mirroring `data-table-toolbar.tsx`'s own search-value-sync pattern.
-  - `features/notifications/hooks/use-notifications.ts` — owns `notifications`/`unreadCount`/`loading` state; opens a `HubConnection` (`@microsoft/signalr`) in a `useEffect` and refetches on every `SystemMessage` push rather than merging the pushed payload in place. Instantiated exactly once, inside `features/notifications/context/notifications-provider.tsx`'s `NotificationsProvider` (see below). `markAsRead(id)` returns `Promise<boolean>`; `refresh` takes an optional `status?: NotificationStatus` parameter, remembered in a `statusRef` so a SignalR-pushed re-fetch preserves whichever tab is currently active.
-  - `features/notifications/context/notifications-provider.tsx` — `NotificationsProvider`/`useNotificationsContext`, another instance of the context-provider-per-concern pattern (`SidebarProvider`/`AccentColorProvider`): calls `useNotifications()` exactly once and shares its full return value (`notifications`/`unreadCount`/`loading`/`markAsRead`/`refresh`) via Context. Mounted once in `components/layout/app-shell.tsx`, so `notification-bell.tsx` and `notification-inbox.tsx` read the same live state/connection instead of each opening its own.
-  - `features/notifications/components/notification-inbox.tsx` — local `useState` for `notifications`/`totalPages`/`pageNumber`/`filter`/`selectedId`; on filter or page change, calls `getMyNotificationsAction({ pageNumber, status })` inside a `useTransition` (dims the panel via `opacity-60` while pending). Reads `unreadCount`/`markAsRead` from `useNotificationsContext()` rather than owning them locally.
-  - `hooks/use-guarded-action.ts` — `useGuardedAction()` returns `[pending, run]`; `run(action, successMessage?, onSuccess?)` wraps `useTransition`, toasting success/error and invoking `onSuccess`. Used by `features/users/components/delete-user-dialog.tsx` and `features/roles/components/delete-role-dialog.tsx`.
-  - `hooks/use-action-success-toast.ts` — `useActionSuccessToast(state, successMessage, onSuccess?)`, a `useEffect` that toasts and runs `onSuccess` once a bound `useActionState` result's `.success` turns true. Used at 6 call sites across 5 files: `features/users/components/create-user-dialog.tsx`, `features/roles/components/create-role-dialog.tsx`, `features/notifications/components/send-notification-dialog.tsx`, `features/roles/components/edit-role-dialog.tsx`, `features/users/components/edit-user-dialog.tsx` (2 call sites — the update-user form and the password-reset form).
-- **Styling**: Tailwind CSS v4, CSS-first configuration — `src/app/globals.css` uses `@import "tailwindcss"` plus an inline `@theme inline { ... }` block. No `tailwind.config.ts`/`.js` file. `postcss.config.mjs` wires in `@tailwindcss/postcss`.
+- **Router**: App Router, rooted at `src/app/`. No `pages/`.
+- **Package manager**: pnpm. `pnpm-workspace.yaml` only configures build-script approval — a single
+  independent app, not a workspace.
+- **Module layout**: `src/modules/<domain>/<name>/` for everything except `src/features/home/` (the
+  one holdout). Each folder: `api/` + `components/` + optional `types/`/`constants/`/`hooks/` + an
+  `index.ts` barrel. See [architecture.md § Layering](./architecture.md#layering).
+- **Data fetching**: server-only, hand-written per feature. Each `api/` has one consolidated
+  `<name>.api.ts` wrapping every backend call, normalized through `lib/server/call-guard.ts`;
+  `*-action.ts` Server Actions are one file per action (including read-only ones a Client Component
+  needs). Whole-list reads happen in async Server Components; writes via a Server Action.
+  `modules/notifications` is the one exception — a browser-direct SignalR WebSocket authenticated
+  with a short-lived, hub-scoped token. See [architecture.md § Key Design Patterns](./architecture.md#key-design-patterns)
+  for the API-layer, DataTable-consumption, and lazy-fetch patterns.
+- **State management**: local component state + React Context, no global store. `*-data-table.tsx`
+  components drive search/pagination through URL `searchParams`; dialogs use `useActionState` + a
+  bumped remount `key`; the Approvals tabs and Leave requests tables render a server-fetched array
+  with no owned pagination state. Persisted UI slices (sidebar, accent, theme) each get a Context
+  provider; `NotificationsProvider` wraps live data + one shared SignalR connection.
+- **Styling**: Tailwind CSS v4, CSS-first config in `src/app/globals.css`. No `tailwind.config.*`.
 
 ## Key Routes/Areas
 
-| Route/Area | Path | Responsibility | Notes |
-|---|---|---|---|
-| Home | `src/app/(dashboard)/page.tsx` (route `/`) | Re-exports `HomePage` from `@/features/home` | Async Server Component: resolves the session (redirects to `/login` if absent), renders a `ProfileSummaryCard` plus an "Inbox" card wrapping `NotificationInbox`, whose initial page is fetched server-side via `getMyNotificationsAction()` |
-| Profile | `src/app/(dashboard)/user-profile/page.tsx` (route `/user-profile`) | Re-exports `UserProfilePage` from `@/features/user-profile` | Account details, QR code of the user ID, roles/claims, session lifecycle card, all fetched live |
-| Login | `src/app/login/page.tsx` (route `/login`) | Re-exports `LoginPage` from `@/features/auth` | Outside the `(dashboard)` group, no `AppShell`/session resolution |
-| Dashboard-group layout | `src/app/(dashboard)/layout.tsx` | Calls `resolveSession()`, wraps `AppShell` (with `permissions`/`userName`/`user` from the resolved session, or the empty/`null` equivalents) in `SessionGate` | Wraps `/`, `/user-profile`, `/identity/users`, `/identity/roles`, `/notifications`; unauthenticated users never actually reach it in practice because `proxy.ts` redirects first. Sibling `(dashboard)/error.tsx` (rendered inside `AppShell`) and `(dashboard)/loading.tsx` (a centered `Spinner`) provide this group's error/loading boundaries, cascading to every nested route |
-| Root layout | `src/app/layout.tsx` | Loads `Inter` font, wraps app in `ThemeProvider` → `AccentColorProvider` → `TooltipProvider`, mounts `<AppToaster />` (`components/toast`) as a sibling of `TooltipProvider` | `<html suppressHydrationWarning>` for `next-themes`; also owns `src/app/error.tsx`, the root error boundary |
-| Root / dashboard error boundaries | `src/app/error.tsx`, `src/app/(dashboard)/error.tsx` | Client error boundaries (`"use client"`) | Branch on `isRecoverableDeploymentError(error)` (`lib/shared/deployment-recovery.ts`): a deploy-induced error renders `DeploymentRecoveryNotice` + the health-probe-gated auto-reload loop; anything else renders the generic destructive `Alert` + "Try again" (`reset()`) as before. Only differ in wrapper classes (`min-h-screen` centered vs `py-12`) |
-| Health probe | `src/app/api/health/route.ts` (route `/api/health`) | Unauthenticated liveness probe — `GET` → `204`, `export const dynamic = "force-dynamic"` | Polled by the deploy-recovery flow from an errored tab to tell "server is back" from "still deploying" before a hard reload; usable by infra health checks too. `proxy.ts`'s matcher already excludes `/api` from the auth gate |
-| Users | `src/app/(dashboard)/identity/users/page.tsx` (route `/identity/users`) | Re-exports `UsersPage` from `@/features/users` | Full CRUD: list, create, edit, delete, force-password-reset |
-| Roles | `src/app/(dashboard)/identity/roles/page.tsx` (route `/identity/roles`) | Re-exports `RolesPage` from `@/features/roles` | Full CRUD: list (client-filtered, no server search), create (name/description only — the backend's `POST /role` accepts no claims), edit (name/description + a permissions checklist + an "Other claims" editor for arbitrary/unrecognized claims), delete |
-| Notifications | `src/app/(dashboard)/notifications/page.tsx` (route `/notifications`) | Re-exports `NotificationsPage` from `@/features/notifications` | Gated on `notification.read`; a "Send" action gated on `notification.send`. Status + recipient filter dropdowns |
+| Route | Path | Notes |
+|---|---|---|
+| Home | `/` | Async Server Component — resolves the session (redirect to `/login` if absent), renders `ProfileSummaryCard` + `NotificationInbox` (initial page fetched server-side) |
+| Profile | `/user-profile` | Account details, QR of the user id, roles/claims/permissions, session lifecycle card. Super-admin-only extras (`isSuperAdminUser`): a manual "Refresh now" action and a "Session tokens" card exposing the raw access/refresh token with copy + show/hide |
+| Login | `/login` | Outside `(dashboard)` — no `AppShell`/session resolution. Password form + "Continue with Microsoft" |
+| Microsoft login relay | `/login/microsoft/start`, `/login/microsoft/callback` | Route Handlers, not pages — see Auth Flow |
+| Dashboard layout | `src/app/(dashboard)/layout.tsx` | `resolveSession()` → `SessionGate` wrapping `AppShell`. Sibling `error.tsx` (deploy-recovery branch) + `loading.tsx` (spinner) cascade to nested routes |
+| Root layout | `src/app/layout.tsx` | Fonts, `ThemeProvider` → `AccentColorProvider` → `TooltipProvider`, `<AppToaster />`; owns `app/error.tsx` |
+| Health probe | `/api/health` | `GET` → `204`, `force-dynamic`, no auth; polled by the deploy-recovery loop |
+| Users | `/identity/users` | Gated `identity.users.*`. List/create/edit/delete/force-password |
+| Roles | `/identity/roles` | Gated. Client-filtered list; create (name/description only); edit adds a permissions checklist + "Other claims" editor |
+| Notifications | `/notifications` | Gated `notification.read`; "Send" gated `notification.send`. Status + recipient filter |
+| Companies | `/organization/companies` | Gated. CRUD; edit works off row data (no on-open detail fetch) |
+| Departments & Teams | `/organization/departments` | Gated. `?companyId=` picker + recursive tree + "Employee Levels" tab |
+| Employees | `/organization/employees` | Gated. Search/paginate; tabbed edit dialog (Details / Departments & Teams / Login) |
+| Approvals | `/approvals` | Gated `approval.requests.view`; view-all panel + "Create test request" gated `approval.requests.view_all` |
+| Leave requests | `/leave-requests`, `/leave-requests/[id]` | **No permission gate** — any session. `leave.requests.manage` unlocks an "All requests" tab + delete-any |
 
-Every `page.tsx` under `src/app/` is a one-line re-export from a feature's public barrel (`export { X as default } from "@/features/<name>";`) — routing files contain no logic. The one non-page route file, `src/app/api/health/route.ts`, is the trivial liveness handler above.
-
-`src/constants/nav-items.ts` declares nav entries for `/` (Home), an "Administration" group (`/administration`, nesting `/identity/users`, `/identity/roles`, `/notifications`), and `/settings`. `/identity/users`, `/identity/roles`, and `/notifications` all have real pages (see above); `/administration` and `/settings` have **no corresponding `page.tsx`** (verified via directory listing) and 404 if followed — they are hidden from the sidebar and the command palette alike only when a permission gates them, which neither does, so both currently appear in both.
+Every `page.tsx` is a one-line re-export from a feature/module barrel. `constants/nav-items.ts`
+assembles `NAV_ITEMS` from each feature's own `NavItem`: `[home, Administration group, Organization
+group, /approvals, /leave-requests, Settings]`. `/administration`, `/organization`, `/settings` have
+no `page.tsx` and 404 if followed; being ungated they still show in the sidebar and ⌘K palette.
 
 ## Backend Integration
 
-Real, but partial. `lib/server/http.ts` resolves its base URL per named backend client via `lib/server/config.ts`'s `getApiBaseUrl(client)` — `lib/server/api-clients.ts`'s `ApiClients` registry has two entries, `Identity` and `Notifications`, each resolving its own required server-only env var (`IDENTITY_API_BASE_URL`/`NOTIFICATIONS_API_BASE_URL`, see `.env.example`). The base URL owns its full path prefix (e.g. `api/v1/`) — `http.ts`'s `buildUrl` does not hardcode one itself, it resolves the request `path` directly against the (trailing-slash-normalized) base URL. `lib/server/backend-api.ts` exposes this as a `createBackendApiClient(client)` factory, producing two ready instances, `identityApi`/`notificationsApi`, used by nearly every `features/*/api/*.ts` file instead of one hardcoded client — the point of the factory shape is that adding a new backend later is just another `createBackendApiClient(...)` call, no sibling file needed. Authorization is attached via a request-handler pipeline rather than a passed-in token: each instance auto-runs `lib/server/http-handlers/bearer-token-handler.ts`'s `bearerTokenHandler`, which reads the ambient session (`getSession()`) and sets `Authorization: Bearer <accessToken>` if present; the pre-session-cookie call sites (`token.api.ts`'s `getToken`/`refreshToken`, `user-profile.api.ts`'s `getCurrentUser`) instead pass the same file's `explicitBearerTokenHandler(accessToken)` directly to `http.ts`, along with an explicit `client: ApiClients.Identity` — Identity.Api and Notifications.Api are two logically separate backend modules, currently co-hosted in one process (`StarterKit.WebApi`, `http://localhost:5000`), but the client models them as independently configurable. Non-2xx responses surface a real message where available: `send()`'s `extractErrorMessage` helper reads the response body and prefers, in order, the app's own `ApiResponse.message`, an ASP.NET `ValidationProblemDetails.errors` map, or a `ProblemDetails.title`, falling back to a generic "request failed with status N" message only if none parse — this is shared-kernel and applies to every `features/*/api/*.ts` call. Non-2xx responses are thrown as a typed `HttpError` (`lib/server/http.ts`, carries the HTTP `status`), which `lib/server/call-guard.ts`'s `errorResponse()` maps to the backend's own `ResultCode` vocabulary (401 → `"unauthorized"`, 400 → `"bad_request"`, anything else — including a network failure with no response at all — → `"error"`) — this is what lets the auth-refresh flow (see Auth Flow below) tell a *permanent* refresh failure (the token itself is invalid) apart from a *transient* one (network/backend outage).
+Real, but partial. `lib/server/api-clients.ts` registers five backend clients — `Identity`,
+`Notifications`, `Organization`, `Approval`, `LeaveManagement` — each resolving its own
+`*_API_BASE_URL` env var (the base URL owns its full path prefix; `http.ts` prepends nothing).
+`lib/server/backend-api.ts`'s `createBackendApiClient(client)` factory produces five ready instances
+(`identityApi` … `leaveManagementApi`); auth is attached by a request-handler pipeline
+(`bearerTokenHandler` reads the ambient session), not a passed token. The five backends are logically
+separate modules currently co-hosted in one process (`StarterKit.WebApi`).
+Error handling, the envelope contract, and the permanent-vs-transient refresh-failure distinction are
+covered in [architecture.md § Key Design Patterns](./architecture.md#key-design-patterns).
 
-Endpoints currently wired, by feature:
-- **`auth`**: `auth/token/get` (`getToken()`, POST), `auth/token/refresh` (`refreshToken()`, POST) — both in `features/auth/api/token.api.ts`, both calling `client: ApiClients.Identity` explicitly; `refreshToken()` is called from `lib/server/refresh-session.ts`'s `refreshSession()`, invoked by `features/auth/api/ensure-fresh-session-action.ts`'s `ensureFreshSessionAction()` — a Server Action driven client-side by `components/layout/session-gate.tsx` on hard navigation, not proactively by `src/proxy.ts` anymore (see Auth Flow).
-- **`user-profile`**: `user_profile` (`getCurrentUser`, GET), `user_profile/token/list` (`listSessions`, GET) and `user_profile/token/revoke` (`revokeSession`, PUT) — all three in `features/user-profile/api/user-profile.api.ts`, exported from the feature barrel; used by `/user-profile`'s session-management UI.
-- **`users`**: `user/search` (GET, `searchUsers`), `user` (GET all, `getAllUsers`; PUT-by-id, `updateUser`; DELETE-by-id, `deleteUser`), plus get-by-id, create, force-password, and `get_domain_user/{userName}` (`getDomainUser`, wrapping the backend's `IActiveDirectoryService.GetByUserNameAsync`) — the `Identity.Api` `UserController` surface this app wraps, all in `features/users/api/users.api.ts`. Every write path has a real UI consumer at `/identity/users` (search, create, edit, delete, force-password-reset); `getUserById` has a second caller via `get-user-detail-action.ts`, the edit dialog's on-open detail fetch (see [architecture.md](./architecture.md)'s "fetch full detail on open" pattern). `user/search` is also used by `search-users-action.ts`, backing `features/notifications/components/user-select.tsx`'s on-demand recipient/sender search, not `users-page.tsx`'s own list search. `getAllUsers` remains unconsumed by any page directly. `getDomainUser` is consumed via `get-domain-user-action.ts` by `create-user-dialog.tsx`'s domain-user lookup (see Purpose above).
-- **`roles`**: `role` (GET all, `getAllRoles`; POST, `createRole`; PUT, `updateRole`; DELETE-by-id, `deleteRole`), plus get-by-id — the full `Identity.Api` `RoleController` surface, all in `features/roles/api/roles.api.ts`. Full CRUD at `/identity/roles`; `getRoleById` is used via `get-role-detail-action.ts` for the edit dialog's on-open fetch. `getAllRoles` also has a second consumer via `get-all-roles-action.ts` — `roles-page.tsx` calls it directly for the list itself, and `edit-user-dialog.tsx` also calls it (through the action) to self-fetch the role picklist on open.
-- **`permissions`**: `permissions` (GET, `getPermissions`) — the full catalog of definable permissions (`PermissionDefinition { name, displayName, parent }`), backing the Roles edit dialog's permissions checklist; also in `features/roles/api/roles.api.ts`. `edit-role-dialog.tsx` self-fetches it on open via `get-permissions-action.ts`, alongside its existing role-detail fetch.
-- **`home`**: none directly — `HomePage` (`features/home/`) itself makes no HTTP call beyond `resolveSession()` (cookie-only, no fetch) and `getMyNotificationsAction()`, which is the same `user_notification` endpoint the `notifications` feature already wires (see below).
-- **`notifications`**: `notification` (GET, `getNotifications` — admin search/list; POST, `sendNotification` — admin send), both permission-gated backend-side (backend also exposes `notification/force_logout`, with no frontend caller), both in `features/notifications/api/notifications.api.ts`; `user_notification` (GET, `getMyNotifications` — self-scoped), `user_notification/{id}` (GET, `markNotificationRead` — marks-as-read as a side effect), `user_notification/count_unread` (GET, `getUnreadCount`), all three in `features/notifications/api/user-notifications.api.ts`. Plus a direct WebSocket connection straight to the backend's `/signalr-hub` (`NEXT_PUBLIC_SIGNALR_HUB_URL`, an absolute URL — not proxied same-origin through `next.config.ts`, which has no `rewrites()`; requires backend CORS for the admin origin), authenticated via a short-lived access token handed to the browser by `getSignalRTokenAction()` — the one deliberate place the access token leaves the httpOnly cookie boundary described in Auth Flow below; `getSignalRTokenAction()` also proactively refreshes a near-expiry session first (`refreshSessionIfNearExpiry()`), so a long-open tab can't hand SignalR a stale token. The connection retries after a failed handshake (30s, via `use-notifications.ts`'s retryable `connectSignalR`), logging a sanitized error rather than the SignalR client's raw HTML-embedding error message; `.configureLogging(LogLevel.Critical)` silences SignalR's own noisy `console.error` for the expected abnormal-closure (code 1006) that happens whenever `(dashboard)/layout.tsx` unmounts (e.g. hitting an unmatched route — there is no `not-found.tsx` anywhere under `app/`). `notifications-page.tsx` does not call `getAllUsers` to populate the recipient filter/picker or resolve the "To" column's display name — the recipient picker (`user-select.tsx`) searches `user/search` on demand instead, and the "To" column renders `notification.toUserId` directly. `getMyNotifications`/`getMyNotificationsAction` also power `HomePage`'s inbox (`NotificationInbox`), which pages/filters server-side via `getMyNotificationsAction({ pageNumber, status })`; the topbar bell's own tab filter (`notification-bell.tsx`) goes through the same server-side `refresh(status)` path instead of filtering a fetched batch client-side. Both the bell and the inbox share one live connection/`unreadCount` via `features/notifications/context/notifications-provider.tsx` (`NotificationsProvider`), mounted once in `AppShell`.
+Endpoints this client consumes, by module:
 
-Each API function returns a normalized `Result`/`ApiResponse`-shaped envelope via `guardCall`/`guardResponseCall`/`guardRawCall` in `lib/server/call-guard.ts`, matching the backend's own `Result<T>` envelope (`types/api.ts`).
+- **auth** — `auth/token/get`, `auth/token/refresh`, `auth/token/external` (POST — exchanges a one-time
+  PKCE code for a token; see Auth Flow) (`modules/identity/auth/api/token.api.ts`, explicit
+  `client: Identity`); `auth/token/hub` (POST, authenticated — mints the short-lived hub-scoped token
+  for the SignalR handshake, `modules/notifications/api/signalr.api.ts`). The Microsoft relay's
+  browser-facing leg targets `Identity.Web` directly (`IDENTITY_WEB_BASE_URL`, not this client's
+  `Identity` backend client) — see Auth Flow.
+- **user-profile** — `user_profile` (GET), `user_profile/token/{list,revoke}`.
+- **users** — `user/search`, `user` (GET-all / PUT / DELETE), get-by-id, create, force-password,
+  `user/get_domain_user/{userName}` (AD lookup). `user/search` also backs the three on-demand
+  user-search components.
+- **roles** — `role` (GET-all / POST / PUT / DELETE), get-by-id.
+- **permissions** — `permissions` (the definable-permission catalog for the Roles edit dialog).
+- **notifications** — `notification` (admin GET/POST), `user_notification` (self-scoped
+  GET/mark-read/count), plus a browser-direct WebSocket to `/signalr-hub` (`SIGNALR_HUB_URL`).
+- **companies** — `company` (paged search / POST / PUT / DELETE), get-by-id.
+- **departments** — `org_unit/company/{id}/tree`, `org_unit/{id}` (GET/PUT), `org_unit/{id}/move`,
+  `org_unit` (POST), `org_unit/{id}` (DELETE), `org_unit/{id}/{employee,manager}`; `employee_level/company/{id}`
+  + create/update/delete.
+- **employees** — `employee/search`, `employee/{id}` (GET/PUT/DELETE), `employee` (POST),
+  `employee/{id}/org_unit` (POST) + `/{orgUnitId}` (PUT/DELETE), `employee/{id}/login`
+  (POST/PUT/DELETE). `searchEmployees` also resolves employee names for the Leave requests "All
+  requests" tab.
+- **approvals** — `modules/approvals/api/approvals.api.ts` (admin, `approval.requests.view_all`):
+  `approval` (GET search / POST test request). `user-approvals.api.ts` (self-service, server-scoped
+  by `UserApprovalController`): `approval/user` (GET / POST), `approval/user/{id}`,
+  `approval/user/{id}/decide`.
+- **leave-requests** — `leave_request/search`, `leave_request/{id}` (GET/PUT/DELETE),
+  `leave_request/approvers`, `leave_request` (POST). `employeeId` search filter is honored
+  server-side only for `leave.requests.manage`.
 
-`/identity/users`, `/identity/roles`, and `/notifications` all gate on permissions via the shared `lib/server/require-permission.tsx`'s `requirePermission(permission)`, which internally calls `lib/server/authorization.ts`'s `hasPermission(session, permission)` — a 2-arg call deriving `userName` from `session.profile?.userName` internally. Permission-string constants live per-feature rather than in one shared file: `features/users/constants/permissions.ts` (`USERS_PERMISSIONS`), `features/roles/constants/permissions.ts` (`ROLES_PERMISSIONS`), and `features/notifications/constants/permissions.ts` (`NOTIFICATIONS_PERMISSIONS`). The string values match the backend's actual format (`Identity.Contracts/Authorization/IdentityPermissions.cs`): lowercase, dotted, `identity`-prefixed (e.g. `identity.users.view`, `identity.roles.manage`). Missing the `*.View`/`.Read` permission renders the shared `components/shared/access-denied.tsx` (`AccessDenied`) via `requirePermission`'s returned `denied` element, uniformly across all three pages; missing `*.Create`/`*.Update`/`*.Delete`/`*.Manage`/`.Send` just hides the corresponding action.
+Every function returns a normalized `Result`/`ApiResponse` envelope via `call-guard.ts`. Gated pages
+use `lib/server/require-permission.tsx`; `/leave-requests` deliberately does not (see architecture.md
+§ Module/Route Boundaries). Permission-string constants live per-feature/module in
+`constants/permissions.ts`, matching each backend module's own format (e.g.
+`organization.companies.view`, `approval.requests.view_all`, `leave.requests.manage`).
 
 ## Auth Flow
 
-Cookie-based session, encrypted at rest, with proactive token refresh:
+Cookie-based session, AES-256-GCM encrypted at rest (`TOKEN_ENCRYPTION_KEY`), with proactive refresh.
+Two entry points converge on the same session-establishment step:
 
-1. `/login` → `LoginForm` (`features/auth/components/login-form.tsx`) submits to `loginAction`, a `"use server"` Server Action (`features/auth/api/login-action.ts`). When the page was reached via `/login?redirect=<path>`, `LoginPage`/`LoginForm` carry that path through as a hidden `redirect` form field (see step 4). The `Card` UI itself (header, form, submit button) lives entirely in `LoginForm` (a Client Component), not `LoginPage` (an async Server Component that just resolves `searchParams` and centers `<LoginForm redirect={redirect} />`) — `LoginForm` derives `pending` from `useActionState` and renders a dimmed, centered `Spinner` overlay plus a `<fieldset disabled={pending}>` around the inputs while the action is in flight.
-2. `loginAction` calls `getToken()` (POST `auth/token/get`, `features/auth/api/token.api.ts`). On success it also calls `getCurrentUser()` for display/profile data (a failure here doesn't block login — `profile` defaults to `null`). **Permissions and roles are decoded directly from the access token's JWT** (`lib/server/jwt.ts`'s `extractPermissions`/`extractRoles`, reading the `permission`/`role` claim types) — never from the profile API. `SessionData.claims` is the union of every claim in the JWT (`extractAllClaims`) and the profile API's raw claims, deduped via `dedupeClaims()` (`lib/server/build-session-claims.ts`'s `buildSessionClaims()`).
-3. The resulting `SessionData` (access/refresh token, absolute access-token expiry, a hard 7-day absolute `sessionExpiresAt` — `SESSION_TTL_MS`, not extended by refresh — claims, permissions, roles, profile, and a `refreshFailureCount` used by step 6 below) is JSON-serialized and **encrypted** (`lib/server/token-cipher.ts`'s `encrypt()`, AES-256-GCM, keyed by `TOKEN_ENCRYPTION_KEY`) before being written to the `admin_session` cookie (`httpOnly`, `sameSite: "lax"`, `path: "/"`, `maxAge` derived from `sessionExpiresAt`). `TOKEN_ENCRYPTION_KEY` is a hard requirement (`lib/server/config.ts`'s `getTokenEncryptionKey()` throws if unset) and is read on every encrypt/decrypt via `token-cipher.ts`.
-4. On success, `loginAction` reads the submitted `redirect` field and redirects there if it's a safe same-site relative path (`startsWith("/")` and not `startsWith("//")` — guards against an open redirect), falling back to `/`.
-5. `src/proxy.ts` (the Next.js "proxy" convention file, successor to `middleware.ts`) runs on every non-static/non-API request, but only as a thin auth gate — it decrypts and validates the cookie (`lib/server/parse-session.ts`'s `parseSessionCookie()` → `token-cipher.ts`'s `decrypt()`) and checks the hard 7-day `sessionExpiresAt` cap: a missing/expired/malformed session redirects to `/login?redirect=<path>` and clears the cookie, and visiting `/login` with a still-valid session redirects to `/`. It no longer touches token refresh or profile freshness itself — those moved client-side (next step) so a loading UI can be shown while they run, since middleware blocks the whole navigation with no way to render anything during that wait.
-6. `components/layout/session-gate.tsx` (`SessionGate`, a Client Component mounted inside `(dashboard)/layout.tsx`, wrapping `AppShell`) drives session freshness instead. It mounts — and so runs its initial check — only on a true hard navigation, since nested layouts don't remount on in-app soft navigation. On mount it calls `features/auth/api/ensure-fresh-session-action.ts`'s `ensureFreshSessionAction({ refetchProfile: true })` (a Server Action), showing `components/layout/session-loading-overlay.tsx`'s `SessionLoadingOverlay` (a full-page, blurred, spinner overlay) on top of the already-rendered content while it runs. The action calls the shared `refreshSessionIfNearExpiry(session)` (`lib/server/refresh-session.ts`) — same trigger condition as before (`REFRESH_LEAD_MS`, 5 minutes of expiry), but now returning a `RefreshOutcome` discriminated union (`{status: "skipped"}` / `{status: "success", session}` / `{status: "failed", permanent: boolean}`) instead of `SessionData | null`, so callers can tell "not due" apart from "attempted and failed." A transient failure (`permanent: false` — network/5xx, says nothing about the refresh token's validity) makes `SessionGate` retry up to 2 more times (1s/2s backoff); if every attempt keeps failing transiently, it switches to `components/layout/session-unreachable-overlay.tsx`'s `SessionUnreachableOverlay` ("Can't reach the server. Retrying…") and keeps polling every 5s until the backend answers. A **permanent** failure (`permanent: true` — 401/400, the refresh token itself is invalid/revoked) increments `SessionData.refreshFailureCount`; once it reaches `MAX_REFRESH_FAILURES` (3, `lib/server/session-cookie.ts`) the action deletes the cookie and calls `redirect("/login")` itself — a genuinely dead session no longer waits out the full 7-day `sessionExpiresAt` cap. On a successful refresh, and/or (on the initial check only) a profile refetch via `lib/server/refetch-profile.ts`'s `refetchProfile()` (the same `getCurrentUser()` + `buildSessionClaims()` logic that used to live inline in `proxy.ts`), the action persists the updated cookie (`persistSessionCookie()`, resetting `refreshFailureCount` to 0) and returns `{status: "updated"}`, which `SessionGate` answers with `router.refresh()` to re-render the Server Component tree with the fresh cookie. Once the initial check settles (any outcome), `SessionGate` starts a silent 60-second background interval calling `ensureFreshSessionAction({ refetchProfile: false })` — no overlay, no gating — to keep a long-open, soft-navigation-only session's token from going stale.
-7. `logoutAction` (`features/auth/api/logout-action.ts`, `"use server"`) deletes the session cookie and redirects to `/login?redirect=<path>` (same open-redirect guard as login) or plain `/login`. `components/layout/user-menu.tsx`'s "Log out" item calls it with the current path (`usePathname()` + `useSearchParams()`) — session-expiry (via `proxy.ts`/`SessionGate`) and explicit logout both funnel through the same `/login?redirect=<path>` → post-login-redirect pattern.
-8. `lib/server/session.ts`'s `getSession()` reads and decrypts the cookie (no fetch). `features/user-profile/api/resolve-session.ts`'s `resolveSession()` is a thin passthrough to `getSession()` — it makes no live `getCurrentUser()` call itself, since `SessionGate` already keeps the cookie's profile/claims fresh on every hard navigation and after each refresh. Used by the dashboard-group layout, the profile page, and both `UsersPage`/`RolesPage`.
+1. **Password login** — `LoginForm` submits to `loginAction`, which calls `getToken()` then
+   `getCurrentUser()` (a profile failure doesn't block login), then `establishSession()`.
+2. **Microsoft login** — `ExternalLoginLink` (a plain server-rendered `<a>`, a real top-level
+   navigation) sends the browser to `/login/microsoft/start`, which generates a PKCE verifier/challenge
+   pair (`lib/server/external-login-pkce.ts`), stores the verifier in a short-lived HttpOnly cookie, and
+   redirects to `Identity.Web`'s `/Account/ExternalLoginStart` (`IDENTITY_WEB_BASE_URL` — a distinct,
+   browser-reachable origin from the server-to-server `IDENTITY_API_BASE_URL`). After the backend's own
+   relay completes, it redirects back to `/login/microsoft/callback`, which reads+clears the PKCE
+   cookie, exchanges the code via `exchangeExternalLoginCode()` (`auth/token/external`), and also calls
+   `establishSession()`. See `app/login/microsoft/{start,callback}/route.ts`.
+3. **`establishSession()`** (`modules/identity/auth/api/establish-session.ts`, shared by both paths
+   above) — **permissions and roles are decoded from the access-token JWT** (`lib/server/jwt.ts`),
+   never trusted from the profile API; `claims` is the deduped union of both.
+4. **Persist** — `persistSessionCookie()` reduces `SessionData` to the minimal `StoredSession`
+   (tokens, expiries, profile, `refreshFailureCount`, `extraClaims` — `claims`/`permissions`/`roles`
+   dropped, re-derived on read), encrypts it, and writes `admin_session` (`httpOnly`, `sameSite: lax`,
+   `maxAge` from a hard 7-day `sessionExpiresAt`). Past `MAX_CHUNK_BYTES` it splits across numbered
+   chunk cookies (`cookie-codec.ts`).
+5. **Redirect** — both entry points honor a safe same-site return path (open-redirect guarded — the
+   Microsoft path carries it through as `state`), else `/`. On failure, either path redirects to
+   `/login?error=...`, rendered by the same `Alert` `LoginForm` already uses.
+6. **`src/proxy.ts`** — a thin auth gate only: decrypt/validate/hydrate the cookie(s), enforce the
+   7-day cap (missing/expired ⇒ `/login?redirect=<path>`, clearing every chunk name), and redirect
+   away from the public auth paths when already authenticated. The public-path check is an explicit
+   allow-list (`/login`, `/login/microsoft/start`, `/login/microsoft/callback`), not a single
+   comparison. No token refresh or profile refetch anymore.
+7. **`SessionGate`** (`components/layout/session-gate.tsx`, wrapping `AppShell`) drives freshness. On
+   a hard navigation it calls `ensureFreshSessionAction({ refetchProfile: true })` behind a full-page
+   overlay. That calls `refreshSessionIfNearExpiry()` (`REFRESH_LEAD_MS` = 5 min) which returns a
+   `RefreshOutcome` (`skipped` / `success` / `failed{permanent}`); the action maps it to
+   `fresh`/`updated`/`retry`/`degraded`. `retry` (transient) retries 2× then polls a
+   `SessionUnreachableOverlay` every 5s; `updated` triggers `router.refresh()`; `degraded`
+   (permanent 401/400) increments `refreshFailureCount` and force-logs-out at `MAX_REFRESH_FAILURES`
+   (3). After settling, a silent 60s interval keeps a long-open session fresh.
+8. **Logout** — `logoutAction` deletes every session cookie and redirects to `/login?redirect=<path>`
+   (same guard). Session expiry and explicit logout both funnel through the same redirect pattern.
+9. **`getSession()`** reads and decrypts the cookie (no fetch); `resolveSession()` is a thin
+   passthrough used by the dashboard layout and every gated page.
 
-Note: `token-cipher.ts` uses Node's built-in `crypto` module (`createCipheriv`/`createDecipheriv`) directly, and `proxy.ts` has no explicit `export const runtime` pin — see [architecture.md](./architecture.md#known-architectural-risks--debt) for the resulting flag around which runtime this is verified to require.
+**SignalR handshake token.** `getSignalRTokenAction()` (`modules/notifications/api/get-signalr-token-action.ts`)
+first calls `refreshSessionIfNearExpiry()` so the session bearer is valid (the mint call is
+authenticated and `proxy.ts` skips `/api` paths), then calls `getHubToken()` →
+`POST auth/token/hub` for a **dedicated hub-audience-scoped token** (~120s, `uid`+`jti` only) — not
+the session access token. It returns that token plus the server-resolved `SIGNALR_HUB_URL`.
+`use-notifications.ts` passes an `accessTokenFactory` that re-invokes the action on every (re)connect,
+so `withAutomaticReconnect()` always gets a fresh short-lived token that is rejected on `/api`. The
+only other places a token reaches the browser are the short-lived PKCE `code_verifier` cookie (never
+an access token) used by the Microsoft login relay above, and the super-admin-only "Session tokens"
+card on `/user-profile` (`isSuperAdminUser` gate), which renders the raw session access/refresh token
+for inspection. `token-cipher.ts` uses Node's `crypto` and `proxy.ts` has no explicit runtime pin — see
+[architecture.md § Known Risks](./architecture.md#known-architectural-risks--debt).
 
 ## Notes
 
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-03_
+_Last synced: 2026-09-11_

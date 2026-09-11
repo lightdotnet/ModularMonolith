@@ -4,6 +4,7 @@ using Mapster;
 using Microsoft.EntityFrameworkCore;
 using StarterKit.Notifications.Api.Data;
 using StarterKit.Notifications.Api.Entities;
+using StarterKit.Notifications.Api.SignalR;
 using StarterKit.Notifications.Contracts.Services;
 using StarterKit.Notifications.Contracts.SystemNotifications;
 using StarterKit.Persistence.Extensions;
@@ -11,7 +12,8 @@ using StarterKit.Persistence.Extensions;
 namespace StarterKit.Notifications.Api.Services;
 
 internal class NotificationService(
-    NotificationDbContext context) : INotificationService
+    NotificationDbContext context,
+    IHubService hub) : INotificationService
 {
     public Task<PagedResult<NotificationDto>> GetAsync(NotificationLookup request)
     {
@@ -54,6 +56,20 @@ internal class NotificationService(
 
         await context.Notifications.AddAsync(entity);
         await context.SaveChangesAsync();
+    }
+
+    public async Task SendAsync(
+        string fromUserId,
+        string? fromName,
+        string toUserId,
+        SystemMessage message,
+        CancellationToken cancellationToken = default)
+    {
+        await SaveAsync(fromUserId, fromName, toUserId, message);
+
+        // Push after the record is saved so a client reacting to the push can load
+        // the persisted entry from the API. The payload itself is sent to the client too.
+        await hub.SendAsync(message, toUserId, cancellationToken);
     }
 
     public Task MarkAsReadAsync(string userId, string id)

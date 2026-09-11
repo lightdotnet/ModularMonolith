@@ -36,12 +36,17 @@ internal class JwtTokenIssuer(
             .Select(rc => new Claim(rc.ClaimType!, rc.ClaimValue!))
             .ToListAsync();
 
+        // Per-user claims (e.g. employee_id, set by other modules via IUserService.SetClaimAsync)
+        // are not read from RoleClaims above, so they must be merged in explicitly here.
+        var userClaims = await userManager.GetClaimsAsync(user);
+
         var claims = new List<Claim>
         {
             { ClaimTypeConstants.UserId, user.Id },
             { ClaimTypeConstants.UserName, user.UserName },
         }
         .Union(permissionClaims)
+        .Union(userClaims)
         .Where(x => !string.IsNullOrEmpty(x.Value))
         .ToList();
 

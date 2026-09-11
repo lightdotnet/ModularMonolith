@@ -1,6 +1,7 @@
 ﻿using Light.ActiveDirectory.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using StarterKit.Identity.Api.Application.Users.Commands;
+using StarterKit.Identity.Api.Application.Users.Queries;
 using StarterKit.Identity.Contracts;
 using StarterKit.Identity.Contracts.Services;
 using StarterKit.Infrastructure.Endpoints;
@@ -16,10 +17,9 @@ public class UserController(
 {
     [HttpGet("search")]
     public async Task<IActionResult> SearchAsync(
-        [FromQuery] SearchUserQuery search,
-        [FromQuery] PageQuery page)
+        [FromQuery] SearchUserRequest request)
     {
-        return Ok(await userService.SearchAsync(search, page.PageNumber, page.PageSize));
+        return Ok(await Mediator.Send(new SearchUserQuery(request)));
     }
 
     [HttpGet]
@@ -42,36 +42,40 @@ public class UserController(
 
     [HttpPost]
     [MustHavePermission(IdentityPermissions.Users.Create)]
-    public async Task<IActionResult> PostAsync([FromBody] CreateUserCommand request)
+    public async Task<IActionResult> PostAsync(
+        [FromBody] CreateUserRequest request)
     {
-        var res = await Mediator.Send(request);
-        return Ok(res);
+        return Ok(await Mediator.Send(new CreateUserCommand(request)));
     }
 
     [HttpPut("{id}")]
     [MustHavePermission(IdentityPermissions.Users.Update)]
-    public async Task<IActionResult> PutAsync(string id, [FromBody] UserDto request)
+    public async Task<IActionResult> PutAsync(
+        string id,
+        [FromBody] UserDto request)
     {
         if (id != request.Id)
         {
             return Ok(Result.Error("Validate User ID not match"));
         }
 
-        return Ok(await userService.UpdateAsync(request));
+        return Ok(await Mediator.Send(new UpdateUserCommand(request)));
     }
 
     [HttpDelete("{id}")]
     [MustHavePermission(IdentityPermissions.Users.Delete)]
     public async Task<IActionResult> DeleteAsync(string id)
     {
-        return Ok(await userService.DeleteAsync(id));
+        return Ok(await Mediator.Send(new DeleteUserCommand(id)));
     }
 
     [HttpPut("{id}/password/force")]
     [MustHavePermission(IdentityPermissions.Users.Update)]
-    public async Task<IActionResult> ForcePasswordAsync(string id, [FromBody] string password)
+    public async Task<IActionResult> ForcePasswordAsync(
+        [FromRoute] string id,
+        [FromBody] string password)
     {
-        return Ok(await userService.ForcePasswordAsync(id, password));
+        return Ok(await Mediator.Send(new ForcePasswordCommand(id, password)));
     }
 
     [HttpGet("get_domain_user/{userName}")]
@@ -85,7 +89,7 @@ public class UserController(
     {
         var users = await userService.GetAllAsync();
 
-        var domainUsers = users.Where(x => x.AuthProvider == AuthProvider.AD.ToString());
+        var domainUsers = users.Where(x => x.AuthProvider == AuthProviderWire.ActiveDirectory);
 
         foreach (var user in domainUsers)
         {
@@ -94,7 +98,7 @@ public class UserController(
             {
                 user.Status = ActiveStatus.State.Locked.ToString();
 
-                await userService.UpdateAsync(user);
+                await Mediator.Send(new UpdateUserCommand(user));
             }
         }
 

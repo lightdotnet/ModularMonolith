@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getCurrentUser } from "@/features/user-profile/api/user-profile.api";
+import { getCurrentUser } from "@/modules/identity/user-profile/api/user-profile.api";
 import { buildSessionClaims } from "@/lib/server/build-session-claims";
 import type { ProfileData, SessionData } from "@/types/session";
 

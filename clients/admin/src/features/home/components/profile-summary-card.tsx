@@ -2,7 +2,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { UserStatusBadge } from "@/features/user-profile/components/user-status-badge";
+import { UserStatusBadge } from "@/modules/identity/user-profile/components/user-status-badge";
 import { getDisplayName, getInitials } from "@/lib/shared/user-display";
 import type { SessionData } from "@/types/session";
 

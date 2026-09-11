@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   ensureFreshSessionAction,
   type EnsureFreshSessionResult,
-} from "@/features/auth/api/ensure-fresh-session-action";
+} from "@/modules/identity/auth/api/ensure-fresh-session-action";
 import { SessionLoadingOverlay } from "@/components/layout/session-loading-overlay";
 import { SessionUnreachableOverlay } from "@/components/layout/session-unreachable-overlay";
 

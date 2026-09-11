@@ -2,7 +2,7 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 import { AccessDenied } from "@/components/shared/access-denied";
-import { resolveSession } from "@/features/user-profile";
+import { resolveSession } from "@/modules/identity/user-profile";
 import { hasPermission } from "@/lib/server/authorization";
 import type { SessionData } from "@/types/session";
 

@@ -1,4 +1,5 @@
 using StarterKit.Identity.Api.Entities;
+using StarterKit.Identity.Contracts;
 using StarterKit.Shared;
 using Xunit;
 
@@ -52,31 +53,29 @@ public class UserTests
     }
 
     [Fact]
-    public void ChangeAuthProvider_ShouldSetProvider_WhenNotEmpty()
+    public void ChangeAuthProvider_ShouldSetProvider_WhenExternal()
     {
         // Arrange
         var user = new User { UserName = "jane.doe" };
 
         // Act
-        user.ChangeAuthProvider("AD");
+        user.ChangeAuthProvider(AuthProvider.ActiveDirectory);
 
         // Assert
-        Assert.Equal("AD", user.AuthProvider);
+        Assert.Equal(AuthProvider.ActiveDirectory, user.AuthProvider);
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    public void ChangeAuthProvider_ShouldClearProvider_WhenNullOrEmpty(string? authProvider)
+    [Fact]
+    public void ChangeAuthProvider_ShouldResetToLocal_WhenLocal()
     {
         // Arrange
-        var user = new User { UserName = "jane.doe", AuthProvider = "AD" };
+        var user = new User { UserName = "jane.doe", AuthProvider = AuthProvider.ActiveDirectory };
 
         // Act
-        user.ChangeAuthProvider(authProvider);
+        user.ChangeAuthProvider(AuthProvider.Local);
 
         // Assert
-        Assert.Null(user.AuthProvider);
+        Assert.Equal(AuthProvider.Local, user.AuthProvider);
     }
 
     [Fact]
@@ -91,7 +90,7 @@ public class UserTests
             PhoneNumber = "555-0100",
             Email = "jane@example.com",
             PasswordHash = "hash",
-            AuthProvider = "AD",
+            AuthProvider = AuthProvider.ActiveDirectory,
         };
 
         // Act
@@ -104,7 +103,7 @@ public class UserTests
         Assert.Null(user.PhoneNumber);
         Assert.Null(user.Email);
         Assert.Null(user.PasswordHash);
-        Assert.Null(user.AuthProvider);
+        Assert.Equal(AuthProvider.Local, user.AuthProvider);
         Assert.Equal(ActiveStatus.State.Locked, user.Status.Value);
     }
 }

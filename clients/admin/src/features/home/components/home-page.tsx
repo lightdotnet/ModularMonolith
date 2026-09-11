@@ -6,9 +6,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { resolveSession } from "@/features/user-profile";
-import { getMyNotificationsAction } from "@/features/notifications/api/get-my-notifications-action";
-import { NotificationInbox } from "@/features/notifications/components/notification-inbox";
+import { resolveSession } from "@/modules/identity/user-profile";
+import { getMyNotificationsAction } from "@/modules/notifications/api/get-my-notifications-action";
+import { NotificationInbox } from "@/modules/notifications/components/notification-inbox";
 import { ProfileSummaryCard } from "@/features/home/components/profile-summary-card";
 
 export async function HomePage() {

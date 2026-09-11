@@ -15,4 +15,17 @@ public interface INotificationService
     Task ReadAllAsync(string userId);
 
     Task SaveAsync(string fromUserId, string? fromName, string toUserId, SystemMessage message);
+
+    /// <summary>
+    /// Persists a notification and pushes it live to the recipient over SignalR in one call —
+    /// the cross-module equivalent of what <c>SendNotificationCommandHandler</c> does for the
+    /// HTTP-facing admin endpoint. Intended for other modules (e.g. Approval) to notify a user
+    /// in-process, via DI, without needing access to the internal SignalR hub service.
+    /// </summary>
+    Task SendAsync(
+        string fromUserId,
+        string? fromName,
+        string toUserId,
+        SystemMessage message,
+        CancellationToken cancellationToken = default);
 }

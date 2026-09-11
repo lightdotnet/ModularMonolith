@@ -4,16 +4,24 @@ using Light.AspNetCore.Builder;
 using Light.AspNetCore.Middlewares;
 using Light.AspNetCore.Swagger;
 using Light.Mediator;
+using Microsoft.AspNetCore.RateLimiting;
+using StarterKit.Approval.Api;
 using StarterKit.Identity.Api;
+using StarterKit.Identity.Web;
 using StarterKit.Infrastructure;
+using StarterKit.Infrastructure.Caching;
 using StarterKit.Infrastructure.Cors;
 using StarterKit.Infrastructure.HealthChecks;
 using StarterKit.Infrastructure.Modularity;
 using StarterKit.Infrastructure.Services;
+using StarterKit.LeaveManagement.Api;
 using StarterKit.Notifications.Api;
+using StarterKit.Organization.Api;
 using StarterKit.Shared;
 using StarterKit.Shared.Authorization;
+using StarterKit.WebApi.Authentication;
 using System.Reflection;
+using System.Threading.RateLimiting;
 
 namespace StarterKit.WebApi;
 
@@ -24,6 +32,9 @@ public static class ConfigureExtensions
             Assembly.GetExecutingAssembly(),
             typeof(IdentityModule).Assembly,
             typeof(NotificationModule).Assembly,
+            typeof(OrganizationModule).Assembly,
+            typeof(ApprovalModule).Assembly,
+            typeof(LeaveManagementModule).Assembly,
         ];
 
     public static IServiceCollection ConfigureServices(this IServiceCollection services, IConfiguration configuration)
@@ -32,7 +43,10 @@ public static class ConfigureExtensions
 
         // Light Framework
         services.AddMediatorFromAssemblies(assemblies);
-        services.AddBehaviors(typeof(ValidationBehaviour<,>));
+        services.AddBehaviors(
+            typeof(LoggingBehaviour<,>),
+            typeof(ValidationBehaviour<,>)
+            );
         services.AddOptions<RequestLoggingOptions>().BindConfiguration("RequestLogging");
         services.AddGlobalExceptionHandler();
         services.AddApiVersion(1);
@@ -40,8 +54,24 @@ public static class ConfigureExtensions
         services.AddFileGenerator();
 
         services.AddSharedInfrastructure();
+        services.AddAppCache(configuration);
         services.AddHealthChecksService();
         services.AddCorsPolicy(configuration);
+
+        // IP-based fixed-window limiter guarding the external-login relay pages (Identity.Web)
+        // and the auth/token/external exchange endpoint (TokenController) - all three are
+        // anonymous, so they need their own throttle independent of the authenticated user.
+        services.AddRateLimiter(options =>
+        {
+            options.AddPolicy("external-login", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 10,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                }));
+        });
 
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, ServerCurrentUser>();
@@ -49,6 +79,9 @@ public static class ConfigureExtensions
         services.AddPermissionAuthorization();
 
         services.AddModules<AppModule>(configuration, assemblies);
+
+        services.AddIdentityWeb(configuration);
+        services.AddApiAuthentication(configuration);
 
         return services;
     }
@@ -59,8 +92,10 @@ public static class ConfigureExtensions
             .UseGuidV7TraceId()
             .UseLightRequestLogging()
             .UseLightExceptionHandler()
+            .UseStaticFiles()
             .UseRouting()
             .UseCorsPolicy() // must add before Auth
+            .UseRateLimiter()
             .UseAuthentication()
             .UseAuthorization()
             .UseSwagger();
@@ -81,6 +116,8 @@ public static class ConfigureExtensions
         //map versioned endpoint
         var endpoints = app.MapGroup("api/v{version:apiVersion}").WithApiVersionSet(versions);
         endpoints.MapModuleEndpoints<AppModule>(assemblies);
+
+        app.UseIdentityWeb();
 
         return app;
     }

@@ -11,7 +11,7 @@ public class IdentityModule : AppModule
     {
         services.AddIdentityServices(configuration);
 
-        services.AddJwtAuthentication(configuration);
+        services.AddJwtTokenServices(configuration);
 
         services.AddSingleton<IPermissionDefinitionProvider, IdentityPermissionProvider>();
 

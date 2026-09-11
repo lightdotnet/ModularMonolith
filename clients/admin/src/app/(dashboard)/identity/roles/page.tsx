@@ -1,1 +1,1 @@
-export { RolesPage as default } from "@/features/roles";
+export { RolesPage as default } from "@/modules/identity/roles";

@@ -20,6 +20,8 @@ public abstract class CurrentUserBase : ICurrentUser
 
     public string? PhoneNumber => User?.GetPhoneNumber();
 
+    public string? EmployeeId => User?.GetEmployeeId();
+
     public string? Email => User?.GetEmail();
 
     public bool IsAuthenticated => User?.IsAuthenticated() is true;
