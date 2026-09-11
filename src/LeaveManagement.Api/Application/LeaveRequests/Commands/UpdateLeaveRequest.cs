@@ -1,4 +1,5 @@
-using StarterKit.Approval.Contracts.Approvals;
+using Light.Exceptions;
+using Microsoft.Extensions.Logging;
 using StarterKit.Approval.Contracts.Services;
 using StarterKit.LeaveManagement.Api.Data;
 using StarterKit.LeaveManagement.Api.Domain.LeaveRequests;
@@ -7,13 +8,14 @@ using StarterKit.Organization.Contracts.Services;
 namespace StarterKit.LeaveManagement.Api.Application.LeaveRequests.Commands;
 
 /// <summary>
-/// Editing a <c>Pending</c>/<c>Rejected</c> request (the only statuses a non-management caller may
-/// touch) is treated as a resubmission: Approval has no "update" primitive, only Create/Decide/
-/// Cancel, so the prior (still-pending) approval request is cancelled and a fresh one
-/// is created against the edited fields and a freshly-resolved approver. The old workflow is
-/// cancelled and the new one created <b>before</b> any local field is touched, so a failure on
-/// either side leaves the row untouched. A <c>.manage</c> edit is a metadata correction only and
-/// never touches the approval workflow.
+/// Editing a <c>Pending</c>/<c>Rejected</c> request as its owner is treated as a resubmission:
+/// Approval has no "update" primitive, only Create/Decide/Cancel, so the prior (still-pending)
+/// approval request is cancelled and a fresh one is created against the edited fields and a
+/// freshly-resolved approver. The old workflow is cancelled and the new one created <b>before</b>
+/// any local field is touched, so a failure on either side leaves the row untouched; the final
+/// local save carries its own best-effort cancel compensation. A <c>.manage</c> edit is a metadata
+/// correction only (<see cref="LeaveRequest.ReviseDetails"/>) and never touches the workflow, but
+/// still enforces the overlapping-period guard.
 /// </summary>
 internal sealed record UpdateLeaveRequestCommand(
     string Id,
@@ -24,7 +26,9 @@ internal sealed record UpdateLeaveRequestCommand(
 internal class UpdateLeaveRequestCommandHandler(
     LeaveManagementDbContext context,
     IOrgDirectoryService orgDirectoryService,
-    IApprovalService approvalService)
+    LeaveRequestApprovalCoordinator coordinator,
+    IApprovalService approvalService,
+    ILogger<UpdateLeaveRequestCommandHandler> logger)
     : ICommandHandler<UpdateLeaveRequestCommand, IResult>
 {
     public async Task<IResult> Handle(
@@ -39,109 +43,145 @@ internal class UpdateLeaveRequestCommandHandler(
             return Result.NotFound($"Leave request {request.Id} not found");
 
         // Reconcile a possibly-stale local status against Approval before the authorization gate.
-        if (entity.Status == LeaveRequestStatus.Pending && entity.ApprovalRequestId is not null)
-        {
-            var view = await approvalService.GetStatusByRequestAsync(
-                LeaveRequestStatusMap.RequestType,
-                entity.Id,
-                cancellationToken);
-
-            if (view is not null)
-            {
-                var mapped = LeaveRequestStatusMap.MapStatus(view.Status);
-
-                if (mapped != entity.Status)
-                {
-                    entity.Status = mapped;
-                    await context.SaveChangesAsync(cancellationToken);
-                }
-            }
-        }
+        await coordinator.ReconcileStatusAsync(entity, cancellationToken);
 
         if (!request.CanManage)
         {
-            if (entity.UserId != request.CurrentUserId)
+            if (!entity.IsOwnedBy(request.CurrentUserId))
                 return Result.Error("You can only edit your own leave requests.");
 
-            if (entity.Status is not (LeaveRequestStatus.Pending or LeaveRequestStatus.Rejected))
+            if (!entity.IsOwnerActionable)
                 return Result.Error("This leave request can no longer be edited.");
         }
 
         var model = request.Model;
 
-        if (model.EndDate < model.StartDate)
-            return Result.Error("End date cannot be before start date.");
+        // DateRange's own constructor guard is the single source of truth for "end before start" —
+        // Guard translates the ExceptionBase it throws into a Result instead of a duplicated
+        // pre-check here.
+        var periodResult = LeaveRequestApprovalCoordinator.Guard(
+            () => new DateRange(model.StartDate, model.EndDate));
 
-        var wasPending = entity.Status == LeaveRequestStatus.Pending;
+        if (!periodResult.IsSuccess)
+            return Result.Error(periodResult.Message);
+
+        var period = periodResult.Data;
 
         if (request.CanManage)
         {
-            entity.LeaveType = model.LeaveType;
-            entity.StartDate = model.StartDate;
-            entity.EndDate = model.EndDate;
-            entity.Reason = model.Reason;
-        }
-        else
-        {
-            if (string.IsNullOrEmpty(model.ApproverEmployeeId))
-                return Result.Error("Please select an approver.");
-
-            var candidates = await orgDirectoryService.GetApproverCandidatesAsync(
-                entity.EmployeeId, cancellationToken);
-
-            var approver = candidates.FirstOrDefault(x => x.EmployeeId == model.ApproverEmployeeId);
-
-            if (approver is null)
-                return Result.Error("Invalid approver selection.");
-
-            // The JWT carries no name claims, so the requester's display name is resolved from
-            // their Organization employee record instead — same source as the approver's own name.
-            var requesterName = await orgDirectoryService.GetEmployeeNameAsync(
-                entity.EmployeeId, cancellationToken);
-
-            if (wasPending && entity.ApprovalRequestId is not null)
-            {
-                var cancel = await approvalService.CancelAsync(
-                    entity.ApprovalRequestId,
-                    entity.UserId,
-                    cancellationToken);
-
-                if (!cancel.IsSuccess)
-                    return Result.Error("Could not withdraw the current approval to resubmit. Please try again.");
-            }
-
-            var approvalResult = await approvalService.CreateAsync(
-                new CreateApprovalRequest(
-                    RequestType: LeaveRequestStatusMap.RequestType,
-                    RequestId: entity.Id,
-                    RequesterUserId: entity.UserId,
-                    RequesterEmployeeId: entity.EmployeeId,
-                    RequesterName: requesterName,
-                    Title: $"{model.LeaveType} leave request",
-                    Content: model.Reason,
-                    DeepLinkUrl: $"/leave-requests/{entity.Id}",
-                    DocumentTypeId: null,
-                    ApproverChain:
-                    [
-                        new ApproverStepInput(1, approver.UserId, approver.EmployeeId, approver.Name),
-                    ]),
+            var manageOverlap = await coordinator.EnsureNoOverlapAsync(
+                entity.EmployeeId,
+                period,
+                excludeRequestId: entity.Id,
                 cancellationToken);
 
-            // Residual, accepted: if the cancel above succeeded but this create failed, the row
-            // stays Pending pointing at the now-cancelled workflow until the next reconcile tick
-            // flips it to Cancelled. No eager status write here.
-            if (!approvalResult.IsSuccess)
-                return Result.Error("Failed to resubmit the leave request for approval.");
+            if (!manageOverlap.IsSuccess)
+                return Result.Error(manageOverlap.Message);
 
-            entity.LeaveType = model.LeaveType;
-            entity.StartDate = model.StartDate;
-            entity.EndDate = model.EndDate;
-            entity.Reason = model.Reason;
-            entity.ApprovalRequestId = approvalResult.Data;
-            entity.Status = LeaveRequestStatus.Pending;
+            // Defense in depth: ReviseDetails enforces no status guard of its own, so this call
+            // should never throw, but a race or a future guard change surfaces as a Result.Error
+            // instead of an unhandled exception.
+            var reviseResult = LeaveRequestApprovalCoordinator.Guard(
+                () => entity.ReviseDetails(model.LeaveType, period, model.Reason));
+
+            if (!reviseResult.IsSuccess)
+                return reviseResult;
+
+            await context.SaveChangesAsync(cancellationToken);
+
+            return Result.Success();
         }
 
-        await context.SaveChangesAsync(cancellationToken);
+        // Owner resubmission path.
+        if (string.IsNullOrEmpty(model.ApproverEmployeeId))
+            return Result.Error("Please select an approver.");
+
+        var overlap = await coordinator.EnsureNoOverlapAsync(
+            entity.EmployeeId,
+            period,
+            excludeRequestId: entity.Id,
+            cancellationToken);
+
+        if (!overlap.IsSuccess)
+            return Result.Error(overlap.Message);
+
+        var approverResolution = await coordinator.ResolveApproverAsync(
+            entity.EmployeeId,
+            model.ApproverEmployeeId,
+            cancellationToken);
+
+        if (!approverResolution.IsSuccess)
+            return Result.Error(approverResolution.Message);
+
+        // The JWT carries no name claims, so the requester's display name is resolved from their
+        // Organization employee record instead — same source as the approver's own name.
+        var requesterName = await orgDirectoryService.GetEmployeeNameAsync(
+            entity.EmployeeId,
+            cancellationToken);
+
+        var wasPending = entity.Status == LeaveRequestStatus.Pending;
+
+        if (wasPending && entity.ApprovalRequestId is not null)
+        {
+            var cancel = await approvalService.CancelAsync(
+                entity.ApprovalRequestId,
+                entity.UserId,
+                cancellationToken);
+
+            if (!cancel.IsSuccess)
+                return Result.Error("Could not withdraw the current approval to resubmit. Please try again.");
+        }
+
+        var approvalResult = await coordinator.CreateApprovalAsync(
+            entity,
+            model.LeaveType,
+            model.Reason,
+            approverResolution.Data,
+            requesterName,
+            cancellationToken);
+
+        if (!approvalResult.IsSuccess)
+            return Result.Error("Failed to resubmit the leave request for approval.");
+
+        try
+        {
+            // Resubmit runs inside the same compensation boundary as the save: a throw here still
+            // triggers the best-effort cancel below instead of leaking an unhandled exception.
+            entity.Resubmit(model.LeaveType, period, model.Reason, approvalResult.Data);
+
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Failed to persist resubmitted leave request {LeaveRequestId} after approval {ApprovalRequestId} was created; attempting to cancel the workflow.",
+                entity.Id,
+                approvalResult.Data);
+
+            try
+            {
+                await approvalService.CancelAsync(
+                    approvalResult.Data,
+                    entity.UserId,
+                    cancellationToken);
+            }
+            catch (Exception cancelEx)
+            {
+                logger.LogError(
+                    cancelEx,
+                    "Failed to compensate by cancelling approval {ApprovalRequestId} for the unsaved resubmitted leave request.",
+                    approvalResult.Data);
+            }
+
+            return ex is ExceptionBase domainEx
+                ? LeaveRequestApprovalCoordinator.ToResult(domainEx)
+                : Result.Error("Could not save the leave request. Please try again.");
+        }
 
         return Result.Success();
     }

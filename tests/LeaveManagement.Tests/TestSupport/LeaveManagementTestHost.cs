@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using StarterKit.LeaveManagement.Api.Application.LeaveRequests;
 using StarterKit.LeaveManagement.Api.Data;
 using StarterKit.Shared;
 
@@ -13,11 +14,19 @@ namespace LeaveManagement.Tests.TestSupport;
 /// </summary>
 public sealed class LeaveManagementTestHost : IDisposable
 {
+    // Mapster's TypeAdapterConfig is process-global; outside the real host, nothing ever calls
+    // LeaveManagementModule.Add, so without this the Period -> StartDate/EndDate flattening
+    // configured in LeaveRequestMappingConfig would silently never run and Adapt<LeaveRequestDto>()
+    // would map both dates to default. Registered once per test run, not per host instance.
+    private static readonly bool MappingRegistered = RegisterMapping();
+
     private readonly SqliteConnection _connection;
     private readonly ServiceProvider _provider;
 
     public LeaveManagementTestHost(FakeCurrentUser? currentUser = null, FakeDateTime? dateTime = null)
     {
+        _ = MappingRegistered;
+
         CurrentUser = currentUser ?? new FakeCurrentUser();
         DateTime = dateTime ?? new FakeDateTime();
 
@@ -47,5 +56,11 @@ public sealed class LeaveManagementTestHost : IDisposable
     {
         _provider.Dispose();
         _connection.Dispose();
+    }
+
+    private static bool RegisterMapping()
+    {
+        LeaveRequestMappingConfig.Register();
+        return true;
     }
 }

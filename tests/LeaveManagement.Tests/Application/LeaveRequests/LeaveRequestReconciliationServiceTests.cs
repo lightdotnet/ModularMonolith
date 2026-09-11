@@ -12,8 +12,8 @@ namespace LeaveManagement.Tests.Application.LeaveRequests;
 
 public class LeaveRequestReconciliationServiceTests
 {
-    private static ApprovalStatusView View(string requestId, ApprovalStatus status) =>
-        new("approval-" + requestId, "LeaveRequest", requestId, status, 1);
+    private static ApprovalStatusView View(string approvalRequestId, string requestId, ApprovalStatus status) =>
+        new(approvalRequestId, "LeaveRequest", requestId, status, 1);
 
     private static async Task<LeaveRequest> SeedAsync(
         LeaveManagementTestHost host,
@@ -22,16 +22,9 @@ public class LeaveRequestReconciliationServiceTests
         string? approvalRequestId)
     {
         host.DateTime.UtcNow = created;
-        var entity = new LeaveRequest
-        {
-            UserId = "user-1",
-            EmployeeId = "employee-1",
-            LeaveType = LeaveType.Annual,
-            StartDate = created,
-            EndDate = created.AddDays(1),
-            Status = status,
-            ApprovalRequestId = approvalRequestId,
-        };
+        var entity = LeaveRequestBuilder.Build(
+            "user-1", "employee-1", LeaveType.Annual, created, created.AddDays(1), status,
+            approvalRequestId: approvalRequestId);
         await host.Context.LeaveRequests.AddAsync(entity, TestContext.Current.CancellationToken);
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         return entity;
@@ -68,9 +61,9 @@ public class LeaveRequestReconciliationServiceTests
         IReadOnlyCollection<string> requestedIds = [];
         var views = new Dictionary<string, ApprovalStatusView>
         {
-            [a.Id] = View(a.Id, ApprovalStatus.Approved),
-            [b.Id] = View(b.Id, ApprovalStatus.Pending),
-            [c.Id] = View(c.Id, ApprovalStatus.Rejected),
+            [a.Id] = View("appr-a", a.Id, ApprovalStatus.Approved),
+            [b.Id] = View("appr-b", b.Id, ApprovalStatus.Pending),
+            [c.Id] = View("appr-c", c.Id, ApprovalStatus.Rejected),
         };
         var approvalService = ApprovalServiceReturning(ids => requestedIds = ids, views);
 
@@ -107,9 +100,9 @@ public class LeaveRequestReconciliationServiceTests
         IReadOnlyCollection<string> requestedIds = [];
         var views = new Dictionary<string, ApprovalStatusView>
         {
-            [oldest.Id] = View(oldest.Id, ApprovalStatus.Approved),
-            [middle.Id] = View(middle.Id, ApprovalStatus.Approved),
-            [newest.Id] = View(newest.Id, ApprovalStatus.Approved),
+            [oldest.Id] = View("appr-1", oldest.Id, ApprovalStatus.Approved),
+            [middle.Id] = View("appr-2", middle.Id, ApprovalStatus.Approved),
+            [newest.Id] = View("appr-3", newest.Id, ApprovalStatus.Approved),
         };
         var approvalService = ApprovalServiceReturning(ids => requestedIds = ids, views);
 
@@ -127,6 +120,35 @@ public class LeaveRequestReconciliationServiceTests
         Assert.Equal(LeaveRequestStatus.Approved, rows[oldest.Id]);
         Assert.Equal(LeaveRequestStatus.Approved, rows[middle.Id]);
         Assert.Equal(LeaveRequestStatus.Pending, rows[newest.Id]);
+    }
+
+    [Fact]
+    public async Task ReconcileOnceAsync_ShouldLeaveRowUnchanged_WhenReturnedViewBelongsToASupersededWorkflow()
+    {
+        // Arrange — the row has since been resubmitted against a fresh workflow; a status view for
+        // the old (superseded) approval id must not be applied. Mirrors the equivalent mismatched-id
+        // guard already covered at the entity level (LeaveRequestTests), the integration-event
+        // subscriber level (ApprovalFinalizedIntegrationEventHandlerTests), and the coordinator's own
+        // ReconcileStatusAsync (LeaveRequestApprovalCoordinatorTests).
+        using var host = new LeaveManagementTestHost();
+        var entity = await SeedAsync(host, DateTimeOffset.UtcNow, LeaveRequestStatus.Pending, "current-approval");
+
+        var views = new Dictionary<string, ApprovalStatusView>
+        {
+            [entity.Id] = View("superseded-approval", entity.Id, ApprovalStatus.Approved),
+        };
+        var approvalService = ApprovalServiceReturning(_ => { }, views);
+
+        // Act
+        var changed = await LeaveRequestReconciliationService.ReconcileOnceAsync(
+            host.Context, approvalService.Object, batchSize: 50, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, changed);
+        var persisted = await host.Context.LeaveRequests
+            .AsNoTracking()
+            .FirstAsync(x => x.Id == entity.Id, TestContext.Current.CancellationToken);
+        Assert.Equal(LeaveRequestStatus.Pending, persisted.Status);
     }
 
     [Fact]

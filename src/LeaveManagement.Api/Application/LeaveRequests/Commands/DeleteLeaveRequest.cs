@@ -12,6 +12,7 @@ internal sealed record DeleteLeaveRequestCommand(
 
 internal class DeleteLeaveRequestCommandHandler(
     LeaveManagementDbContext context,
+    LeaveRequestApprovalCoordinator coordinator,
     IApprovalService approvalService,
     ILogger<DeleteLeaveRequestCommandHandler> logger)
     : ICommandHandler<DeleteLeaveRequestCommand, IResult>
@@ -29,31 +30,14 @@ internal class DeleteLeaveRequestCommandHandler(
 
         // Reconcile a possibly-stale local status against Approval before the status gate — this
         // runs for every caller (including .manage); .manage only skips the gate itself, not this.
-        if (entity.Status == LeaveRequestStatus.Pending && entity.ApprovalRequestId is not null)
-        {
-            var view = await approvalService.GetStatusByRequestAsync(
-                LeaveRequestStatusMap.RequestType,
-                entity.Id,
-                cancellationToken);
-
-            if (view is not null)
-            {
-                var mapped = LeaveRequestStatusMap.MapStatus(view.Status);
-
-                if (mapped != entity.Status)
-                {
-                    entity.Status = mapped;
-                    await context.SaveChangesAsync(cancellationToken);
-                }
-            }
-        }
+        await coordinator.ReconcileStatusAsync(entity, cancellationToken);
 
         if (!request.CanManage)
         {
-            if (entity.UserId != request.CurrentUserId)
+            if (!entity.IsOwnedBy(request.CurrentUserId))
                 return Result.Error("You can only delete your own leave requests.");
 
-            if (entity.Status is not (LeaveRequestStatus.Pending or LeaveRequestStatus.Rejected))
+            if (!entity.IsOwnerActionable)
                 return Result.Error("This leave request can no longer be deleted.");
         }
 

@@ -27,14 +27,14 @@ public class LeaveRequestController(ICurrentUser currentUser) : VersionedApiCont
     public async Task<IActionResult> SearchAsync([FromQuery] LeaveRequestSearchRequest request)
     {
         return Ok(await Mediator.Send(
-            new SearchLeaveRequestsQuery(request, User.GetEmployeeId(), CanManage)));
+            new SearchLeaveRequestsQuery(request, _currentUserId, CanManage)));
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetAsync([FromRoute] string id)
     {
         return Ok(await Mediator.Send(
-            new GetLeaveRequestByIdQuery(id, User.GetEmployeeId(), CanManage)));
+            new GetLeaveRequestByIdQuery(id, _currentUserId, CanManage)));
     }
 
     [HttpGet("approvers")]

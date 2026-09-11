@@ -6,7 +6,7 @@ namespace StarterKit.LeaveManagement.Api.Application.LeaveRequests.Queries;
 
 internal sealed record GetLeaveRequestByIdQuery(
     string Id,
-    string? CurrentEmployeeId,
+    string CurrentUserId,
     bool CanManage) : IQuery<IResult<LeaveRequestDto>>;
 
 internal class GetLeaveRequestByIdQueryHandler(
@@ -24,7 +24,7 @@ internal class GetLeaveRequestByIdQueryHandler(
         if (entity is null)
             return Result<LeaveRequestDto>.NotFound($"Leave request {request.Id} not found");
 
-        if (!request.CanManage && entity.EmployeeId != request.CurrentEmployeeId)
+        if (!request.CanManage && !entity.IsOwnedBy(request.CurrentUserId))
             return Result<LeaveRequestDto>.Error("You can only view your own leave requests.");
 
         return Result<LeaveRequestDto>.Success(entity.Adapt<LeaveRequestDto>());

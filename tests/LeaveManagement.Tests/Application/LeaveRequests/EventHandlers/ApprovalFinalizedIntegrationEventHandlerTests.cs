@@ -18,16 +18,11 @@ public class ApprovalFinalizedIntegrationEventHandlerTests
 
     private static LeaveRequest MakeEntity(
         LeaveRequestStatus status,
-        string? approvalRequestId) => new()
-    {
-        UserId = "user-1",
-        EmployeeId = "employee-1",
-        LeaveType = LeaveType.Annual,
-        StartDate = DateTimeOffset.UtcNow,
-        EndDate = DateTimeOffset.UtcNow.AddDays(1),
-        Status = status,
-        ApprovalRequestId = approvalRequestId,
-    };
+        string? approvalRequestId) =>
+        LeaveRequestBuilder.Build(
+            "user-1", "employee-1", LeaveType.Annual,
+            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(1), status,
+            approvalRequestId: approvalRequestId);
 
     [Theory]
     [InlineData(ApprovalStatus.Approved, LeaveRequestStatus.Approved)]

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StarterKit.Approval.Contracts.Services;
 using StarterKit.LeaveManagement.Api.Data;
+using StarterKit.LeaveManagement.Api.Domain.LeaveRequests;
 
 namespace StarterKit.LeaveManagement.Api.Application.LeaveRequests;
 
@@ -66,7 +67,7 @@ internal sealed class LeaveRequestReconciliationService(
         CancellationToken cancellationToken)
     {
         var rows = await context.LeaveRequests
-            .Where(x => x.Status == LeaveRequestStatus.Pending && x.ApprovalRequestId != null)
+            .Where(new ReconcilableLeaveRequestsSpec())
             .OrderBy(x => x.Created)
             .Take(batchSize)
             .ToListAsync(cancellationToken);
@@ -86,13 +87,12 @@ internal sealed class LeaveRequestReconciliationService(
             if (!views.TryGetValue(row.Id, out var view))
                 continue;
 
-            var mapped = LeaveRequestStatusMap.MapStatus(view.Status);
-
-            if (mapped != row.Status)
-            {
-                row.Status = mapped;
+            // TryApplyOutcome (and, through it, ApplyApprovalOutcome) is the sole authority on
+            // ignoring a superseded workflow or an already-finalized row. Unlike the single-row
+            // reconcile call sites, the sweep batches one save after the whole loop instead of one
+            // per changed row.
+            if (LeaveRequestApprovalCoordinator.TryApplyOutcome(row, view))
                 changed++;
-            }
         }
 
         if (changed > 0)

@@ -5,11 +5,11 @@ using StarterKit.LeaveManagement.Api.Data;
 namespace StarterKit.LeaveManagement.Api.Application.LeaveRequests.EventHandlers;
 
 /// <summary>
-/// First subscriber to Approval's <see cref="ApprovalFinalizedIntegrationEvent"/>. Reconciles the
-/// local <c>LeaveRequest.Status</c> when its approval workflow reaches a terminal outcome. Delivery
-/// runs in-line in the deciding scope; the periodic reconciliation sweep is the backstop for a
-/// missed or failed delivery. All failures are swallowed so a reconciliation error never fails the
-/// originating decide.
+/// Subscribes to Approval's <see cref="ApprovalFinalizedIntegrationEvent"/> to reconcile the local
+/// <c>LeaveRequest.Status</c> when its approval workflow reaches a terminal outcome. This is one of
+/// the subscribers; handler ordering across modules is not guaranteed — the periodic sweep is the
+/// delivery backstop for a missed or failed in-process delivery. All failures are swallowed so a
+/// reconciliation error never fails the originating decide.
 /// </summary>
 internal sealed class ApprovalFinalizedIntegrationEventHandler(
     LeaveManagementDbContext context,
@@ -32,17 +32,16 @@ internal sealed class ApprovalFinalizedIntegrationEventHandler(
             if (entity is null)
                 return;
 
-            // Ignore a late event for a superseded workflow (e.g. after a resubmit).
-            if (entity.ApprovalRequestId != notification.ApprovalRequestId)
-                return;
+            // CurrentLevel is not carried by the integration event and is never read by
+            // ApplyOutcomeAsync/ApplyApprovalOutcome, so the placeholder below is safe.
+            var view = new ApprovalStatusView(
+                notification.ApprovalRequestId,
+                notification.RequestType,
+                notification.RequestId,
+                notification.Status,
+                CurrentLevel: 0);
 
-            var mapped = LeaveRequestStatusMap.MapStatus(notification.Status);
-
-            if (entity.Status == mapped)
-                return;
-
-            entity.Status = mapped;
-            await context.SaveChangesAsync(cancellationToken);
+            await LeaveRequestApprovalCoordinator.ApplyOutcomeAsync(entity, context, view, cancellationToken);
         }
         catch (Exception ex)
         {

@@ -19,8 +19,14 @@ public class LeaveManagementModule : AppModule
 
         services.AddSingleton<IPermissionDefinitionProvider, LeaveManagementPermissionProvider>();
 
+        services.AddScoped<LeaveRequestApprovalCoordinator>();
+
+        LeaveRequestMappingConfig.Register();
+
         services.AddOptions<LeaveReconciliationOptions>()
-            .BindConfiguration("LeaveManagement:Reconciliation");
+            .BindConfiguration("LeaveManagement:Reconciliation")
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
 
         services.AddHostedService<LeaveRequestReconciliationService>();
 

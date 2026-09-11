@@ -5,9 +5,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using StarterKit.Approval.Contracts.Approvals;
 using StarterKit.Approval.Contracts.Services;
+using StarterKit.LeaveManagement.Api.Application.LeaveRequests;
 using StarterKit.LeaveManagement.Api.Application.LeaveRequests.Commands;
 using StarterKit.LeaveManagement.Api.Domain.LeaveRequests;
 using StarterKit.LeaveManagement.Contracts.LeaveRequests;
+using StarterKit.Organization.Contracts.Services;
 using Xunit;
 
 namespace LeaveManagement.Tests.Application.LeaveRequests.Commands;
@@ -20,19 +22,26 @@ public class DeleteLeaveRequestCommandHandlerTests
     private static LeaveRequest MakeEntity(
         string userId,
         LeaveRequestStatus status,
-        string? approvalRequestId = null) => new()
-    {
-        UserId = userId,
-        EmployeeId = "employee-1",
-        LeaveType = LeaveType.Annual,
-        StartDate = DateTimeOffset.UtcNow,
-        EndDate = DateTimeOffset.UtcNow.AddDays(1),
-        Status = status,
-        ApprovalRequestId = approvalRequestId,
-    };
+        string? approvalRequestId = null) =>
+        LeaveRequestBuilder.Build(
+            userId, "employee-1", LeaveType.Annual,
+            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(1), status,
+            approvalRequestId: approvalRequestId);
 
     private static ApprovalStatusView StatusView(string requestId, ApprovalStatus status) =>
         new("approval-1", "LeaveRequest", requestId, status, 1);
+
+    private static DeleteLeaveRequestCommandHandler MakeHandler(
+        LeaveManagementTestHost host,
+        Mock<IApprovalService> approvalServiceMock)
+    {
+        var orgServiceMock = new Mock<IOrgDirectoryService>();
+        return new DeleteLeaveRequestCommandHandler(
+            host.Context,
+            new LeaveRequestApprovalCoordinator(host.Context, approvalServiceMock.Object, orgServiceMock.Object),
+            approvalServiceMock.Object,
+            Logger);
+    }
 
     [Fact]
     public async Task Handle_ShouldReturnNotFound_WhenMissing()
@@ -40,7 +49,7 @@ public class DeleteLeaveRequestCommandHandlerTests
         // Arrange
         using var host = new LeaveManagementTestHost();
         var approvalServiceMock = new Mock<IApprovalService>();
-        var handler = new DeleteLeaveRequestCommandHandler(host.Context, approvalServiceMock.Object, Logger);
+        var handler = MakeHandler(host, approvalServiceMock);
 
         // Act
         var result = await handler.Handle(
@@ -60,7 +69,7 @@ public class DeleteLeaveRequestCommandHandlerTests
         await host.Context.LeaveRequests.AddAsync(entity, TestContext.Current.CancellationToken);
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         var approvalServiceMock = new Mock<IApprovalService>();
-        var handler = new DeleteLeaveRequestCommandHandler(host.Context, approvalServiceMock.Object, Logger);
+        var handler = MakeHandler(host, approvalServiceMock);
 
         // Act
         var result = await handler.Handle(
@@ -81,7 +90,7 @@ public class DeleteLeaveRequestCommandHandlerTests
         await host.Context.LeaveRequests.AddAsync(entity, TestContext.Current.CancellationToken);
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         var approvalServiceMock = new Mock<IApprovalService>();
-        var handler = new DeleteLeaveRequestCommandHandler(host.Context, approvalServiceMock.Object, Logger);
+        var handler = MakeHandler(host, approvalServiceMock);
 
         // Act
         var result = await handler.Handle(
@@ -104,7 +113,7 @@ public class DeleteLeaveRequestCommandHandlerTests
         approvalServiceMock
             .Setup(s => s.CancelAsync("approval-1", "owner", It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
-        var handler = new DeleteLeaveRequestCommandHandler(host.Context, approvalServiceMock.Object, Logger);
+        var handler = MakeHandler(host, approvalServiceMock);
 
         // Act
         var result = await handler.Handle(
@@ -126,7 +135,7 @@ public class DeleteLeaveRequestCommandHandlerTests
         await host.Context.LeaveRequests.AddAsync(entity, TestContext.Current.CancellationToken);
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         var approvalServiceMock = new Mock<IApprovalService>();
-        var handler = new DeleteLeaveRequestCommandHandler(host.Context, approvalServiceMock.Object, Logger);
+        var handler = MakeHandler(host, approvalServiceMock);
 
         // Act
         var result = await handler.Handle(
@@ -150,7 +159,7 @@ public class DeleteLeaveRequestCommandHandlerTests
         approvalServiceMock
             .Setup(s => s.CancelAsync("approval-1", "owner", It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Error("cannot cancel"));
-        var handler = new DeleteLeaveRequestCommandHandler(host.Context, approvalServiceMock.Object, Logger);
+        var handler = MakeHandler(host, approvalServiceMock);
 
         // Act
         var result = await handler.Handle(
@@ -174,7 +183,7 @@ public class DeleteLeaveRequestCommandHandlerTests
         approvalServiceMock
             .Setup(s => s.CancelAsync("approval-1", "owner", It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Error("cannot cancel"));
-        var handler = new DeleteLeaveRequestCommandHandler(host.Context, approvalServiceMock.Object, Logger);
+        var handler = MakeHandler(host, approvalServiceMock);
 
         // Act
         var result = await handler.Handle(
@@ -198,7 +207,7 @@ public class DeleteLeaveRequestCommandHandlerTests
         approvalServiceMock
             .Setup(s => s.GetStatusByRequestAsync("LeaveRequest", entity.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(StatusView(entity.Id, ApprovalStatus.Approved));
-        var handler = new DeleteLeaveRequestCommandHandler(host.Context, approvalServiceMock.Object, Logger);
+        var handler = MakeHandler(host, approvalServiceMock);
 
         // Act
         var result = await handler.Handle(
