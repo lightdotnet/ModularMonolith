@@ -24,7 +24,10 @@ internal class ApprovalRequestCancelledEventHandler(
             {
                 Title = "Approval request withdrawn",
                 Message = $"\"{notification.Title}\" was withdrawn by the requester.",
-                Url = notification.DeepLinkUrl,
+                // Same reasoning as ApprovalStepPendingEventHandler: the recipient here is the
+                // approver, not the requester, so link to Approval's own record rather than the
+                // requesting module's DeepLinkUrl, which the approver may not have access to.
+                Url = $"/approvals/requests/{notification.ApprovalRequestId}",
             },
             cancellationToken);
     }
