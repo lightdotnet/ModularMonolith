@@ -244,6 +244,11 @@ No cycles found among internal imports.
   client-managed reads (notification mark-read) or on-demand detail/picklist fetches; the Approvals
   tables and `LeaveRequestsDataTable` use a client-side `router.refresh()` / per-tab refetch instead.
 
+- **Multiple login entry points converge on one `establishSession()`.** Password login
+  (`login-action.ts`) and the Microsoft PKCE relay (`app/login/microsoft/callback/route.ts`) both call
+  the same extracted `establish-session.ts` once they have a `TokenDto`, so the resulting session is
+  identical regardless of how the token was obtained — see [overview.md § Auth Flow](./overview.md#auth-flow).
+
 ## Module / Route Boundaries
 
 Two route areas: `(dashboard)` (wraps every authenticated page with `resolveSession()` + `SessionGate`
@@ -308,4 +313,4 @@ none exists. `pnpm-workspace.yaml` only configures build-script approval, not a 
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-10_
+_Last synced: 2026-09-11_

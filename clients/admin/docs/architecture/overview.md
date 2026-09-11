@@ -31,7 +31,8 @@ routes, backend contract surface, and the auth flow.
   here.
 - **Home** (`/`) — a `ProfileSummaryCard` plus the notification inbox; a real Server Component
   resolving the session and fetching the caller's notifications.
-- **Auth/session** — an encrypted, proactively-refreshed cookie session (see Auth Flow).
+- **Auth/session** — an encrypted, proactively-refreshed cookie session, reached via password login or
+  a Microsoft PKCE relay (see Auth Flow).
 - **Deploy resilience** — both `error.tsx` boundaries recognize deploy-induced stale-tab errors and
   show a health-probe-gated auto-reload notice instead of the generic error card.
 
@@ -63,7 +64,8 @@ routes, backend contract surface, and the auth flow.
 |---|---|---|
 | Home | `/` | Async Server Component — resolves the session (redirect to `/login` if absent), renders `ProfileSummaryCard` + `NotificationInbox` (initial page fetched server-side) |
 | Profile | `/user-profile` | Account details, QR of the user id, roles/claims/permissions, session lifecycle card. Super-admin-only extras (`isSuperAdminUser`): a manual "Refresh now" action and a "Session tokens" card exposing the raw access/refresh token with copy + show/hide |
-| Login | `/login` | Outside `(dashboard)` — no `AppShell`/session resolution |
+| Login | `/login` | Outside `(dashboard)` — no `AppShell`/session resolution. Password form + "Continue with Microsoft" |
+| Microsoft login relay | `/login/microsoft/start`, `/login/microsoft/callback` | Route Handlers, not pages — see Auth Flow |
 | Dashboard layout | `src/app/(dashboard)/layout.tsx` | `resolveSession()` → `SessionGate` wrapping `AppShell`. Sibling `error.tsx` (deploy-recovery branch) + `loading.tsx` (spinner) cascade to nested routes |
 | Root layout | `src/app/layout.tsx` | Fonts, `ThemeProvider` → `AccentColorProvider` → `TooltipProvider`, `<AppToaster />`; owns `app/error.tsx` |
 | Health probe | `/api/health` | `GET` → `204`, `force-dynamic`, no auth; polled by the deploy-recovery loop |
@@ -95,9 +97,12 @@ covered in [architecture.md § Key Design Patterns](./architecture.md#key-design
 
 Endpoints this client consumes, by module:
 
-- **auth** — `auth/token/get`, `auth/token/refresh` (`modules/identity/auth/api/token.api.ts`,
-  explicit `client: Identity`); `auth/token/hub` (POST, authenticated — mints the short-lived
-  hub-scoped token for the SignalR handshake, `modules/notifications/api/signalr.api.ts`).
+- **auth** — `auth/token/get`, `auth/token/refresh`, `auth/token/external` (POST — exchanges a one-time
+  PKCE code for a token; see Auth Flow) (`modules/identity/auth/api/token.api.ts`, explicit
+  `client: Identity`); `auth/token/hub` (POST, authenticated — mints the short-lived hub-scoped token
+  for the SignalR handshake, `modules/notifications/api/signalr.api.ts`). The Microsoft relay's
+  browser-facing leg targets `Identity.Web` directly (`IDENTITY_WEB_BASE_URL`, not this client's
+  `Identity` backend client) — see Auth Flow.
 - **user-profile** — `user_profile` (GET), `user_profile/token/{list,revoke}`.
 - **users** — `user/search`, `user` (GET-all / PUT / DELETE), get-by-id, create, force-password,
   `user/get_domain_user/{userName}` (AD lookup). `user/search` also backs the three on-demand
@@ -130,23 +135,36 @@ use `lib/server/require-permission.tsx`; `/leave-requests` deliberately does not
 
 ## Auth Flow
 
-Cookie-based session, AES-256-GCM encrypted at rest (`TOKEN_ENCRYPTION_KEY`), with proactive refresh:
+Cookie-based session, AES-256-GCM encrypted at rest (`TOKEN_ENCRYPTION_KEY`), with proactive refresh.
+Two entry points converge on the same session-establishment step:
 
-1. **Login** — `LoginForm` submits to `loginAction`, which calls `getToken()` then `getCurrentUser()`
-   (a profile failure doesn't block login). **Permissions and roles are decoded from the access-token
-   JWT** (`lib/server/jwt.ts`), never trusted from the profile API; `claims` is the deduped union of
-   both.
-2. **Persist** — `persistSessionCookie()` reduces `SessionData` to the minimal `StoredSession`
+1. **Password login** — `LoginForm` submits to `loginAction`, which calls `getToken()` then
+   `getCurrentUser()` (a profile failure doesn't block login), then `establishSession()`.
+2. **Microsoft login** — `ExternalLoginLink` (a plain server-rendered `<a>`, a real top-level
+   navigation) sends the browser to `/login/microsoft/start`, which generates a PKCE verifier/challenge
+   pair (`lib/server/external-login-pkce.ts`), stores the verifier in a short-lived HttpOnly cookie, and
+   redirects to `Identity.Web`'s `/Account/ExternalLoginStart` (`IDENTITY_WEB_BASE_URL` — a distinct,
+   browser-reachable origin from the server-to-server `IDENTITY_API_BASE_URL`). After the backend's own
+   relay completes, it redirects back to `/login/microsoft/callback`, which reads+clears the PKCE
+   cookie, exchanges the code via `exchangeExternalLoginCode()` (`auth/token/external`), and also calls
+   `establishSession()`. See `app/login/microsoft/{start,callback}/route.ts`.
+3. **`establishSession()`** (`modules/identity/auth/api/establish-session.ts`, shared by both paths
+   above) — **permissions and roles are decoded from the access-token JWT** (`lib/server/jwt.ts`),
+   never trusted from the profile API; `claims` is the deduped union of both.
+4. **Persist** — `persistSessionCookie()` reduces `SessionData` to the minimal `StoredSession`
    (tokens, expiries, profile, `refreshFailureCount`, `extraClaims` — `claims`/`permissions`/`roles`
    dropped, re-derived on read), encrypts it, and writes `admin_session` (`httpOnly`, `sameSite: lax`,
    `maxAge` from a hard 7-day `sessionExpiresAt`). Past `MAX_CHUNK_BYTES` it splits across numbered
    chunk cookies (`cookie-codec.ts`).
-3. **Redirect** — `loginAction` honors a safe same-site `?redirect=` path (open-redirect guarded),
-   else `/`.
-4. **`src/proxy.ts`** — a thin auth gate only: decrypt/validate/hydrate the cookie(s), enforce the
+5. **Redirect** — both entry points honor a safe same-site return path (open-redirect guarded — the
+   Microsoft path carries it through as `state`), else `/`. On failure, either path redirects to
+   `/login?error=...`, rendered by the same `Alert` `LoginForm` already uses.
+6. **`src/proxy.ts`** — a thin auth gate only: decrypt/validate/hydrate the cookie(s), enforce the
    7-day cap (missing/expired ⇒ `/login?redirect=<path>`, clearing every chunk name), and redirect
-   away from `/login` when already authenticated. No token refresh or profile refetch anymore.
-5. **`SessionGate`** (`components/layout/session-gate.tsx`, wrapping `AppShell`) drives freshness. On
+   away from the public auth paths when already authenticated. The public-path check is an explicit
+   allow-list (`/login`, `/login/microsoft/start`, `/login/microsoft/callback`), not a single
+   comparison. No token refresh or profile refetch anymore.
+7. **`SessionGate`** (`components/layout/session-gate.tsx`, wrapping `AppShell`) drives freshness. On
    a hard navigation it calls `ensureFreshSessionAction({ refetchProfile: true })` behind a full-page
    overlay. That calls `refreshSessionIfNearExpiry()` (`REFRESH_LEAD_MS` = 5 min) which returns a
    `RefreshOutcome` (`skipped` / `success` / `failed{permanent}`); the action maps it to
@@ -154,9 +172,9 @@ Cookie-based session, AES-256-GCM encrypted at rest (`TOKEN_ENCRYPTION_KEY`), wi
    `SessionUnreachableOverlay` every 5s; `updated` triggers `router.refresh()`; `degraded`
    (permanent 401/400) increments `refreshFailureCount` and force-logs-out at `MAX_REFRESH_FAILURES`
    (3). After settling, a silent 60s interval keeps a long-open session fresh.
-6. **Logout** — `logoutAction` deletes every session cookie and redirects to `/login?redirect=<path>`
+8. **Logout** — `logoutAction` deletes every session cookie and redirects to `/login?redirect=<path>`
    (same guard). Session expiry and explicit logout both funnel through the same redirect pattern.
-7. **`getSession()`** reads and decrypts the cookie (no fetch); `resolveSession()` is a thin
+9. **`getSession()`** reads and decrypts the cookie (no fetch); `resolveSession()` is a thin
    passthrough used by the dashboard layout and every gated page.
 
 **SignalR handshake token.** `getSignalRTokenAction()` (`modules/notifications/api/get-signalr-token-action.ts`)
@@ -166,9 +184,10 @@ authenticated and `proxy.ts` skips `/api` paths), then calls `getHubToken()` →
 the session access token. It returns that token plus the server-resolved `SIGNALR_HUB_URL`.
 `use-notifications.ts` passes an `accessTokenFactory` that re-invokes the action on every (re)connect,
 so `withAutomaticReconnect()` always gets a fresh short-lived token that is rejected on `/api`. The
-only other place a token reaches the browser is the super-admin-only "Session tokens" card on
-`/user-profile` (`isSuperAdminUser` gate), which renders the raw session access/refresh token for
-inspection. `token-cipher.ts` uses Node's `crypto` and `proxy.ts` has no explicit runtime pin — see
+only other places a token reaches the browser are the short-lived PKCE `code_verifier` cookie (never
+an access token) used by the Microsoft login relay above, and the super-admin-only "Session tokens"
+card on `/user-profile` (`isSuperAdminUser` gate), which renders the raw session access/refresh token
+for inspection. `token-cipher.ts` uses Node's `crypto` and `proxy.ts` has no explicit runtime pin — see
 [architecture.md § Known Risks](./architecture.md#known-architectural-risks--debt).
 
 ## Notes
@@ -176,4 +195,4 @@ inspection. `token-cipher.ts` uses Node's `crypto` and `proxy.ts` has no explici
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-10_
+_Last synced: 2026-09-11_

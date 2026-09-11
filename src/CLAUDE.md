@@ -4,7 +4,7 @@ Project-specific guidance for the backend solution under `src/`. See the root [C
 
 ## Purpose
 
-ASP.NET Core (C#) **Modular Monolith** — one solution (`StarterKit.slnx`). `src/StarterKit.WebApi` is the primary deployable process; `src/Identity.Web` (the Identity module's Razor Pages login host) is co-hosted there and can also run standalone as a login-only host. Built on the private `Lightsoft.*` (`Light.*`) vendor framework family (mediator, `Result`/`Paged` contracts, domain base types, ASP.NET Core authorization/modularity/CORS helpers, EF Core helpers, Serilog).
+ASP.NET Core (C#) **Modular Monolith** — one solution (`StarterKit.slnx`). `src/StarterKit.WebApi` is the primary deployable process; `src/Identity.Web` (the Identity module's Razor Pages login host) is co-hosted there and can also run standalone as a login-only host. Built on the private `Lightsoft.*` (`Light.*`) vendor framework family (mediator, `Result`/`Paged` contracts, domain base types, ASP.NET Core authorization/modularity/CORS helpers, EF Core helpers, caching, Serilog).
 
 ## Stack
 
@@ -14,7 +14,7 @@ ASP.NET Core (C#) **Modular Monolith** — one solution (`StarterKit.slnx`). `sr
 
 | Module | Path | Responsibility |
 |---|---|---|
-| Identity | `src/Identity.Api` + `src/Identity.Contracts` + `src/Identity.Web` | Users, roles, claims; API token issuance (password/AD) + refresh + sessions; interactive cookie login and Microsoft Entra ID (OIDC) external login (`Identity.Web`); SignalR hub handshake token; permission catalog. |
+| Identity | `src/Identity.Api` + `src/Identity.Contracts` + `src/Identity.Web` | Users, roles, claims; API token issuance (password/AD) + refresh + sessions; interactive cookie login and Microsoft Entra ID (OIDC) external login (`Identity.Web`), also relayed to separate-origin clients via a one-time PKCE code exchange (see `Identity.Web/Pages/Account/ExternalLoginStart.cshtml.cs`); SignalR hub handshake token; permission catalog. |
 | Notifications | `src/Notifications.Api` + `src/Notifications.Contracts` | Notification storage + real-time push over SignalR (admin + self-service surfaces); owns the welcome-mail handlers reacting to Identity's integration events. |
 | Organization | `src/Organization.Api` + `src/Organization.Contracts` | Companies, department/team hierarchy (`OrgUnit`), company-scoped employee levels, employees, and optional employee-to-Identity-login linking. Also exposes `IOrgDirectoryService`, a cross-module seam consumed by `LeaveManagement`. |
 | Approval | `src/Approval.Api` + `src/Approval.Contracts` | Generic, reusable multi-level approval-request engine — the calling module resolves the approver chain and drives the workflow via `IApprovalService`; not tied to any specific request type. |
@@ -65,4 +65,4 @@ xUnit v3 runs on Microsoft.Testing.Platform. On the .NET 10 SDK `dotnet test` re
 See [docs/known-debt.md](docs/known-debt.md) — the single, current-state-only list of open backend technical debt/pending architecture decisions. Update it directly when debt is found or resolved; don't re-scatter items back into the architecture docs above.
 
 ---
-_Last synced: 2026-09-09_
+_Last synced: 2026-09-11_

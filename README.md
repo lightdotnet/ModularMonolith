@@ -10,6 +10,7 @@ Backend has a working host with **five business modules**; the `admin` client is
 |---|---|
 | `src/Shared`, `src/Infrastructure`, `src/Persistence` (shared kernel + EF Core concerns) | ✅ built |
 | `src/Identity.Api` + `src/Identity.Contracts` — users, roles, claims, JWT auth/token issuance, permission catalog | ✅ built, tested (`tests/Identity.Tests`, ~100 tests) |
+| `src/Identity.Web` — Razor Pages login host: interactive cookie login, Microsoft Entra ID (OIDC) external login, and a PKCE authorization-code relay letting a separate-origin client (e.g. `admin`) complete Microsoft sign-in — co-hosted in `StarterKit.WebApi`, or standalone as a login-only process | ✅ built |
 | `src/Notifications.Api` + `src/Notifications.Contracts` — notification storage + real-time SignalR push (admin + self-service surfaces) | ✅ built — no dedicated test project yet |
 | `src/Organization.Api` + `src/Organization.Contracts` — companies, department/team hierarchy (`OrgUnit`), employee levels, employees, optional employee↔Identity-login linking; exposes `IOrgDirectoryService` | ✅ built, tested (`tests/Organization.Tests`, ~63 tests) |
 | `src/Approval.Api` + `src/Approval.Contracts` — generic multi-level approval-request engine driven via `IApprovalService`; not tied to any request type | ✅ built, tested (`tests/Approval.Tests`, ~57 tests) |
@@ -17,7 +18,7 @@ Backend has a working host with **five business modules**; the `admin` client is
 | `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` (design-time EF Core migration projects) | ✅ built — MSSQL covers all five modules; PostgreSQL/Sqlite cover all but Notifications |
 | `src/StarterKit.WebApi` (composition-root host) | ✅ built — runnable API |
 | `tests/Framework.Tests` (xUnit v3, shared kernel/infra/persistence) | ✅ built — ~69 tests |
-| `clients/admin` (Next.js admin console) | ✅ built — real auth; full CRUD for Users/Roles, Organization (companies/departments/employees), a generic Approvals workflow, and self-service Leave requests; real-time Notifications; permission-gated nav |
+| `clients/admin` (Next.js admin console) | ✅ built — real auth (password or Microsoft); full CRUD for Users/Roles, Organization (companies/departments/employees), a generic Approvals workflow, and self-service Leave requests; real-time Notifications; permission-gated nav |
 | Additional `clients/*` apps (e.g. a primary end-user app) | ❌ not yet created |
 
 ## Structure
@@ -31,6 +32,7 @@ StarterKit.slnx
 ├── src/Persistence                → Shared
 ├── src/Identity.Contracts         → Shared
 ├── src/Identity.Api               → Identity.Contracts, Infrastructure, Persistence, Notifications.Contracts
+├── src/Identity.Web               → Identity.Api, Infrastructure (Razor Pages login host — co-hosted or standalone)
 ├── src/Notifications.Contracts    → Shared
 ├── src/Notifications.Api          → Notifications.Contracts, Infrastructure, Persistence
 ├── src/Organization.Contracts     → Shared
@@ -42,7 +44,7 @@ StarterKit.slnx
 ├── src/Migrations/MSSQL           → all five *.Api projects, Infrastructure, Persistence, Shared
 ├── src/Migrations/PostgreSQL      → Identity/Organization/Approval/LeaveManagement *.Api, Infrastructure, Persistence, Shared
 ├── src/Migrations/Sqlite          → Identity/Organization/Approval/LeaveManagement *.Api, Infrastructure, Persistence, Shared
-├── src/StarterKit.WebApi          → all five *.Api projects, Infrastructure, Shared (composition-root host)
+├── src/StarterKit.WebApi          → all five *.Api projects, Identity.Web, Infrastructure, Shared (composition-root host)
 ├── tests/Framework.Tests          → Shared, Infrastructure, Persistence
 ├── tests/Identity.Tests           → Identity.Api, Shared
 ├── tests/Organization.Tests       → Organization.Api, Identity.Contracts, Shared
@@ -51,7 +53,7 @@ StarterKit.slnx
 └── clients/admin                  (Next.js app — HTTP/JSON only, no shared source with src/)
 ```
 
-Every module reaches another module only through its `<Module>.Contracts` seam — never its `.Api` internals. The five cross-module edges: `Identity → Notifications.Contracts` (welcome email), `Organization → Identity.Contracts` (employee-login), `Approval → Notifications.Contracts` (notify on decision), `LeaveManagement → Approval.Contracts` (approval workflow) and `LeaveManagement → Organization.Contracts` (approver directory).
+Every module reaches another module only through its `<Module>.Contracts` seam — never its `.Api` internals. The five cross-module edges: `Identity → Notifications.Contracts` (welcome email), `Organization → Identity.Contracts` (employee-login), `Approval → Notifications.Contracts` (notify on decision), `LeaveManagement → Approval.Contracts` (approval workflow) and `LeaveManagement → Organization.Contracts` (approver directory). `Identity.Web → Identity.Api` is an intra-module reference (same bounded context), not a cross-module edge.
 
 ## Architecture Diagram
 
@@ -66,6 +68,7 @@ graph TD
     subgraph Identity
         IdC["Identity.Contracts"]
         IdA["Identity.Api"]
+        IdW["Identity.Web<br/>Razor Pages login host"]
     end
     subgraph Notifications
         NoC["Notifications.Contracts"]
@@ -88,6 +91,7 @@ graph TD
     Persistence --> Shared
     IdC & NoC & OrC & ApC & LvC --> Shared
     IdA --> IdC
+    IdW --> IdA
     NoA --> NoC
     OrA --> OrC
     ApA --> ApC
@@ -99,7 +103,7 @@ graph TD
     LvA -. approval workflow .-> ApC
     LvA -. approver directory .-> OrC
 
-    Host --> IdA & NoA & OrA & ApA & LvA
+    Host --> IdA & IdW & NoA & OrA & ApA & LvA
     Admin -. HTTP/JSON .-> Host
 
     classDef leaf fill:#2f6f4f,stroke:#1e4a34,color:#fff;
@@ -108,16 +112,57 @@ graph TD
 
 Each `*.Api` project also depends on `Infrastructure` and `Persistence` (edges omitted above for readability).
 
+## Login Flow (client ↔ server)
+
+`admin` supports two sign-in paths that converge on the same session cookie. See
+[docs/integration.md](docs/integration.md) and
+[src/docs/architecture/modules/Identity.md § External Login (OIDC)](src/docs/architecture/modules/Identity.md)
+for the full mechanics — this is the shape, not the detail.
+
+```mermaid
+sequenceDiagram
+    actor U as Browser
+    participant A as admin (Next.js server)
+    participant W as Identity.Web
+    participant I as Identity.Api
+    participant M as Microsoft Entra ID
+
+    rect rgb(235, 245, 255)
+    note over U,I: Password login
+    U->>A: submit credentials (loginAction)
+    A->>I: POST auth/token/get
+    I-->>A: TokenDto
+    A-->>U: Set admin_session cookie
+    end
+
+    rect rgb(240, 255, 240)
+    note over U,M: Microsoft login (PKCE authorization-code relay)
+    U->>A: GET /login/microsoft/start
+    A-->>U: 302 → Identity.Web (PKCE code_challenge, verifier kept in a short-lived cookie)
+    U->>W: GET /Account/ExternalLoginStart
+    W-->>U: 302 → Microsoft sign-in
+    U->>M: authenticate
+    M-->>U: 302 → Identity.Web (/signin-oidc)
+    U->>W: OIDC callback
+    W->>I: mint token (in-process, same module)
+    W-->>U: 302 → admin /login/microsoft/callback?code=...
+    U->>A: GET /login/microsoft/callback?code=...
+    A->>I: POST auth/token/external {code, codeVerifier}
+    I-->>A: TokenDto (code now consumed, single-use)
+    A-->>U: Set admin_session cookie
+    end
+```
+
 ## Tech Stack
 
 | Layer | Stack |
 |---|---|
 | Backend runtime | ASP.NET Core (C#), `net10.0` |
-| Backend architecture | Modular Monolith — flat projects under `src/`: five modules (`Identity`, `Notifications`, `Organization`, `Approval`, `LeaveManagement`), each an `<Module>.Api` + `<Module>.Contracts` pair, plus the shared kernel (`Shared`, `Infrastructure`, `Persistence`) and the `StarterKit.WebApi` composition-root host. One `DbContext` per module, all sharing one physical database separated by schema |
+| Backend architecture | Modular Monolith — flat projects under `src/`: five modules (`Identity`, `Notifications`, `Organization`, `Approval`, `LeaveManagement`), each an `<Module>.Api` + `<Module>.Contracts` pair (Identity also ships `Identity.Web`, a Razor Pages login host), plus the shared kernel (`Shared`, `Infrastructure`, `Persistence`) and the `StarterKit.WebApi` composition-root host. One `DbContext` per module, all sharing one physical database separated by schema |
 | Backend data access | EF Core — provider-configurable via `DbProvider` in `appsettings.json` (`InMemory` / `PostgreSQL` / `MSSQL` / `Sqlite`), with a design-time migrations project per relational provider (`src/Migrations/{MSSQL,PostgreSQL,Sqlite}`) |
-| Vendor framework | `Lightsoft.*` package family (mediator, `Result`/`Paged` contracts, domain base types, ASP.NET Core authorization/modularity/CORS helpers, Serilog) |
+| Vendor framework | `Lightsoft.*` package family (mediator, `Result`/`Paged` contracts, domain base types, ASP.NET Core authorization/modularity/CORS helpers, caching (`Lightsoft.Caching`, config-driven in-memory/Redis switch), Serilog) |
 | Testing | xUnit v3 on Microsoft.Testing.Platform — `tests/{Framework,Identity,Organization,Approval,LeaveManagement}.Tests` (~69 / ~100 / ~63 / ~57 / ~30 tests). No dedicated test project for Notifications yet; no mocking library beyond `Moq` for cross-module seam interfaces — otherwise hand-written fakes / real in-memory DbContexts |
-| Clients | `clients/admin/` — Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, pnpm. Real auth (encrypted-cookie sessions, proactive token refresh), CRUD for Identity / Organization / Approvals / Leave requests against the five backend modules, real-time Notifications via SignalR (browser connects directly to the backend). No mock data. Currently the only client app |
+| Clients | `clients/admin/` — Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, pnpm. Real auth (encrypted-cookie sessions, password or Microsoft, proactive token refresh), CRUD for Identity / Organization / Approvals / Leave requests against the five backend modules, real-time Notifications via SignalR (browser connects directly to the backend). No mock data. Currently the only client app |
 
 ## Getting Started
 
@@ -136,7 +181,7 @@ Configure the DB provider and connection string in `src/StarterKit.WebApi/appset
 ```bash
 cd clients/admin
 pnpm install
-cp .env.example .env.local   # set the five *_API_BASE_URL vars, TOKEN_ENCRYPTION_KEY, SIGNALR_HUB_URL
+cp .env.example .env.local   # set the five *_API_BASE_URL vars, IDENTITY_WEB_BASE_URL, TOKEN_ENCRYPTION_KEY, SIGNALR_HUB_URL
 pnpm dev
 ```
 
