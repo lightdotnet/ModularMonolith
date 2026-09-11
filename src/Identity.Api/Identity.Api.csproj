@@ -11,6 +11,7 @@
 
   <ItemGroup>
 	<PackageReference Include="Lightsoft.ActiveDirectory" />
+    <PackageReference Include="Lightsoft.Caching" />
     <PackageReference Include="Lightsoft.SharedKernel" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" />

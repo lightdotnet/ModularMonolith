@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using StarterKit.Identity.Api.ExternalLogin;
 using StarterKit.Identity.Api.Jwt;
 using StarterKit.Identity.Contracts;
 using StarterKit.Infrastructure.Endpoints;
@@ -11,6 +13,7 @@ namespace StarterKit.Identity.Api.Controllers;
 [Route("api/v{version:apiVersion}/auth")]
 public class TokenController(
     IAuthenticationService authenticationService,
+    IExternalLoginAuthCodeStore externalLoginAuthCodeStore,
     ICurrentUser currentUser) : VersionedApiController
 {
     [AllowAnonymous]
@@ -50,6 +53,19 @@ public class TokenController(
             });
 
         return Ok(res);
+    }
+
+    [AllowAnonymous]
+    [EnableRateLimiting("external-login")]
+    [HttpPost("token/external")]
+    public async Task<IActionResult> ExchangeAuthCode([FromBody] ExchangeAuthCodeRequest request)
+    {
+        var outcome = await externalLoginAuthCodeStore.ConsumeAsync(request.Code, request.CodeVerifier);
+
+        if (outcome.Status != ExternalLoginAuthCodeStatus.Success)
+            return Ok(Result<TokenDto>.Unauthorized("Invalid or expired sign-in code."));
+
+        return Ok(Result<TokenDto>.Success(outcome.Token!));
     }
 
     [Authorize]

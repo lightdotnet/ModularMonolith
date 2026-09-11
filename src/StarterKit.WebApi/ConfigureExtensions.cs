@@ -4,10 +4,12 @@ using Light.AspNetCore.Builder;
 using Light.AspNetCore.Middlewares;
 using Light.AspNetCore.Swagger;
 using Light.Mediator;
+using Microsoft.AspNetCore.RateLimiting;
 using StarterKit.Approval.Api;
 using StarterKit.Identity.Api;
 using StarterKit.Identity.Web;
 using StarterKit.Infrastructure;
+using StarterKit.Infrastructure.Caching;
 using StarterKit.Infrastructure.Cors;
 using StarterKit.Infrastructure.HealthChecks;
 using StarterKit.Infrastructure.Modularity;
@@ -19,6 +21,7 @@ using StarterKit.Shared;
 using StarterKit.Shared.Authorization;
 using StarterKit.WebApi.Authentication;
 using System.Reflection;
+using System.Threading.RateLimiting;
 
 namespace StarterKit.WebApi;
 
@@ -51,8 +54,24 @@ public static class ConfigureExtensions
         services.AddFileGenerator();
 
         services.AddSharedInfrastructure();
+        services.AddAppCache(configuration);
         services.AddHealthChecksService();
         services.AddCorsPolicy(configuration);
+
+        // IP-based fixed-window limiter guarding the external-login relay pages (Identity.Web)
+        // and the auth/token/external exchange endpoint (TokenController) - all three are
+        // anonymous, so they need their own throttle independent of the authenticated user.
+        services.AddRateLimiter(options =>
+        {
+            options.AddPolicy("external-login", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 10,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                }));
+        });
 
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, ServerCurrentUser>();
@@ -76,6 +95,7 @@ public static class ConfigureExtensions
             .UseStaticFiles()
             .UseRouting()
             .UseCorsPolicy() // must add before Auth
+            .UseRateLimiter()
             .UseAuthentication()
             .UseAuthorization()
             .UseSwagger();

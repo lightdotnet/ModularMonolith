@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StarterKit.Identity.Api.Data;
 using StarterKit.Identity.Api.Entities;
+using StarterKit.Identity.Api.ExternalLogin;
 using StarterKit.Identity.Api.Services;
 using StarterKit.Identity.Contracts.ExternalLogin;
 using StarterKit.Identity.Contracts.Services;
@@ -51,6 +52,7 @@ public static class DependencyInjection
         services.AddTransient<IUserService, UserService>();
         services.AddTransient<IRoleService, RoleService>();
         services.AddScoped<IExternalLoginService, ExternalLoginService>();
+        services.AddScoped<IExternalLoginAuthCodeStore, ExternalLoginAuthCodeStore>();
         //services.AddTransient<IServiceClaimService, ServiceClaimService>();
 
         return identityBuilder;

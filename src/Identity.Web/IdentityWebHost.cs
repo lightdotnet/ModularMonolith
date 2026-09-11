@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StarterKit.Identity.Api;
 using StarterKit.Infrastructure;
+using StarterKit.Infrastructure.Caching;
 using StarterKit.Infrastructure.Services;
 using StarterKit.Shared;
 
@@ -24,9 +25,21 @@ internal static class IdentityWebHost
     {
         services.AddHttpContextAccessor();
         services.AddSharedInfrastructure();
+        services.AddAppCache(configuration);
         services.AddScoped<ICurrentUser, ServerCurrentUser>();
         services.AddIdentityServices(configuration);
         services.AddIdentityWeb(configuration);
+
+        // NOTE: this host does not call AddJwtTokenServices, so IAuthenticationService is not
+        // registered here. The new Account/ExternalLoginRelay page (see Pages/Account) depends on
+        // it, but that page's counterpart - the auth/token/external exchange endpoint on
+        // Identity.Api's TokenController - is only mapped by the co-host (StarterKit.WebApi),
+        // which does call AddJwtTokenServices via IdentityModule. The relay is therefore only
+        // functional end-to-end under the co-host; wiring Jwt services here too would require a
+        // "Jwt:SecretKey" in this host's own configuration for a flow it cannot complete alone,
+        // and AddJwtTokenServices throws at startup if that section is missing - a worse outcome
+        // for the standalone host's existing password/AD + interactive Microsoft login than
+        // leaving this one page non-functional in that mode.
 
         // Mediator pipeline, scoped to the Identity assembly only. The standalone host
         // has NO cross-module notification handlers, so ExternalUserProvisionedIntegrationEvent

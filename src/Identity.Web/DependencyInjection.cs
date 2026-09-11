@@ -39,6 +39,8 @@ public static class DependencyInjection
     {
         services.AddScoped<SignInManager<User>>();
 
+        services.AddOptions<ExternalLoginRelayOptions>().BindConfiguration("ExternalLoginRelay");
+
         var microsoft = configuration
             .GetSection("Authentication:Microsoft")
             .Get<MicrosoftOidcOptions>()

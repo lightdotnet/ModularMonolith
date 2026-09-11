@@ -48,13 +48,21 @@ internal class AuthenticationService(
             return errorResult;
         }
 
-        var (tokenExpiresAt, refreshTokenExpiresAt) = ComputeExpirations();
+        var token = await IssueTokenAsync(user, device);
 
-        var token = await userSessionService.GenerateTokenAsync(
-            user,
-            tokenExpiresAt,
-            refreshTokenExpiresAt,
-            device);
+        return Result<TokenDto>.Success(token);
+    }
+
+    public async Task<IResult<TokenDto>> IssueTokenForUserAsync(
+        string userId,
+        DeviceDto? device = null)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+
+        if (user is null || await CheckInvalidUser(user))
+            return Result<TokenDto>.Unauthorized("Invalid credentials.");
+
+        var token = await IssueTokenAsync(user, device);
 
         return Result<TokenDto>.Success(token);
     }
@@ -107,6 +115,22 @@ internal class AuthenticationService(
 
         return Result<HubTokenResponse>.Success(
             new HubTokenResponse(token, _jwt.HubTokenExpirationSeconds));
+    }
+
+    /// <summary>
+    /// The shared token-issuance tail behind <see cref="GetTokenAsync"/> and
+    /// <see cref="IssueTokenForUserAsync"/>: resolve expirations and hand off to
+    /// <see cref="IUserSessionService.GenerateTokenAsync"/>.
+    /// </summary>
+    private async Task<TokenDto> IssueTokenAsync(User user, DeviceDto? device)
+    {
+        var (tokenExpiresAt, refreshTokenExpiresAt) = ComputeExpirations();
+
+        return await userSessionService.GenerateTokenAsync(
+            user,
+            tokenExpiresAt,
+            refreshTokenExpiresAt,
+            device);
     }
 
     private (DateTime TokenExpiresAt, DateTime RefreshTokenExpiresAt) ComputeExpirations()
