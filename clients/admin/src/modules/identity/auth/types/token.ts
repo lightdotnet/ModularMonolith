@@ -8,6 +8,11 @@ export interface RefreshTokenRequest {
   refreshToken: string;
 }
 
+export interface ExchangeExternalLoginCodeRequest {
+  code: string;
+  codeVerifier: string;
+}
+
 export interface DeviceDto {
   id?: string | null;
   name?: string | null;

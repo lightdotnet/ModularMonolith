@@ -4,6 +4,7 @@ import { ApiClients } from "@/lib/server/api-clients";
 import type { Result } from "@/types/api";
 import type {
   DeviceDto,
+  ExchangeExternalLoginCodeRequest,
   GetTokenRequest,
   RefreshTokenRequest,
   TokenDto,
@@ -21,6 +22,23 @@ export function getToken(request: GetTokenRequest, device?: Pick<DeviceDto, "id"
         deviceId: device?.id ?? undefined,
         deviceName: device?.name ?? undefined,
       },
+    }),
+  );
+}
+
+/**
+ * Redeems the one-time authorization code from the Microsoft external-login
+ * relay (`Identity.Web`'s `ExternalLoginStartModel`/`ExternalLoginRelayModel`)
+ * for a token, proving possession of the `code_verifier` matching the
+ * `codeChallenge` sent when the relay was started.
+ */
+export function exchangeExternalLoginCode(code: string, codeVerifier: string) {
+  const request: ExchangeExternalLoginCodeRequest = { code, codeVerifier };
+  return guardCall(() =>
+    requestJson<Result<TokenDto>>("auth/token/external", {
+      client: ApiClients.Identity,
+      method: "POST",
+      body: request,
     }),
   );
 }

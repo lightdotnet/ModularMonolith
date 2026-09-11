@@ -34,6 +34,19 @@ export function getTokenEncryptionKey(): string {
 }
 
 /**
+ * Absolute origin of `Identity.Web` — the browser is redirected here directly
+ * for the Microsoft external-login handshake (`/Account/ExternalLoginStart`),
+ * so unlike `IDENTITY_API_BASE_URL` (server-to-server only, may be an
+ * internal-only address) this one must be reachable from the browser. Read
+ * server-side and resolved into a redirect URL by the
+ * `/login/microsoft/start` Route Handler — not `NEXT_PUBLIC_`-inlined, same
+ * treatment as `SIGNALR_HUB_URL`.
+ */
+export function getIdentityWebBaseUrl(): string {
+  return requireEnv("IDENTITY_WEB_BASE_URL");
+}
+
+/**
  * Absolute URL of the backend's SignalR notification hub. Read server-side and
  * handed to the browser at runtime (via a Server Action) rather than
  * `NEXT_PUBLIC_`-inlined, so it can be changed by editing the deployed

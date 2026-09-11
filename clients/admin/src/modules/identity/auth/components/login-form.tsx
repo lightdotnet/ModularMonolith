@@ -13,11 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
+import { Separator } from "@/components/ui/separator";
 import { loginAction, type LoginFormState } from "@/modules/identity/auth/api/login-action";
+import { ExternalLoginLink } from "@/modules/identity/auth/components/external-login-link";
 
-const initialState: LoginFormState = {};
-
-export function LoginForm({ redirect }: { redirect?: string }) {
+export function LoginForm({ redirect, error }: { redirect?: string; error?: string }) {
+  const initialState: LoginFormState = { error };
   const [state, formAction, pending] = useActionState(
     loginAction,
     initialState,
@@ -71,6 +72,12 @@ export function LoginForm({ redirect }: { redirect?: string }) {
             </Button>
           </fieldset>
         </form>
+        <div className="my-4 flex items-center gap-3">
+          <Separator className="flex-1" />
+          <span className="text-xs text-muted-foreground">OR</span>
+          <Separator className="flex-1" />
+        </div>
+        <ExternalLoginLink returnTo={redirect} />
       </CardContent>
     </Card>
   );
