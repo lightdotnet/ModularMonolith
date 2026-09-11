@@ -178,7 +178,7 @@ export function ApprovalTimeline({
       <div className="sm:hidden">
         <VerticalTimeline resolvedSteps={resolvedSteps} userNamesById={userNamesById} />
       </div>
-      <div className="hidden overflow-x-auto sm:block">
+      <div className="hidden overflow-x-auto p-1 -m-1 sm:block">
         <HorizontalTimeline resolvedSteps={resolvedSteps} userNamesById={userNamesById} />
       </div>
     </>
