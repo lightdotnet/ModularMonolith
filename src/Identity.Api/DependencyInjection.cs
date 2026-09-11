@@ -40,7 +40,7 @@ public static class DependencyInjection
                 options.Lockout.AllowedForNewUsers = true;
 
                 // User settings
-                options.User.RequireUniqueEmail = true;
+                //options.User.RequireUniqueEmail = true;
             })
             .AddRoles<Role>()
             .AddEntityFrameworkStores<IdentityDbContext>()
