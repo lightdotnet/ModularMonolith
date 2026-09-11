@@ -19,6 +19,10 @@
     <Project Path="src/LeaveManagement.Api/LeaveManagement.Api.csproj" />
     <Project Path="src/LeaveManagement.Contracts/LeaveManagement.Contracts.csproj" />
   </Folder>
+  <Folder Name="/src/location-module/">
+    <Project Path="src/Location.Api/Location.Api.csproj" />
+    <Project Path="src/Location.Contracts/Location.Contracts.csproj" />
+  </Folder>
   <Folder Name="/src/notification-module/">
     <Project Path="src/Notifications.Api/Notifications.Api.csproj" />
     <Project Path="src/Notifications.Contracts/Notifications.Contracts.csproj" />
@@ -42,6 +46,7 @@
     <Project Path="tests/Framework.Tests/Framework.Tests.csproj" />
     <Project Path="tests/Identity.Tests/Identity.Tests.csproj" />
     <Project Path="tests/LeaveManagement.Tests/LeaveManagement.Tests.csproj" />
+    <Project Path="tests/Location.Tests/Location.Tests.csproj" />
     <Project Path="tests/Organization.Tests/Organization.Tests.csproj" />
   </Folder>
 </Solution>

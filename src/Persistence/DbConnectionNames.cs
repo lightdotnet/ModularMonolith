@@ -13,4 +13,6 @@ public abstract class DbConnectionNames
     public const string Approval = Default;
 
     public const string LeaveManagement = Default;
+
+    public const string Location = Default;
 }

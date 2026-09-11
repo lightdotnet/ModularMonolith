@@ -39,3 +39,10 @@ await approvalInitialiser.InitialiseAsync();
 var leaveManagementInitialiser = serviceProvider.GetRequiredService<StarterKit.LeaveManagement.Api.Data.LeaveManagementContextInitialiser>();
 
 await leaveManagementInitialiser.InitialiseAsync();
+
+// Location module
+var locationInitialiser = serviceProvider.GetRequiredService<StarterKit.Locations.Api.Data.LocationContextInitialiser>();
+
+await locationInitialiser.InitialiseAsync();
+
+await locationInitialiser.TrySeedAsync();

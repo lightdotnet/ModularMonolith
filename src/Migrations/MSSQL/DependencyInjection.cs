@@ -5,6 +5,7 @@ using StarterKit.Approval.Api.Data;
 using StarterKit.Identity.Api.Entities;
 using StarterKit.Infrastructure;
 using StarterKit.LeaveManagement.Api.Data;
+using StarterKit.Locations.Api.Data;
 using StarterKit.Notifications.Api.Data;
 using StarterKit.Organization.Api.Data;
 using StarterKit.Persistence;
@@ -30,6 +31,8 @@ public static class DependencyInjection
         services.AddApproval(configuration);
 
         services.AddLeaveManagement(configuration);
+
+        services.AddLocation(configuration);
 
         return services;
     }
@@ -131,5 +134,20 @@ public static class DependencyInjection
                 .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
 
         services.AddScoped<LeaveManagementContextInitialiser>();
+    }
+
+    private static void AddLocation(this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString(DbConnectionNames.Location);
+
+        services.AddDbContext<LocationDbContext>(options =>
+            options
+                .UseSqlServer(connectionString, o =>
+                {
+                    o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName);
+                })
+                .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
+
+        services.AddScoped<LocationContextInitialiser>();
     }
 }

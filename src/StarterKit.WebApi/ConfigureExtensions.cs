@@ -15,6 +15,7 @@ using StarterKit.Infrastructure.HealthChecks;
 using StarterKit.Infrastructure.Modularity;
 using StarterKit.Infrastructure.Services;
 using StarterKit.LeaveManagement.Api;
+using StarterKit.Locations.Api;
 using StarterKit.Notifications.Api;
 using StarterKit.Organization.Api;
 using StarterKit.Shared;
@@ -35,6 +36,7 @@ public static class ConfigureExtensions
             typeof(OrganizationModule).Assembly,
             typeof(ApprovalModule).Assembly,
             typeof(LeaveManagementModule).Assembly,
+            typeof(LocationModule).Assembly,
         ];
 
     public static IServiceCollection ConfigureServices(this IServiceCollection services, IConfiguration configuration)

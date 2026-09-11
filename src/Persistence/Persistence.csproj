@@ -10,6 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
+	<PackageReference Include="Lightsoft.Caching" />
 	<PackageReference Include="Lightsoft.EntityFrameworkCore" />
 	<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
 	<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
