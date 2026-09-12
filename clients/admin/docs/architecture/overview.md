@@ -21,6 +21,9 @@ routes, backend contract surface, and the auth flow.
   `Current`/`Acting` status, manager flag) and creating or linking an Identity login.
 - **Retail administration** (`/location`) against `Location.Api` — full CRUD for a global location
   hierarchy (tree) and location types (with configurable allowed parents and child support).
+- **Catalog** (`/catalog`) against `Catalog.Api` — a Products tab (paginated/searchable data table
+  filterable by category and status, create/edit, activate/deactivate, image management) and, gated
+  by `catalog.categories.view`, a Categories tab (recursive tree with create/edit/move/delete).
 - **Approvals** (`/approvals`) against `Approval.Api` — a generic multi-level approval workflow: the
   caller's pending decisions and own requests, plus (for `approval.requests.view_all`) an admin
   view-all and a "Create test request" harness that builds an arbitrary-length approver chain.
@@ -78,23 +81,26 @@ routes, backend contract surface, and the auth flow.
 | Departments & Teams | `/organization/departments` | Gated. `?companyId=` picker + recursive tree + "Employee Levels" tab |
 | Employees | `/organization/employees` | Gated. Search/paginate; tabbed edit dialog (Details / Departments & Teams / Login) |
 | Locations | `/location` | Gated. Recursive tree + Location Types tab |
+| Catalog | `/catalog` | Gated `catalog.products.view`. Products tab (search/paginate/filter by category+status, create/edit, activate/deactivate, images) + Categories tab (`catalog.categories.view`, recursive tree create/edit/move/delete) |
 | Approvals | `/approvals` | Gated `approval.requests.view`; view-all panel + "Create test request" gated `approval.requests.view_all` |
 | Leave requests | `/leave-requests`, `/leave-requests/[id]` | **No permission gate** — any session. `leave.requests.manage` unlocks an "All requests" tab + delete-any |
 
 Every `page.tsx` is a one-line re-export from a feature/module barrel. `constants/nav-items.ts`
 assembles `NAV_ITEMS` from each feature's own `NavItem`: `[home, Administration group, Organization
-group, /approvals, /leave-requests, Settings]`. `/administration`, `/organization`, `/settings` have
+group, /approvals, /leave-requests, Retail group, Settings]`, where the Retail group holds Location
+and Catalog. `/administration`, `/organization`, `/retail`, `/settings` have
 no `page.tsx` and 404 if followed; being ungated they still show in the sidebar and ⌘K palette.
 
 ## Backend Integration
 
-Real, but partial. `lib/server/api-clients.ts` registers six backend clients — `Identity`,
-`Notifications`, `Organization`, `Location`, `Approval`, `LeaveManagement` — each resolving its own
-`*_API_BASE_URL` env var (the base URL owns its full path prefix; `http.ts` prepends nothing).
-`lib/server/backend-api.ts`'s `createBackendApiClient(client)` factory produces six ready instances
-(`identityApi` … `locationApi` … `leaveManagementApi`); auth is attached by a request-handler pipeline
-(`bearerTokenHandler` reads the ambient session), not a passed token. The five backends are logically
-separate modules currently co-hosted in one process (`StarterKit.WebApi`).
+Real, but partial. `lib/server/api-clients.ts` registers seven backend clients — `Identity`,
+`Notifications`, `Organization`, `Location`, `Approval`, `LeaveManagement`, `Catalog` — each resolving
+its own `*_API_BASE_URL` env var (the base URL owns its full path prefix; `http.ts` prepends nothing).
+`lib/server/backend-api.ts`'s `createBackendApiClient(client)` factory produces seven ready instances
+(`identityApi` … `locationApi` … `leaveManagementApi` … `catalogApi`); auth is attached by a
+request-handler pipeline (`bearerTokenHandler` reads the ambient session), not a passed token. The
+seven backends are logically separate modules currently co-hosted in one process
+(`StarterKit.WebApi`).
 Error handling, the envelope contract, and the permanent-vs-transient refresh-failure distinction are
 covered in [architecture.md § Key Design Patterns](./architecture.md#key-design-patterns).
 
@@ -124,6 +130,10 @@ Endpoints this client consumes, by module:
   requests" tab.
 - **locations** — `location/tree`, `location/{id}` (GET/PUT/DELETE), `location/{id}/move`,
   `location` (POST); `location_type` (GET/POST/PUT/DELETE).
+- **catalog** — `category/tree`, `category/{id}` (GET/PUT/DELETE), `category/{id}/children`,
+  `category/{id}/move` (PUT), `category` (POST); `product` (GET, paginated search / POST),
+  `product/{id}` (GET/PUT), `product/{id}/{activate,deactivate}` (PUT), `product/{id}/image`
+  (POST/DELETE).
 - **approvals** — `modules/approvals/api/approvals.api.ts` (admin, `approval.requests.view_all`):
   `approval` (GET search / POST test request). `user-approvals.api.ts` (self-service, server-scoped
   by `UserApprovalController`): `approval/user` (GET / POST), `approval/user/{id}`,
@@ -200,4 +210,4 @@ for inspection. `token-cipher.ts` uses Node's `crypto` and `proxy.ts` has no exp
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-11_
+_Last synced: 2026-09-12_

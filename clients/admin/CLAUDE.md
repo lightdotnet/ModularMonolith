@@ -4,7 +4,7 @@ Project-specific guidance for `clients/admin/`. See the root [CLAUDE.md](../../C
 
 ## Purpose
 
-Internal admin console for the ModularMonolith starter template — the first and, so far, only client app. Real backend integration against `Identity.Api`, `Notifications.Api`, `Organization.Api`, `Location.Api`, `Approval.Api`, and `LeaveManagement.Api` (each wired as its own named backend client): encrypted-cookie auth (password, or Microsoft via a PKCE authorization-code relay — see [docs/architecture/overview.md § Auth Flow](docs/architecture/overview.md#auth-flow)) with proactive token refresh, full Users/Roles CRUD (incl. a custom-claims editor), real-time Notifications (SignalR) with a topbar bell and a Home-page inbox, Organization administration (Companies, Departments & Teams, Employees — including assigning employees into the department/team hierarchy with a status/manager flag and creating/linking their Identity login), Retail administration (Locations), a generic Approvals workflow (per-user pending decisions plus an admin test harness for building multi-level approver chains), self-service Leave requests (every authenticated user submits/edits/deletes their own requests with a required approver picker resolved from real department candidates, plus a `leave.requests.manage`-gated view-all/delete-any surface), permission-gated navigation.
+Internal admin console for the ModularMonolith starter template — the first and, so far, only client app. Real backend integration against `Identity.Api`, `Notifications.Api`, `Organization.Api`, `Location.Api`, `Approval.Api`, `LeaveManagement.Api`, and `Catalog.Api` (each wired as its own named backend client): encrypted-cookie auth (password, or Microsoft via a PKCE authorization-code relay — see [docs/architecture/overview.md § Auth Flow](docs/architecture/overview.md#auth-flow)) with proactive token refresh, full Users/Roles CRUD (incl. a custom-claims editor), real-time Notifications (SignalR) with a topbar bell and a Home-page inbox, Organization administration (Companies, Departments & Teams, Employees — including assigning employees into the department/team hierarchy with a status/manager flag and creating/linking their Identity login), Retail administration (Locations, and a Catalog of categories and products with activation state and images), a generic Approvals workflow (per-user pending decisions plus an admin test harness for building multi-level approver chains), self-service Leave requests (every authenticated user submits/edits/deletes their own requests with a required approver picker resolved from real department candidates, plus a `leave.requests.manage`-gated view-all/delete-any surface), permission-gated navigation.
 
 ## Stack
 
@@ -37,7 +37,7 @@ No automated test suite exists yet (no Jest/Vitest/Playwright/Testing Library) �
 Nothing in this repo currently documents conventions shared *across* client apps — `admin` is the only one, and everything above is specific to it. If a second app under `clients/` is added, revisit whether any of this generalizes into a genuinely cross-client-apps doc rather than assuming `admin`'s conventions apply by default.
 
 ---
-_Last synced: 2026-09-11_
+_Last synced: 2026-09-12_
 
 <!-- BEGIN:nextjs-agent-rules -->
 
