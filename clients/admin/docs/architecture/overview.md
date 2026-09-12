@@ -19,6 +19,8 @@ routes, backend contract surface, and the auth flow.
   managers" dialog, plus a company-scoped Employee Levels panel; employee CRUD with a tabbed edit
   dialog (Details / Departments & Teams / Login) covering membership assignment (level, primary,
   `Current`/`Acting` status, manager flag) and creating or linking an Identity login.
+- **Retail administration** (`/location`) against `Location.Api` — full CRUD for a global location
+  hierarchy (tree) and location types (with configurable allowed parents and child support).
 - **Approvals** (`/approvals`) against `Approval.Api` — a generic multi-level approval workflow: the
   caller's pending decisions and own requests, plus (for `approval.requests.view_all`) an admin
   view-all and a "Create test request" harness that builds an arbitrary-length approver chain.
@@ -75,6 +77,7 @@ routes, backend contract surface, and the auth flow.
 | Companies | `/organization/companies` | Gated. CRUD; edit works off row data (no on-open detail fetch) |
 | Departments & Teams | `/organization/departments` | Gated. `?companyId=` picker + recursive tree + "Employee Levels" tab |
 | Employees | `/organization/employees` | Gated. Search/paginate; tabbed edit dialog (Details / Departments & Teams / Login) |
+| Locations | `/location` | Gated. Recursive tree + Location Types tab |
 | Approvals | `/approvals` | Gated `approval.requests.view`; view-all panel + "Create test request" gated `approval.requests.view_all` |
 | Leave requests | `/leave-requests`, `/leave-requests/[id]` | **No permission gate** — any session. `leave.requests.manage` unlocks an "All requests" tab + delete-any |
 
@@ -85,11 +88,11 @@ no `page.tsx` and 404 if followed; being ungated they still show in the sidebar 
 
 ## Backend Integration
 
-Real, but partial. `lib/server/api-clients.ts` registers five backend clients — `Identity`,
-`Notifications`, `Organization`, `Approval`, `LeaveManagement` — each resolving its own
+Real, but partial. `lib/server/api-clients.ts` registers six backend clients — `Identity`,
+`Notifications`, `Organization`, `Location`, `Approval`, `LeaveManagement` — each resolving its own
 `*_API_BASE_URL` env var (the base URL owns its full path prefix; `http.ts` prepends nothing).
-`lib/server/backend-api.ts`'s `createBackendApiClient(client)` factory produces five ready instances
-(`identityApi` … `leaveManagementApi`); auth is attached by a request-handler pipeline
+`lib/server/backend-api.ts`'s `createBackendApiClient(client)` factory produces six ready instances
+(`identityApi` … `locationApi` … `leaveManagementApi`); auth is attached by a request-handler pipeline
 (`bearerTokenHandler` reads the ambient session), not a passed token. The five backends are logically
 separate modules currently co-hosted in one process (`StarterKit.WebApi`).
 Error handling, the envelope contract, and the permanent-vs-transient refresh-failure distinction are
@@ -119,6 +122,8 @@ Endpoints this client consumes, by module:
   `employee/{id}/org_unit` (POST) + `/{orgUnitId}` (PUT/DELETE), `employee/{id}/login`
   (POST/PUT/DELETE). `searchEmployees` also resolves employee names for the Leave requests "All
   requests" tab.
+- **locations** — `location/tree`, `location/{id}` (GET/PUT/DELETE), `location/{id}/move`,
+  `location` (POST); `location_type` (GET/POST/PUT/DELETE).
 - **approvals** — `modules/approvals/api/approvals.api.ts` (admin, `approval.requests.view_all`):
   `approval` (GET search / POST test request). `user-approvals.api.ts` (self-service, server-scoped
   by `UserApprovalController`): `approval/user` (GET / POST), `approval/user/{id}`,
