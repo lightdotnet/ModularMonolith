@@ -143,7 +143,8 @@ public class CreateLocationCommandHandlerTests
     private static Mock<ILocationTypeCache> CacheReturning(LocationType type)
     {
         var mock = new Mock<ILocationTypeCache>();
-        mock.Setup(x => x.GetAsync(type.Id, It.IsAny<CancellationToken>())).ReturnsAsync(type);
+        var detached = LocationType.Create(type.Id, type.Name, type.AllowedParentTypeId, type.CanHaveChildren);
+        mock.Setup(x => x.GetAsync(type.Id, It.IsAny<CancellationToken>())).ReturnsAsync(detached);
         return mock;
     }
 

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StarterKit.Approval.Api.Data;
+using StarterKit.Catalog.Api.Data;
 using StarterKit.Identity.Api.Entities;
 using StarterKit.Infrastructure;
 using StarterKit.LeaveManagement.Api.Data;
@@ -29,6 +30,8 @@ public static class DependencyInjection
         services.AddOrganization(configuration);
 
         services.AddApproval(configuration);
+
+        services.AddCatalog(configuration);
 
         services.AddLeaveManagement(configuration);
 
@@ -119,6 +122,21 @@ public static class DependencyInjection
                 .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
 
         services.AddScoped<ApprovalContextInitialiser>();
+    }
+
+    private static void AddCatalog(this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString(DbConnectionNames.Catalog);
+
+        services.AddDbContext<CatalogDbContext>(options =>
+            options
+                .UseSqlServer(connectionString, o =>
+                {
+                    o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName);
+                })
+                .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
+
+        services.AddScoped<CatalogContextInitialiser>();
     }
 
     private static void AddLeaveManagement(this IServiceCollection services, IConfiguration configuration)

@@ -6,6 +6,7 @@ using Light.AspNetCore.Swagger;
 using Light.Mediator;
 using Microsoft.AspNetCore.RateLimiting;
 using StarterKit.Approval.Api;
+using StarterKit.Catalog.Api;
 using StarterKit.Identity.Api;
 using StarterKit.Identity.Web;
 using StarterKit.Infrastructure;
@@ -37,6 +38,7 @@ public static class ConfigureExtensions
             typeof(ApprovalModule).Assembly,
             typeof(LeaveManagementModule).Assembly,
             typeof(LocationModule).Assembly,
+            typeof(CatalogModule).Assembly,
         ];
 
     public static IServiceCollection ConfigureServices(this IServiceCollection services, IConfiguration configuration)

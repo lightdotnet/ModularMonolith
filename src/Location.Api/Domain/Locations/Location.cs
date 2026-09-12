@@ -29,15 +29,15 @@ public class Location : AuditableEntity
 
     public string LocationTypeId { get; private set; } = null!;
 
-    public LocationType Type { get; private set; } = null!;
-
     public string? ParentLocationId { get; private set; }
 
-    public Location? Parent { get; private set; }
-
-    public IList<Location> Children { get; private set; } = [];
-
     public LocationStatus Status { get; private set; } = LocationStatus.Active;
+
+    public virtual LocationType Type { get; private set; } = null!;
+
+    public virtual Location? Parent { get; private set; }
+
+    public virtual IList<Location> Children { get; private set; } = [];
 
     public static Location Create(
         string name,

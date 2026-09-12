@@ -8,15 +8,15 @@ public class EmployeeOrgUnitMembership : AuditableEntity
 {
     public string EmployeeId { get; set; } = null!;
 
-    public Employee Employee { get; set; } = null!;
+    public virtual Employee Employee { get; set; } = null!;
 
     public string OrgUnitId { get; set; } = null!;
 
-    public OrgUnit OrgUnit { get; set; } = null!;
+    public virtual OrgUnit OrgUnit { get; set; } = null!;
 
     public string? LevelId { get; set; }
 
-    public EmployeeLevel? Level { get; set; }
+    public virtual EmployeeLevel? Level { get; set; }
 
     public bool IsPrimary { get; set; }
 

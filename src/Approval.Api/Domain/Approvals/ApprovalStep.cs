@@ -41,7 +41,7 @@ public class ApprovalStep : AuditableEntity
 
     public DateTimeOffset? DecidedAt { get; private set; }
 
-    public ApprovalRequest ApprovalRequest { get; private set; } = null!;
+    public virtual ApprovalRequest ApprovalRequest { get; private set; } = null!;
 
     internal bool IsPending => Status == ApprovalStepStatus.Pending;
 

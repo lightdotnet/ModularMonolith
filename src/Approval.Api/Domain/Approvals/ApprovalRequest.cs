@@ -37,7 +37,7 @@ public class ApprovalRequest : AuditableEntity
 
     public string? DocumentTypeId { get; private set; }
 
-    public ApprovalDocumentType? DocumentType { get; private set; }
+    public virtual ApprovalDocumentType? DocumentType { get; private set; }
 
     public int CurrentLevel { get; private set; }
 

@@ -10,6 +10,10 @@
     <Project Path="src/Approval.Api/Approval.Api.csproj" />
     <Project Path="src/Approval.Contracts/Approval.Contracts.csproj" />
   </Folder>
+  <Folder Name="/src/catalog-module/">
+    <Project Path="src/Catalog.Api/Catalog.Api.csproj" />
+    <Project Path="src/Catalog.Contracts/Catalog.Contracts.csproj" />
+  </Folder>
   <Folder Name="/src/identity-module/">
     <Project Path="src/Identity.Api/Identity.Api.csproj" />
     <Project Path="src/Identity.Contracts/Identity.Contracts.csproj" />
@@ -43,6 +47,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Approval.Tests/Approval.Tests.csproj" />
+    <Project Path="tests/Catalog.Tests/Catalog.Tests.csproj" />
     <Project Path="tests/Framework.Tests/Framework.Tests.csproj" />
     <Project Path="tests/Identity.Tests/Identity.Tests.csproj" />
     <Project Path="tests/LeaveManagement.Tests/LeaveManagement.Tests.csproj" />

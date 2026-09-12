@@ -10,7 +10,7 @@ using var host = Host.CreateHostBuilder(args).Build();
 using var scope = host.Services.CreateScope();
 
 var serviceProvider = scope.ServiceProvider;
-
+/*
 // Identity module
 var identityInitialiser = serviceProvider.GetRequiredService<IdentityContextInitialiser>();
 
@@ -39,10 +39,15 @@ await approvalInitialiser.InitialiseAsync();
 var leaveManagementInitialiser = serviceProvider.GetRequiredService<StarterKit.LeaveManagement.Api.Data.LeaveManagementContextInitialiser>();
 
 await leaveManagementInitialiser.InitialiseAsync();
-
+*/
 // Location module
 var locationInitialiser = serviceProvider.GetRequiredService<StarterKit.Locations.Api.Data.LocationContextInitialiser>();
 
 await locationInitialiser.InitialiseAsync();
 
 await locationInitialiser.TrySeedAsync();
+
+// Catalog module
+var catalogInitialiser = serviceProvider.GetRequiredService<StarterKit.Catalog.Api.Data.CatalogContextInitialiser>();
+
+await catalogInitialiser.InitialiseAsync();

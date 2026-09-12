@@ -8,9 +8,9 @@ public class OrgUnit : AuditableEntity
 
     public string? ParentId { get; set; }
 
-    public OrgUnit? Parent { get; set; }
+    public virtual OrgUnit? Parent { get; set; }
 
-    public IList<OrgUnit> Children { get; set; } = [];
+    public virtual IList<OrgUnit> Children { get; set; } = [];
 
     public OrgUnitType Type { get; set; }
 
@@ -24,5 +24,5 @@ public class OrgUnit : AuditableEntity
 
     public OrganizationStatus Status { get; set; } = OrganizationStatus.Active;
 
-    public IList<EmployeeOrgUnitMembership> Memberships { get; set; } = [];
+    public virtual IList<EmployeeOrgUnitMembership> Memberships { get; set; } = [];
 }

@@ -1,4 +1,5 @@
 using StarterKit.Locations.Api.Data;
+using StarterKit.Locations.Api.Domain.LocationTypes;
 using StarterKit.Locations.Api.Domain.Locations;
 using StarterKit.Locations.Api.Services;
 
@@ -48,6 +49,14 @@ internal class CreateLocationCommandHandler(
 
         if (codeExists)
             return Result<string>.Error($"Location code '{model.Code}' already exists.");
+
+        var trackedType = context.ChangeTracker.Entries<LocationType>()
+            .FirstOrDefault(e => e.Entity.Id == type.Id)?.Entity;
+
+        if (trackedType is not null)
+            type = trackedType;
+        else
+            context.Attach(type);
 
         var entity = Location.Create(
             model.Name,
