@@ -31,6 +31,10 @@
     <Project Path="src/Notifications.Api/Notifications.Api.csproj" />
     <Project Path="src/Notifications.Contracts/Notifications.Contracts.csproj" />
   </Folder>
+  <Folder Name="/src/orders-module/">
+    <Project Path="src/Orders.Api/Orders.Api.csproj" />
+    <Project Path="src/Orders.Contracts/Orders.Contracts.csproj" />
+  </Folder>
   <Folder Name="/src/organization-module/">
     <Project Path="src/Organization.Api/Organization.Api.csproj" />
     <Project Path="src/Organization.Contracts/Organization.Contracts.csproj" />
@@ -52,6 +56,7 @@
     <Project Path="tests/Identity.Tests/Identity.Tests.csproj" />
     <Project Path="tests/LeaveManagement.Tests/LeaveManagement.Tests.csproj" />
     <Project Path="tests/Location.Tests/Location.Tests.csproj" />
+    <Project Path="tests/Orders.Tests/Orders.Tests.csproj" />
     <Project Path="tests/Organization.Tests/Organization.Tests.csproj" />
   </Folder>
 </Solution>

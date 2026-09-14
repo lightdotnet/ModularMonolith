@@ -38,7 +38,28 @@ public class CatalogPricingServiceTests
         var service = new CatalogPricingService(host.Context);
 
         // Act
-        var result = await service.GetPriceInfoAsync("missing", TestContext.Current.CancellationToken);
+        var result = await service.GetPriceInfoAsync(999, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetPriceInfoAsync_ShouldReturnNull_WhenProductIsSoftDeleted()
+    {
+        // Arrange — CatalogDbContext's Product query filter (Deleted == null) applies transparently
+        // here too, since this service does not call IgnoreQueryFilters().
+        using var host = new CatalogTestHost();
+        var category = await SeedCategoryAsync(host);
+        var product = await SeedProductAsync(host, category.Id, "SKU-001");
+        product.Deactivate();
+        product.Delete();
+        host.Context.Products.Remove(product);
+        await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var service = new CatalogPricingService(host.Context);
+
+        // Act
+        var result = await service.GetPriceInfoAsync(product.Id, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -55,7 +76,7 @@ public class CatalogPricingServiceTests
         var service = new CatalogPricingService(host.Context);
 
         // Act
-        var result = await service.GetPriceInfoBatchAsync([productA.Id, "missing"], TestContext.Current.CancellationToken);
+        var result = await service.GetPriceInfoBatchAsync([productA.Id, 999], TestContext.Current.CancellationToken);
 
         // Assert
         var item = Assert.Single(result);
@@ -71,7 +92,7 @@ public class CatalogPricingServiceTests
         var service = new CatalogPricingService(host.Context);
 
         // Act
-        var result = await service.GetPriceInfoBatchAsync(["missing-1", "missing-2"], TestContext.Current.CancellationToken);
+        var result = await service.GetPriceInfoBatchAsync([998, 999], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);

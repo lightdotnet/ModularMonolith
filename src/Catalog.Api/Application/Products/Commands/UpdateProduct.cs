@@ -12,13 +12,13 @@ namespace StarterKit.Catalog.Api.Application.Products.Commands;
 /// not field edits — mirrors why Location/OrgUnit split <c>Move</c> out but keep other edits as one
 /// <c>PUT</c>.
 /// </summary>
-internal sealed record UpdateProductCommand(string Id, UpdateProductRequest Model) : ICommand<IResult>;
+internal sealed record UpdateProductCommand(long Id, UpdateProductRequest Model) : ICommand<IResult>;
 
 internal sealed class UpdateProductCommandValidator : AbstractValidator<UpdateProductCommand>
 {
     public UpdateProductCommandValidator()
     {
-        RuleFor(x => x.Id).NotEmpty();
+        RuleFor(x => x.Id).GreaterThan(0);
         RuleFor(x => x.Model).SetValidator(new UpdateProductRequestValidator());
     }
 }

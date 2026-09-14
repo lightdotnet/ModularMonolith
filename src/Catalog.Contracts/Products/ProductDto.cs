@@ -8,7 +8,7 @@ namespace StarterKit.Catalog.Contracts.Products;
 /// <c>LeaveRequestDto</c> flattens <c>DateRange</c> to <c>StartDate</c>/<c>EndDate</c>; a Contracts
 /// DTO never carries a nested value-object shape.
 /// </summary>
-public class ProductDto : BaseDto
+public class ProductDto : BaseDto<long>
 {
     public string CategoryId { get; set; } = null!;
 
@@ -16,7 +16,8 @@ public class ProductDto : BaseDto
 
     public string? Description { get; set; }
 
-    public string Sku { get; set; } = null!;
+    /// <summary><c>null</c> once cleared via <c>RemoveProductSkuCommand</c> — see <c>Product.Sku</c>.</summary>
+    public string? Sku { get; set; }
 
     public decimal Price { get; set; }
 

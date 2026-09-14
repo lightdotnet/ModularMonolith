@@ -42,7 +42,7 @@ public class AddProductImageCommandHandlerTests
 
         // Act
         var result = await handler.Handle(
-            new AddProductImageCommand("missing", new AddProductImageRequest { Url = "https://example.com/a.png" }),
+            new AddProductImageCommand(999, new AddProductImageRequest { Url = "https://example.com/a.png" }),
             TestContext.Current.CancellationToken);
 
         // Assert

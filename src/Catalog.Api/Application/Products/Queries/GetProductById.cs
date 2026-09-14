@@ -3,7 +3,7 @@ using StarterKit.Catalog.Api.Domain.Products;
 
 namespace StarterKit.Catalog.Api.Application.Products.Queries;
 
-internal sealed record GetProductByIdQuery(string Id) : IQuery<IResult<ProductDto>>;
+internal sealed record GetProductByIdQuery(long Id) : IQuery<IResult<ProductDto>>;
 
 internal class GetProductByIdQueryHandler(CatalogDbContext context)
     : IQueryHandler<GetProductByIdQuery, IResult<ProductDto>>
@@ -32,7 +32,7 @@ internal class GetProductByIdQueryHandler(CatalogDbContext context)
         CategoryId = entity.CategoryId,
         Name = entity.Name,
         Description = entity.Description,
-        Sku = entity.Sku.Value,
+        Sku = entity.Sku?.Value,
         Price = entity.Price.Amount,
         Currency = entity.Price.Currency,
         VatRate = entity.VatRate.Value,

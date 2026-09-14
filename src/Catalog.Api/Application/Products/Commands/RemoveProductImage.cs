@@ -3,13 +3,13 @@ using StarterKit.Catalog.Api.Domain.Products;
 
 namespace StarterKit.Catalog.Api.Application.Products.Commands;
 
-internal sealed record RemoveProductImageCommand(string Id, string Url) : ICommand<IResult>;
+internal sealed record RemoveProductImageCommand(long Id, string Url) : ICommand<IResult>;
 
 internal sealed class RemoveProductImageCommandValidator : AbstractValidator<RemoveProductImageCommand>
 {
     public RemoveProductImageCommandValidator()
     {
-        RuleFor(x => x.Id).NotEmpty();
+        RuleFor(x => x.Id).GreaterThan(0);
         RuleFor(x => x.Url).NotEmpty();
     }
 }

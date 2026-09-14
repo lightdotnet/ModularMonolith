@@ -27,6 +27,7 @@
     <ProjectReference Include="..\Location.Api\Location.Api.csproj" />
     <ProjectReference Include="..\Notifications.Api\Notifications.Api.csproj" />
     <ProjectReference Include="..\Notifications.Contracts\Notifications.Contracts.csproj" />
+    <ProjectReference Include="..\Orders.Api\Orders.Api.csproj" />
     <ProjectReference Include="..\Organization.Api\Organization.Api.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>

@@ -55,7 +55,36 @@ public class GetProductByIdQueryHandlerTests
         var handler = new GetProductByIdQueryHandler(host.Context);
 
         // Act
-        var result = await handler.Handle(new GetProductByIdQuery("missing"), TestContext.Current.CancellationToken);
+        var result = await handler.Handle(new GetProductByIdQuery(999), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnNotFound_WhenProductIsSoftDeleted()
+    {
+        // Arrange — CatalogDbContext's Product query filter (Deleted == null) applies here too,
+        // since this handler does not call IgnoreQueryFilters().
+        using var host = new CatalogTestHost();
+        var category = await SeedCategoryAsync(host);
+        var product = Product.Create(
+            category.Id,
+            "Widget",
+            null,
+            new Sku("SKU-001"),
+            new Money(100m, CurrencyConstants.Default),
+            new VatPercentage(10m));
+        await host.Context.Products.AddAsync(product, TestContext.Current.CancellationToken);
+        await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        product.Deactivate();
+        product.Delete();
+        host.Context.Products.Remove(product);
+        await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var handler = new GetProductByIdQueryHandler(host.Context);
+
+        // Act
+        var result = await handler.Handle(new GetProductByIdQuery(product.Id), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.IsSuccess);

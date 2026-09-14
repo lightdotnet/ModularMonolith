@@ -35,6 +35,7 @@
     <ProjectReference Include="..\..\LeaveManagement.Api\LeaveManagement.Api.csproj" />
     <ProjectReference Include="..\..\Location.Api\Location.Api.csproj" />
     <ProjectReference Include="..\..\Notifications.Api\Notifications.Api.csproj" />
+    <ProjectReference Include="..\..\Orders.Api\Orders.Api.csproj" />
     <ProjectReference Include="..\..\Organization.Api\Organization.Api.csproj" />
     <ProjectReference Include="..\..\Persistence\Persistence.csproj" />
     <ProjectReference Include="..\..\Shared\Shared.csproj" />
@@ -52,6 +53,7 @@
     <Folder Include="LeaveManagement\" />
     <Folder Include="Location\" />
     <Folder Include="Notifications\" />
+    <Folder Include="Orders\" />
     <Folder Include="Organization\" />
   </ItemGroup>
 

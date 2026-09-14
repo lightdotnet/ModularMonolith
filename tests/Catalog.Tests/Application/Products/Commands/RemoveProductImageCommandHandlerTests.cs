@@ -41,7 +41,7 @@ public class RemoveProductImageCommandHandlerTests
 
         // Act
         var result = await handler.Handle(
-            new RemoveProductImageCommand("missing", "https://example.com/a.png"),
+            new RemoveProductImageCommand(999, "https://example.com/a.png"),
             TestContext.Current.CancellationToken);
 
         // Assert

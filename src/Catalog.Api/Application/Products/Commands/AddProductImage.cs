@@ -3,13 +3,13 @@ using StarterKit.Catalog.Api.Domain.Products;
 
 namespace StarterKit.Catalog.Api.Application.Products.Commands;
 
-internal sealed record AddProductImageCommand(string Id, AddProductImageRequest Model) : ICommand<IResult>;
+internal sealed record AddProductImageCommand(long Id, AddProductImageRequest Model) : ICommand<IResult>;
 
 internal sealed class AddProductImageCommandValidator : AbstractValidator<AddProductImageCommand>
 {
     public AddProductImageCommandValidator()
     {
-        RuleFor(x => x.Id).NotEmpty();
+        RuleFor(x => x.Id).GreaterThan(0);
         RuleFor(x => x.Model).SetValidator(new AddProductImageRequestValidator());
     }
 }

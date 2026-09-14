@@ -56,7 +56,7 @@ public class UpdateProductCommandHandlerTests
 
         // Act
         var result = await handler.Handle(
-            new UpdateProductCommand("missing", ValidRequest(category.Id)),
+            new UpdateProductCommand(999, ValidRequest(category.Id)),
             TestContext.Current.CancellationToken);
 
         // Assert

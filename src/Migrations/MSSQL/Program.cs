@@ -39,15 +39,22 @@ await approvalInitialiser.InitialiseAsync();
 var leaveManagementInitialiser = serviceProvider.GetRequiredService<StarterKit.LeaveManagement.Api.Data.LeaveManagementContextInitialiser>();
 
 await leaveManagementInitialiser.InitialiseAsync();
-*/
+
 // Location module
 var locationInitialiser = serviceProvider.GetRequiredService<StarterKit.Locations.Api.Data.LocationContextInitialiser>();
 
 await locationInitialiser.InitialiseAsync();
 
 await locationInitialiser.TrySeedAsync();
-
+*/
 // Catalog module
 var catalogInitialiser = serviceProvider.GetRequiredService<StarterKit.Catalog.Api.Data.CatalogContextInitialiser>();
 
 await catalogInitialiser.InitialiseAsync();
+
+await catalogInitialiser.TrySeedAsync();
+
+// Orders module
+var ordersInitialiser = serviceProvider.GetRequiredService<StarterKit.Orders.Api.Data.OrdersContextInitialiser>();
+
+await ordersInitialiser.InitialiseAsync();

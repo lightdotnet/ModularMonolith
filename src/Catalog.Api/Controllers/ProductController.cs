@@ -19,7 +19,7 @@ public class ProductController : VersionedApiController
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetAsync([FromRoute] string id)
+    public async Task<IActionResult> GetAsync([FromRoute] long id)
     {
         return Ok(await Mediator.Send(new GetProductByIdQuery(id)));
     }
@@ -33,36 +33,50 @@ public class ProductController : VersionedApiController
 
     [HttpPut("{id}")]
     [MustHavePermission(CatalogPermissions.Products.Manage)]
-    public async Task<IActionResult> PutAsync([FromRoute] string id, [FromBody] UpdateProductRequest request)
+    public async Task<IActionResult> PutAsync([FromRoute] long id, [FromBody] UpdateProductRequest request)
     {
         return Ok(await Mediator.Send(new UpdateProductCommand(id, request)));
     }
 
     [HttpPut("{id}/activate")]
     [MustHavePermission(CatalogPermissions.Products.Manage)]
-    public async Task<IActionResult> ActivateAsync([FromRoute] string id)
+    public async Task<IActionResult> ActivateAsync([FromRoute] long id)
     {
         return Ok(await Mediator.Send(new ActivateProductCommand(id)));
     }
 
     [HttpPut("{id}/deactivate")]
     [MustHavePermission(CatalogPermissions.Products.Manage)]
-    public async Task<IActionResult> DeactivateAsync([FromRoute] string id)
+    public async Task<IActionResult> DeactivateAsync([FromRoute] long id)
     {
         return Ok(await Mediator.Send(new DeactivateProductCommand(id)));
     }
 
     [HttpPost("{id}/image")]
     [MustHavePermission(CatalogPermissions.Products.Manage)]
-    public async Task<IActionResult> AddImageAsync([FromRoute] string id, [FromBody] AddProductImageRequest request)
+    public async Task<IActionResult> AddImageAsync([FromRoute] long id, [FromBody] AddProductImageRequest request)
     {
         return Ok(await Mediator.Send(new AddProductImageCommand(id, request)));
     }
 
     [HttpDelete("{id}/image")]
     [MustHavePermission(CatalogPermissions.Products.Manage)]
-    public async Task<IActionResult> RemoveImageAsync([FromRoute] string id, [FromQuery] string url)
+    public async Task<IActionResult> RemoveImageAsync([FromRoute] long id, [FromQuery] string url)
     {
         return Ok(await Mediator.Send(new RemoveProductImageCommand(id, url)));
+    }
+
+    [HttpDelete("{id}/sku")]
+    [MustHavePermission(CatalogPermissions.Products.Manage)]
+    public async Task<IActionResult> RemoveSkuAsync([FromRoute] long id)
+    {
+        return Ok(await Mediator.Send(new RemoveProductSkuCommand(id)));
+    }
+
+    [HttpDelete("{id}")]
+    [MustHavePermission(CatalogPermissions.Products.Manage)]
+    public async Task<IActionResult> DeleteAsync([FromRoute] long id)
+    {
+        return Ok(await Mediator.Send(new DeleteProductCommand(id)));
     }
 }

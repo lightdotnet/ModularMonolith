@@ -20,13 +20,13 @@ public class CatalogDbContext(
 
     public override int SaveChanges()
     {
-        this.AuditEntries(currentUser.UserId, clock.AuditTime, false);
+        this.AuditEntries(currentUser.UserId, clock.AuditTime, true);
         return base.SaveChanges();
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        this.AuditEntries(currentUser.UserId, clock.AuditTime, false);
+        this.AuditEntries(currentUser.UserId, clock.AuditTime, true);
         return base.SaveChangesAsync(cancellationToken);
     }
 
@@ -58,11 +58,16 @@ public class CatalogDbContext(
         {
             entity.ToTable(name: "Products");
 
-            entity.HasIndex(x => x.Sku).IsUnique();
+            // Filtered unique index, deliberately not scoped by Deleted: a soft-deleted product's
+            // still-assigned SKU continues to occupy the constraint until explicitly cleared via
+            // ClearSku/RemoveProductSkuCommand — reuse requires that explicit step, soft-delete
+            // alone does not free it. Nulls (a cleared SKU) are excluded so any number of products
+            // can share a cleared SKU.
+            entity.HasIndex(x => x.Sku).IsUnique().HasFilter("[Sku] IS NOT NULL");
 
             entity.HasIndex(x => x.CategoryId);
 
-            entity.ConfigureAuditableEntity();
+            entity.ConfigureAuditableEntity<Product, long>();
 
             entity.Property(x => x.CategoryId).HasMaxLength(450);
 
@@ -70,11 +75,17 @@ public class CatalogDbContext(
 
             entity.Property(x => x.Description).HasMaxLength(2000);
 
+            // First active query filter in this repo — the precedent for the next soft-deletable
+            // aggregate. GetProductById/ListProducts/CatalogPricingService need no code change: the
+            // filter already hides soft-deleted products from every default read.
+            entity.HasQueryFilter(x => x.Deleted == null);
+
             // Converted scalar column, not an owned type — keeps a plain unique index; owned-type
             // index syntax has no precedent in this repo. Uniqueness itself is belt-and-suspenders:
             // CreateProductCommandHandler pre-checks before insert, this index is the DB backstop.
+            // Null-safe conversion: Sku became nullable once a product's SKU can be cleared.
             entity.Property(x => x.Sku)
-                .HasConversion(sku => sku.Value, v => new Sku(v))
+                .HasConversion(sku => sku == null ? null : sku.Value, v => v == null ? null : new Sku(v))
                 .HasMaxLength(Sku.MaxLength);
 
             // Table-split owned type (same row) — mutated in place via Money.Update rather than

@@ -17,7 +17,7 @@ namespace StarterKit.Catalog.Api.Services;
 internal class CatalogPricingService(CatalogDbContext context) : ICatalogPricingService
 {
     public async Task<ProductPriceInfoDto?> GetPriceInfoAsync(
-        string productId,
+        long productId,
         CancellationToken cancellationToken = default)
     {
         var entity = await context.Products
@@ -29,7 +29,7 @@ internal class CatalogPricingService(CatalogDbContext context) : ICatalogPricing
     }
 
     public async Task<IReadOnlyList<ProductPriceInfoDto>> GetPriceInfoBatchAsync(
-        IEnumerable<string> productIds,
+        IEnumerable<long> productIds,
         CancellationToken cancellationToken = default)
     {
         var ids = productIds.ToList();
@@ -45,7 +45,8 @@ internal class CatalogPricingService(CatalogDbContext context) : ICatalogPricing
     private static ProductPriceInfoDto ToDto(Product entity) => new()
     {
         Id = entity.Id,
-        Sku = entity.Sku.Value,
+        ProductName = entity.Name,
+        Sku = entity.Sku?.Value,
         Price = entity.Price.Amount,
         Currency = entity.Price.Currency,
         VatRate = entity.VatRate.Value,

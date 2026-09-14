@@ -37,7 +37,7 @@ public class DeactivateProductCommandHandlerTests
         var handler = new DeactivateProductCommandHandler(host.Context);
 
         // Act
-        var result = await handler.Handle(new DeactivateProductCommand("missing"), TestContext.Current.CancellationToken);
+        var result = await handler.Handle(new DeactivateProductCommand(999), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.IsSuccess);

@@ -26,7 +26,7 @@ public class CreateProductCommandHandlerTests
         Assert.True(result.IsSuccess);
         var entity = await host.Context.Products.FindAsync([result.Data], TestContext.Current.CancellationToken);
         Assert.Equal("Widget", entity!.Name);
-        Assert.Equal("SKU-001", entity.Sku.Value);
+        Assert.Equal("SKU-001", entity.Sku!.Value);
     }
 
     [Fact]

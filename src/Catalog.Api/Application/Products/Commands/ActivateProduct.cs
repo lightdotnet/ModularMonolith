@@ -3,13 +3,13 @@ using StarterKit.Catalog.Api.Domain.Products;
 
 namespace StarterKit.Catalog.Api.Application.Products.Commands;
 
-internal sealed record ActivateProductCommand(string Id) : ICommand<IResult>;
+internal sealed record ActivateProductCommand(long Id) : ICommand<IResult>;
 
 internal sealed class ActivateProductCommandValidator : AbstractValidator<ActivateProductCommand>
 {
     public ActivateProductCommandValidator()
     {
-        RuleFor(x => x.Id).NotEmpty();
+        RuleFor(x => x.Id).GreaterThan(0);
     }
 }
 

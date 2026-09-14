@@ -18,6 +18,7 @@ using StarterKit.Infrastructure.Services;
 using StarterKit.LeaveManagement.Api;
 using StarterKit.Locations.Api;
 using StarterKit.Notifications.Api;
+using StarterKit.Orders.Api;
 using StarterKit.Organization.Api;
 using StarterKit.Shared;
 using StarterKit.Shared.Authorization;
@@ -39,6 +40,7 @@ public static class ConfigureExtensions
             typeof(LeaveManagementModule).Assembly,
             typeof(LocationModule).Assembly,
             typeof(CatalogModule).Assembly,
+            typeof(OrdersModule).Assembly,
         ];
 
     public static IServiceCollection ConfigureServices(this IServiceCollection services, IConfiguration configuration)

@@ -7,9 +7,12 @@ namespace StarterKit.Catalog.Contracts.Products;
 /// for Orders/Inventory. Flattens <c>Money</c>/<c>VatPercentage</c> to scalars, same as
 /// <see cref="ProductDto"/>.
 /// </summary>
-public class ProductPriceInfoDto : BaseDto
+public class ProductPriceInfoDto : BaseDto<long>
 {
-    public string Sku { get; set; } = null!;
+    public string ProductName { get; set; } = null!;
+
+    /// <summary><c>null</c> once cleared via <c>RemoveProductSkuCommand</c> — see <c>Product.Sku</c>.</summary>
+    public string? Sku { get; set; }
 
     public decimal Price { get; set; }
 

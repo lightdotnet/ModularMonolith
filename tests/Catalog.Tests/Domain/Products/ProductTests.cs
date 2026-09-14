@@ -1,3 +1,4 @@
+using Light.Exceptions;
 using StarterKit.Catalog.Api.Domain.Products;
 using StarterKit.Catalog.Contracts.Common;
 using StarterKit.Shared.Constants;
@@ -214,5 +215,55 @@ public class ProductTests
 
         // Assert
         Assert.Equal(ProductStatus.Inactive, product.Status);
+    }
+
+    [Fact]
+    public void ClearSku_ShouldSetSkuToNull()
+    {
+        // Arrange
+        var product = Product.Create("category-1", "Widget", null, ValidSku(), ValidPrice(), ValidVat());
+
+        // Act
+        product.ClearSku();
+
+        // Assert
+        Assert.Null(product.Sku);
+    }
+
+    [Fact]
+    public void ClearSku_ShouldNotThrow_WhenSkuIsAlreadyNull()
+    {
+        // Arrange
+        var product = Product.Create("category-1", "Widget", null, ValidSku(), ValidPrice(), ValidVat());
+        product.ClearSku();
+
+        // Act
+        product.ClearSku();
+
+        // Assert
+        Assert.Null(product.Sku);
+    }
+
+    [Fact]
+    public void Delete_ShouldThrowConflictException_WhenProductIsActive()
+    {
+        // Arrange
+        var product = Product.Create("category-1", "Widget", null, ValidSku(), ValidPrice(), ValidVat());
+
+        // Act & Assert
+        Assert.Throws<ConflictException>(() => product.Delete());
+    }
+
+    [Fact]
+    public void Delete_ShouldNotThrow_WhenProductIsInactive()
+    {
+        // Arrange — Delete() itself only asserts the guard; the actual soft-delete is triggered by
+        // the caller (DeleteProductCommandHandler) via context.Products.Remove(entity) afterward.
+        var product = Product.Create("category-1", "Widget", null, ValidSku(), ValidPrice(), ValidVat());
+        product.Deactivate();
+
+        // Act & Assert
+        var exception = Record.Exception(() => product.Delete());
+        Assert.Null(exception);
     }
 }

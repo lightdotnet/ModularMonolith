@@ -15,4 +15,6 @@ public abstract class DbConnectionNames
     public const string LeaveManagement = Default;
 
     public const string Location = Default;
+
+    public const string Orders = Default;
 }

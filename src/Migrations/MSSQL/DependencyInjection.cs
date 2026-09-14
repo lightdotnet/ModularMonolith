@@ -8,6 +8,7 @@ using StarterKit.Infrastructure;
 using StarterKit.LeaveManagement.Api.Data;
 using StarterKit.Locations.Api.Data;
 using StarterKit.Notifications.Api.Data;
+using StarterKit.Orders.Api.Data;
 using StarterKit.Organization.Api.Data;
 using StarterKit.Persistence;
 using StarterKit.Persistence.MigrationSupport;
@@ -36,6 +37,8 @@ public static class DependencyInjection
         services.AddLeaveManagement(configuration);
 
         services.AddLocation(configuration);
+
+        services.AddOrders(configuration);
 
         return services;
     }
@@ -167,5 +170,20 @@ public static class DependencyInjection
                 .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
 
         services.AddScoped<LocationContextInitialiser>();
+    }
+
+    private static void AddOrders(this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString(DbConnectionNames.Orders);
+
+        services.AddDbContext<OrdersDbContext>(options =>
+            options
+                .UseSqlServer(connectionString, o =>
+                {
+                    o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName);
+                })
+                .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
+
+        services.AddScoped<OrdersContextInitialiser>();
     }
 }

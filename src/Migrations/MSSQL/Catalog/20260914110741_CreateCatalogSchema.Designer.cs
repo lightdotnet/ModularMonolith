@@ -12,7 +12,7 @@ using StarterKit.Catalog.Api.Data;
 namespace MSSQL.Catalog
 {
     [DbContext(typeof(CatalogDbContext))]
-    [Migration("20260912042729_CreateCatalogSchema")]
+    [Migration("20260914110741_CreateCatalogSchema")]
     partial class CreateCatalogSchema
     {
         /// <inheritdoc />
@@ -68,9 +68,11 @@ namespace MSSQL.Catalog
 
             modelBuilder.Entity("StarterKit.Catalog.Api.Domain.Products.Product", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<string>("CategoryId")
                         .IsRequired()
@@ -83,6 +85,12 @@ namespace MSSQL.Catalog
                     b.Property<string>("CreatedBy")
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTimeOffset?>("Deleted")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Description")
                         .HasMaxLength(2000)
@@ -101,7 +109,6 @@ namespace MSSQL.Catalog
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Sku")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -113,7 +120,8 @@ namespace MSSQL.Catalog
                     b.HasIndex("CategoryId");
 
                     b.HasIndex("Sku")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[Sku] IS NOT NULL");
 
                     b.ToTable("Products", "catalog");
                 });
@@ -144,9 +152,8 @@ namespace MSSQL.Catalog
 
                             SqlServerPropertyBuilderExtensions.UseIdentityColumn(b1.Property<int>("Id"));
 
-                            b1.Property<string>("ProductId")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(450)");
+                            b1.Property<long>("ProductId")
+                                .HasColumnType("bigint");
 
                             b1.Property<int?>("SortOrder")
                                 .HasColumnType("int");
@@ -168,8 +175,8 @@ namespace MSSQL.Catalog
 
                     b.OwnsOne("StarterKit.Shared.ValueObjects.Money", "Price", b1 =>
                         {
-                            b1.Property<string>("ProductId")
-                                .HasColumnType("nvarchar(450)");
+                            b1.Property<long>("ProductId")
+                                .HasColumnType("bigint");
 
                             b1.Property<decimal>("Amount")
                                 .HasColumnType("decimal(18,2)")
@@ -191,8 +198,8 @@ namespace MSSQL.Catalog
 
                     b.OwnsOne("StarterKit.Shared.ValueObjects.VatPercentage", "VatRate", b1 =>
                         {
-                            b1.Property<string>("ProductId")
-                                .HasColumnType("nvarchar(450)");
+                            b1.Property<long>("ProductId")
+                                .HasColumnType("bigint");
 
                             b1.Property<decimal>("Value")
                                 .HasColumnType("decimal(5,2)")

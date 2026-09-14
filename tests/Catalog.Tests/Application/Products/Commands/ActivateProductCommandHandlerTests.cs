@@ -39,7 +39,7 @@ public class ActivateProductCommandHandlerTests
         var handler = new ActivateProductCommandHandler(host.Context);
 
         // Act
-        var result = await handler.Handle(new ActivateProductCommand("missing"), TestContext.Current.CancellationToken);
+        var result = await handler.Handle(new ActivateProductCommand(999), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.IsSuccess);
