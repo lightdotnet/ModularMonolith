@@ -8,12 +8,20 @@ discriminator, no allowed-parent-type rule, so `Create`/`Rename`/`Move` carry no
 of their own beyond keeping every state transition behind a guarded method. `Product` is the sellable
 item — SKU, price, VAT rate, category assignment, and a small gallery of image URLs — with every
 transition (`Create`/`Rename`/`UpdateDescription`/`Reprice`/`UpdateVatRate`/`Recategorize`/
-`AddImage`/`RemoveImage`/`Activate`/`Deactivate`) behind a guarded method. Pricing uses two genuinely
-shared-kernel value objects, `Money`/`VatPercentage` (`src/Shared/ValueObjects/`) — `Product` is their
-only consumer today (see [../architecture.md § Shared Kernel](../architecture.md#shared-kernel--common-building-blocks)).
-The module also exposes `ICatalogPricingService`, a read-only cross-module seam (same role as
-Location's `ILocationDirectoryService`) intended for a future Orders/Inventory-style module to resolve
-product pricing without reaching into this module's aggregate or EF internals — it has no consumer yet.
+`AddImage`/`RemoveImage`/`Activate`/`Deactivate`/`ClearSku`/`Delete`) behind a guarded method. Unlike
+every other aggregate in this repo (including `Category`), `Product.Id` is a database-generated
+`bigint IDENTITY(1,1)` rather than an app-generated string GUID, and `Product` is the repo's first
+active soft-delete instance (`ISoftDelete`, backed by a query filter that hides deleted rows from
+every default read) — see Notable Conventions for both. `Sku` is nullable: `ClearSku` frees it for
+reuse by a new product, but a soft-deleted product's SKU is not freed automatically — see Notable
+Conventions for the reuse mechanics. Pricing uses two genuinely shared-kernel value objects,
+`Money`/`VatPercentage` (`src/Shared/ValueObjects/`) — `Product` was their first consumer;
+`Orders.Api`'s `Order`/`OrderLine`/`OrderFee`/`Payment` now also consume `Money`, and `OrderLine`
+consumes `VatPercentage` too (see [Orders.md](Orders.md), and
+[../architecture.md § Shared Kernel](../architecture.md#shared-kernel--common-building-blocks)). The
+module also exposes `ICatalogPricingService`, a read-only cross-module seam (same role as Location's
+`ILocationDirectoryService`) that `Orders.Api` consumes to resolve a product's current name/price/VAT
+rate/status when adding an order line, without reaching into this module's aggregate or EF internals.
 
 ## Internal Layering
 
@@ -22,8 +30,8 @@ the same structural convention as `Organization`/`Approval`/`LeaveManagement`/`L
 
 | Project | Responsibility | Notes |
 |---|---|---|
-| `Catalog.Contracts` | DTOs, requests, enums, and the permission catalog, organized into per-feature subfolders — `Common/` (`ProductStatus`: `Active`/`Inactive`), `Categories/` (`CategoryDto`, `CategoryTreeNodeDto` (adds a `Children` list), `CreateCategoryRequest`, `UpdateCategoryRequest`, `MoveCategoryRequest`), `Products/` (`ProductDto` (flattens `Money`/`VatPercentage` to scalar `Price`/`Currency`/`VatRate`, never a nested value-object shape), `ProductImageDto`, `ProductPriceInfoDto` (the cross-module pricing projection), `ProductSearchRequest`, `CreateProductRequest`, `UpdateProductRequest`, `AddProductImageRequest`), `Services/` (`ICatalogPricingService` — the module's cross-module seam, see Notable Conventions), `Authorization/` (`CatalogPermissions`, `CatalogPermissionProvider`). Every Request DTO carries its own `AbstractValidator<TRequest>` **in the same file** — the two-layer FluentValidation convention `Location` established (see Notable Conventions). Declares `Lightsoft.AspNetCore.Authorization` directly. |
-| `Catalog.Api` | Single project organized by folder: `Domain/{Categories,Products}` (`Domain/Categories/Category.cs` + `CategoryByIdSpec.cs`; `Domain/Products/Product.cs` + `Sku.cs` + `ProductImageUrl.cs` + `ProductByIdSpec.cs` — see Notable Conventions for the `Specification<T>` pattern), `Data/` (`CatalogDbContext`, `CatalogContextInitialiser`), `Application/{Categories,Products}/{Commands,Queries}` (every handler owns its business logic directly against `CatalogDbContext` — no service-class indirection — plus a thin per-command `AbstractValidator`, see Notable Conventions), `Services/` (`CatalogPricingService`, `internal`, implementing `ICatalogPricingService`), `Controllers/` (`CategoryController`, `ProductController`), `CatalogModule.cs` (DI: DbContext + `ICatalogPricingService` + permission provider). |
+| `Catalog.Contracts` | DTOs, requests, enums, and the permission catalog, organized into per-feature subfolders — `Common/` (`ProductStatus`: `Active`/`Inactive`), `Categories/` (`CategoryDto`, `CategoryTreeNodeDto` (adds a `Children` list), `CreateCategoryRequest`, `UpdateCategoryRequest`, `MoveCategoryRequest`), `Products/` (`ProductDto` (flattens `Money`/`VatPercentage` to scalar `Price`/`Currency`/`VatRate`, never a nested value-object shape; nullable `Sku`), `ProductImageDto`, `ProductPriceInfoDto` (the cross-module pricing projection, also nullable `Sku`), `ProductSearchRequest`, `CreateProductRequest`, `UpdateProductRequest`, `AddProductImageRequest`), `Services/` (`ICatalogPricingService` — the module's cross-module seam, keyed by `long productId`, see Notable Conventions), `Authorization/` (`CatalogPermissions`, `CatalogPermissionProvider`). Every Request DTO carries its own `AbstractValidator<TRequest>` **in the same file** — the two-layer FluentValidation convention `Location` established (see Notable Conventions). Declares `Lightsoft.AspNetCore.Authorization` directly. |
+| `Catalog.Api` | Single project organized by folder: `Domain/{Categories,Products}` (`Domain/Categories/Category.cs` + `CategoryByIdSpec.cs`; `Domain/Products/Product.cs` (`AuditableEntity<long>`, `ISoftDelete`) + `Sku.cs` + `ProductImageUrl.cs` + `ProductByIdSpec.cs` — see Notable Conventions for the `Specification<T>` pattern), `Data/` (`CatalogDbContext`, `CatalogContextInitialiser`), `Application/{Categories,Products}/{Commands,Queries}` (every handler owns its business logic directly against `CatalogDbContext` — no service-class indirection — plus a thin per-command `AbstractValidator`, see Notable Conventions; `Products/Commands` includes `CreateProduct`/`UpdateProduct`/`ActivateProduct`/`DeactivateProduct`/`AddProductImage`/`RemoveProductImage`/`RemoveProductSku`/`DeleteProduct`), `Services/` (`CatalogPricingService`, `internal`, implementing `ICatalogPricingService`), `Controllers/` (`CategoryController`, `ProductController`), `CatalogModule.cs` (DI: DbContext + `ICatalogPricingService` + permission provider). |
 
 ## Public Contract
 
@@ -41,23 +49,26 @@ class level):
 | `api/v{version}/category/{id}` | DELETE | `catalog.categories.manage` | Route `id` | `Result`; blocked if the category still has child categories or products assigned |
 
 `ProductController` (route `product`, `[MustHavePermission(CatalogPermissions.Products.View)]` at
-class level):
+class level; every route id is `long`):
 
 | Route | Verb | Permission | Request | Response |
 |---|---|---|---|---|
 | `api/v{version}/product` | GET | `catalog.products.view` | `ProductSearchRequest` (`SearchQuery` base — `SearchValue` + paging — plus `CategoryId`/`Status` filters) | `PagedResult<ProductDto>`, filtered by category/status/`Name.Contains(SearchValue)`, ordered by `Created` desc |
 | `api/v{version}/product/{id}` | GET | `catalog.products.view` | Route `id` | `Result<ProductDto>` — hand-mapped from the materialised entity, not an EF `Select` projection (see Notable Conventions) |
-| `api/v{version}/product` | POST | `catalog.products.manage` | `CreateProductRequest` | `Result<string>` (new id); validates the category exists, pre-checks SKU uniqueness (equality filter on the `HasConversion`-mapped `Sku`), then `Product.Create` with a constructed `Sku`/`Money`/`VatPercentage` |
+| `api/v{version}/product` | POST | `catalog.products.manage` | `CreateProductRequest` | `Result<long>` (new id); validates the category exists, pre-checks SKU uniqueness with `IgnoreQueryFilters()` (equality filter on the `HasConversion`-mapped `Sku`, see Notable Conventions), then `Product.Create` with a constructed `Sku`/`Money`/`VatPercentage` |
 | `api/v{version}/product/{id}` | PUT | `catalog.products.manage` | `UpdateProductRequest` | `Result`; one general-purpose update (`Rename`+`UpdateDescription`+`Reprice`+`UpdateVatRate`+`Recategorize` together) — `Sku` is immutable post-create |
 | `api/v{version}/product/{id}/activate` | PUT | `catalog.products.manage` | Route `id` | `Result`; `Product.Activate` |
 | `api/v{version}/product/{id}/deactivate` | PUT | `catalog.products.manage` | Route `id` | `Result`; `Product.Deactivate` |
 | `api/v{version}/product/{id}/image` | POST | `catalog.products.manage` | `AddProductImageRequest { Url, SortOrder? }` | `Result`; `Product.AddImage` |
 | `api/v{version}/product/{id}/image` | DELETE | `catalog.products.manage` | Query `url` | `Result`; `Product.RemoveImage(url)` removes every image matching the url |
+| `api/v{version}/product/{id}/sku` | DELETE | `catalog.products.manage` | Route `id` | `Result`; `Product.ClearSku()`, loaded with `IgnoreQueryFilters()` so an already-soft-deleted product's SKU can still be freed for reuse (see Notable Conventions) |
+| `api/v{version}/product/{id}` | DELETE | `catalog.products.manage` | Route `id` | `Result`; `Product.Delete()` guards `Status == Inactive` (throws `ConflictException` otherwise), then `context.Products.Remove(entity)` — the soft-delete plumbing intercepts that `Remove()` call (see Notable Conventions) |
 
 Every action across both controllers dispatches a mediator command/query under
 `Application/{Categories,Products}/{Commands,Queries}` — handlers own their `CatalogDbContext` logic
 directly, same shape as `Organization`/`LeaveManagement`/`Location`. `ICatalogPricingService` (see
-Notable Conventions) is a DI-only seam with no HTTP surface of its own, and currently has no consumer.
+Notable Conventions) is a DI-only seam with no HTTP surface of its own; `Orders.Api` is its consumer
+(see Depended On By).
 
 `CatalogPermissions.{Categories,Products}` each expose only `View`/`Manage` — not the
 `View`/`Create`/`Update`/`Delete` four-way split most other modules use, mirroring Location's
@@ -74,22 +85,33 @@ Three tables:
 
 - **`Categories`** — unique index on `(ParentCategoryId, Name)`; index on `ParentCategoryId`.
   Self-referencing `Parent`/`Children` FK (`ParentCategoryId`) is `DeleteBehavior.Restrict`. `Name` max
-  length 200, `ParentCategoryId` max length 450.
-- **`Products`** — unique index on `Sku`; index on `CategoryId`. FK to `Category` (`CategoryId`) is
-  `Restrict`. `Name` max length 200, `Description` max length 2000, `CategoryId` max length 450.
-  `Sku` is a converted scalar column (`HasConversion(sku => sku.Value, v => new Sku(v))`, max length
-  `Sku.MaxLength` = 100) rather than an owned type. `Price`/`VatRate` are table-split EF owned types
-  (same row) — `PriceAmount decimal(18,2)`/`PriceCurrency` (max length 3), `VatRate decimal(5,2)`;
+  length 200, `ParentCategoryId` max length 450. `Id` stays the repo's usual app-generated string GUID
+  (`AuditableEntity`), unaffected by `Product.Id`'s retype (see below).
+- **`Products`** — filtered unique index on `Sku` (`WHERE [Sku] IS NOT NULL`, deliberately not scoped
+  by `Deleted` — see Notable Conventions); index on `CategoryId`. FK to `Category` (`CategoryId`) is
+  `Restrict`. `Name` max length 200, `Description` max length 2000, `CategoryId` max length 450. `Id`
+  is a database-generated `bigint IDENTITY(1,1)` (`AuditableEntity<long>`) — `ConfigureAuditableEntity<Product, long>()`
+  skips the `Id`-length configuration the string-keyed overload applies to `Category`, letting the
+  provider's own numeric-key convention take over (see Notable Conventions). `Sku` is a nullable
+  converted scalar column (`HasConversion`, null-safe both ways, max length `Sku.MaxLength` = 100)
+  rather than an owned type. `Price`/`VatRate` are table-split EF owned types (same row) —
+  `PriceAmount decimal(18,2)`/`PriceCurrency` (max length 3), `VatRate decimal(5,2)`;
   `Reprice`/`UpdateVatRate` mutate the tracked owned instance in place via `Money.Update`/
-  `VatPercentage.Update` rather than reassigning (see Notable Conventions).
+  `VatPercentage.Update` rather than reassigning (see Notable Conventions). `Product` implements
+  `ISoftDelete` (`Deleted`/`DeletedBy`) and carries `entity.HasQueryFilter(x => x.Deleted == null)` —
+  the first active query filter in this repo (see Notable Conventions).
 - **`ProductImages`** — owned collection (`OwnsMany`) into its own table with a shadow `int Id`
   surrogate key as the sole PK (not composite with `ProductId`) — Sqlite only auto-populates an
   `INTEGER PRIMARY KEY` via its rowid-alias optimization when that column is the sole PK member;
-  `ProductId` is a plain indexed FK column instead. `Url` max length 2048.
+  `ProductId` is a plain indexed FK column instead, typed `bigint` following `Product.Id`. `Url` max
+  length 2048.
 
-Both `Category`/`Product` call `entity.ConfigureAuditableEntity()`; `SaveChanges[Async]` calls
-`TrackingExtensions.AuditEntries(currentUser.UserId, clock.AuditTime, enableSoftDelete: false)` — same
-as `Organization`/`Location`, neither entity implements `ISoftDelete`.
+`Category` calls `entity.ConfigureAuditableEntity()` (the string-keyed overload); `Product` calls the
+numeric-key sibling `entity.ConfigureAuditableEntity<Product, long>()`. `SaveChanges[Async]` calls
+`TrackingExtensions.AuditEntries(currentUser.UserId, clock.AuditTime, enableSoftDelete: true)` —
+flipped to `true` because `Product` is the first entity anywhere in this repo to implement
+`ISoftDelete`; `AuditEntries` only stamps `Deleted`/`DeletedBy` on entries whose runtime type actually
+implements the interface, so `Category` (not `ISoftDelete`) is unaffected by the flip.
 
 Query handlers read `AsNoTracking`. `GetCategoryByIdQueryHandler`/`GetCategoryChildrenQueryHandler` use
 Mapster's `ProjectToType<T>`; `GetCategoryTreeQueryHandler` loads the full flat table once and
@@ -100,12 +122,16 @@ DTO instead of an EF `Select` projection — `Sku` is a `HasConversion`-mapped s
 `VatRate` are owned-type table-split columns that load automatically with the entity, and there is no
 established precedent in this repo for composing further member access (`x.Sku.Value`) inside a
 server-translated `Select`; loading the entity sidesteps the question (see `CatalogPricingService`'s
-class doc).
+class doc). The default query (used by all three) transparently excludes soft-deleted products via the
+`Product` query filter; `RemoveProductSkuCommandHandler` and `CreateProductCommandHandler`'s SKU
+uniqueness pre-check both call `IgnoreQueryFilters()` deliberately (see Notable Conventions).
 
 Migrations exist for **MSSQL only so far**: `src/Migrations/MSSQL/Catalog/` holds a single migration
 (`CreateCatalogSchema`) — not yet a squashed baseline (per the dev-migration-squash convention,
 squashing happens once a module is judged complete), and it is also the only migration to date, so
-there is nothing to squash yet. The `PostgreSQL`/`Sqlite` migration projects do not yet reference
+there is nothing to squash yet; it was regenerated from scratch (not an incremental `AlterColumn`
+migration) to reflect the current model in one clean baseline, since no environment had been deployed
+against the prior schema. The `PostgreSQL`/`Sqlite` migration projects do not yet reference
 `Catalog.Api` at all. `src/Migrations/MSSQL/Program.cs` calls only
 `CatalogContextInitialiser.InitialiseAsync()` — no seed data (`CatalogContextInitialiser` has no
 `TrySeedAsync`, unlike Location's).
@@ -114,9 +140,9 @@ there is nothing to squash yet. The `PostgreSQL`/`Sqlite` migration projects do 
 
 | Depends on | Type | Why |
 |---|---|---|
-| `Shared` | project (`Catalog.Contracts → Shared`) | `BaseDto` for `CategoryDto`/`CategoryTreeNodeDto`/`ProductDto`/`ProductPriceInfoDto`; the `Money`/`VatPercentage` value objects and `CurrencyConstants.Default` consumed by the `Product` aggregate. |
+| `Shared` | project (`Catalog.Contracts → Shared`) | `BaseDto`/`BaseDto<long>` for `CategoryDto`/`CategoryTreeNodeDto`/`ProductDto`/`ProductPriceInfoDto`; the `Money`/`VatPercentage` value objects and `CurrencyConstants.Default` consumed by the `Product` aggregate. |
 | `Infrastructure` | project (`Catalog.Api → Infrastructure`) | `VersionedApiController`, `AppModule` base class. |
-| `Persistence` | project (`Catalog.Api → Persistence`) | `BaseDbContext`, `AddConfiguredDbContext`, `AuditEntries`/`ConfigureAuditableEntity`. |
+| `Persistence` | project (`Catalog.Api → Persistence`) | `BaseDbContext`, `AddConfiguredDbContext`, `AuditEntries`/`ConfigureAuditableEntity`/`ConfigureAuditableEntity<TEntity, TId>`. |
 | `Catalog.Contracts` | project (`Catalog.Api → Catalog.Contracts`) | The module's own seam. |
 | Vendor `Lightsoft.AspNetCore.Authorization` (both projects), `Lightsoft.EntityFrameworkCore`, `Lightsoft.Mediator`, `Lightsoft.Result`, `Mapster` (`Catalog.Api`) | package, **all declared directly** | Same positive contrast as `Organization`/`Approval`/`LeaveManagement`/`Location` — no undeclared-transitive-dependency instance. |
 
@@ -131,10 +157,14 @@ other module's `Contracts` seam.
   `CatalogContextInitialiser`. `PostgreSQL`/`Sqlite` do not (see Data Access).
 - `Catalog.Tests` — `Catalog.Api.csproj` grants `InternalsVisibleTo` to reach the `internal`
   command/query records and handlers.
-
-Nothing currently references `Catalog.Contracts` to consume `ICatalogPricingService` — it is built
-ahead of any real consumer, mirroring the role `ILocationDirectoryService` plays for `Location` (its
-own XML doc names Orders/Inventory as candidate future consumers, neither of which exist yet).
+- `Orders.Api`/`Orders.Contracts` — both project-reference `Catalog.Contracts`. `Orders.Api`'s
+  `AddOrderLineCommandHandler` is `ICatalogPricingService`'s first real consumer: it calls
+  `GetPriceInfoAsync(productId)` to resolve a product's current name/price/VAT rate/status and
+  snapshots them onto the new `OrderLine`, rejecting the add if the product is missing or not `Active`
+  (see [Orders.md](Orders.md)). `Orders.Contracts.csproj` also carries a `ProjectReference` to
+  `Catalog.Contracts`, but no type in `Orders.Contracts` itself currently uses it — every
+  cross-module-looking field in its own DTOs (e.g. `LocationId`) is a plain `string`, not a shared
+  type; only `Orders.Api` actually consumes the seam.
 
 ## Notable Conventions
 
@@ -147,22 +177,51 @@ own XML doc names Orders/Inventory as candidate future consumers, neither of whi
   `(ParentCategoryId, Name)` DB index plus a handler pre-check, but the index treats two `NULL`
   `ParentCategoryId` rows as distinct — so under a race, two root-level categories can still end up
   with the same name. Documented on `Category`'s class doc; not yet tracked as a `known-debt.md` item.
+- **`Product.Id` is a database-generated `bigint IDENTITY(1,1)`, not the repo's usual app-generated
+  string GUID.** `Category.Id` keeps the usual convention — `Product` (along with every id in
+  `Orders.Api`'s `Order`/`OrderLine`/`OrderFee`/`Payment` family) is instead built on the numeric-key
+  `AuditableEntity<long>` base rather than the string-keyed `AuditableEntity`: smaller/faster PKs,
+  natural sort order, and a compact value for `OrderLine.ProductId`'s cross-module snapshot to carry.
+  `ConfigureAuditableEntity<Product, long>()` (`Persistence/Extensions/EntityTypeBuilderExtensions.cs`)
+  is the numeric-key sibling of the string-keyed `ConfigureAuditableEntity()` `Category` still uses —
+  it skips the `Id`-length configuration the string overload applies, since a numeric identity column
+  needs none.
+- **`Product` is the first active soft-delete instance in this repo.** Implements `ISoftDelete`
+  (`Deleted`/`DeletedBy`, both set only through the interface reference by
+  `TrackingExtensions.AuditEntries`, never directly by application code). `Product.Delete()` is a
+  guarded domain method — callable only when `Status == ProductStatus.Inactive`, throws
+  `ConflictException` otherwise — so a sellable product can't vanish out from under an active catalog;
+  `DeleteProductCommandHandler` calls `Delete()` then `context.Products.Remove(entity)`, and that
+  `Remove()` call is what `AuditEntries(..., enableSoftDelete: true)` intercepts and turns into a
+  stamped `Deleted`/`DeletedBy` update instead of a real `DELETE`. `CatalogDbContext.ConfigureModel`
+  adds `entity.HasQueryFilter(x => x.Deleted == null)` on `Product` — the first active query filter in
+  this repo, the precedent for the next soft-deletable aggregate. `Category` does not implement
+  `ISoftDelete` and is unaffected.
 - **`Money`/`VatPercentage` are genuinely shared-kernel value objects** (`src/Shared/ValueObjects/`),
-  not Catalog-specific — `Product` is their first and only consumer today. Both guard construction and
-  expose an `internal Update` that mutates the tracked instance in place rather than being reassigned
-  (same `DateRange.Update`/`ActiveStatus.Update` pattern `LeaveManagement` established) — reassigning
-  an owned reference makes EF's change tracker emit the old instance as `Deleted`, which
-  `TrackingExtensions.AuditEntries` resets back to `Unchanged` to guard against nulling the owned
-  columns, but that reset then leaves the new values unpersisted. Since they live in a different
-  assembly than `Catalog.Api`, `Shared.csproj` grants a scoped
-  `InternalsVisibleTo("StarterKit.Catalog.Api")` to reach `Update`, alongside its existing
-  `InternalsVisibleTo("Framework.Tests")`. See
+  not Catalog-specific — `Product` was their first consumer; `Orders.Api`'s `Order`/`OrderLine`/
+  `OrderFee`/`Payment` now also consume `Money` (and `OrderLine` consumes `VatPercentage`). Both guard
+  construction and expose an `internal Update` that mutates the tracked instance in place rather than
+  being reassigned (same `DateRange.Update`/`ActiveStatus.Update` pattern `LeaveManagement`
+  established) — reassigning an owned reference makes EF's change tracker emit the old instance as
+  `Deleted`, which `TrackingExtensions.AuditEntries` resets back to `Unchanged` to guard against
+  nulling the owned columns, but that reset then leaves the new values unpersisted. Since they live in
+  a different assembly than either consumer, `Shared.csproj` grants a scoped
+  `InternalsVisibleTo("StarterKit.Catalog.Api")` and `InternalsVisibleTo("StarterKit.Orders.Api")` to
+  reach `Update`, alongside its existing `InternalsVisibleTo("Framework.Tests")`. See
   [../architecture.md § Shared Kernel](../architecture.md#shared-kernel--common-building-blocks).
-- **`Sku` is a converted-scalar value object (`HasConversion`), not an owned type** — deliberately does
-  not derive from `Light.Domain.ValueObjects.ValueObject` (that base exists to survive the
-  tracked-owned-type `Deleted`/`Added` replace hazard described above, which only applies to owned
-  navigations, not a converted scalar). Uniqueness is a handler pre-check plus a DB unique index, same
-  belt-and-suspenders split as every other uniqueness rule in this repo.
+- **`Sku` is a nullable, converted-scalar value object (`HasConversion`), not an owned type** —
+  deliberately does not derive from `Light.Domain.ValueObjects.ValueObject` (that base exists to
+  survive the tracked-owned-type `Deleted`/`Added` replace hazard described above, which only applies
+  to owned navigations, not a converted scalar) — the same shape `Orders.Api`'s `OrderCode` is
+  explicitly modeled on. Set once at `Create` and thereafter only ever moves toward `null` via
+  `ClearSku()` — there is no "change SKU" operation. Reuse is deliberately **not** automatic on
+  soft-delete: the filtered unique index (`WHERE [Sku] IS NOT NULL`, see Data Access) is *not* scoped
+  by `Deleted`, so a soft-deleted product's SKU keeps blocking reuse until `RemoveProductSkuCommand`
+  (`DELETE /product/{id}/sku`) explicitly clears it — only then can a new `CreateProduct` claim that
+  SKU value. `RemoveProductSkuCommandHandler` and `CreateProductCommandHandler`'s SKU-uniqueness
+  pre-check both call `IgnoreQueryFilters()` for this reason — without it, a soft-deleted holder's SKU
+  would look "available" right up until `SaveChanges` threw a raw DB unique-constraint violation.
+  Uniqueness itself stays belt-and-suspenders: the handler pre-check plus this DB index.
 - **`ProductImageUrl` is an owned collection (`OwnsMany`) with no in-place `Update`** — unlike `Money`/
   `VatPercentage`'s single table-split references, a collection member is always fully added or
   removed via `Product.AddImage`/`RemoveImage`, so it never needs one.
@@ -176,14 +235,17 @@ own XML doc names Orders/Inventory as candidate future consumers, neither of whi
   [../../conventions/coding-conventions.md](../../conventions/coding-conventions.md)): each `Contracts`
   request DTO carries an `AbstractValidator<TRequest>` in the same file (field-shape rules only); each
   mediator command has a thin `AbstractValidator<TCommand>` (same file as the command+handler)
-  validating the route-level `Id` (`NotEmpty`) directly and delegating to the Contracts validator via
+  validating the route-level `Id` (`GreaterThan(0)` for `Product`'s numeric id, `NotEmpty` for
+  `Category`'s string id) directly and delegating to the Contracts validator via
   `RuleFor(x => x.Model).SetValidator(new XRequestValidator())`.
 - **`CatalogPermissions` has only `View`/`Manage`, not the four-way `View`/`Create`/`Update`/`Delete`
   split most other modules use** — mirrors `Location`'s per-module simplification.
 - **`ICatalogPricingService`/`CatalogPricingService` is the module's cross-module DI seam**, same role
   as Location's `ILocationDirectoryService` — `GetPriceInfoAsync`/`GetPriceInfoBatchAsync`, both
-  read-only and `AsNoTracking`. Currently has **zero consumers**; it exists ahead of a future
-  Orders/Inventory-style module (named directly in its own XML doc).
+  read-only and `AsNoTracking`, keyed by `long productId`/`IEnumerable<long> productIds`. Its real
+  consumer is `Orders.Api`'s `AddOrderLineCommandHandler` (see Depended On By); since the service reads
+  through `CatalogDbContext`'s default query, a soft-deleted product is transparently excluded from
+  pricing lookups the same way it's excluded from `GetProductById`/`ListProducts`.
 - **Migration is MSSQL-only, a single unsquashed migration** — see Data Access. Treat `Catalog` as
   mid-development, not yet at the "template baseline" state `Organization`/`Approval`/
   `LeaveManagement` are in.
@@ -196,4 +258,4 @@ own XML doc names Orders/Inventory as candidate future consumers, neither of whi
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-12_
+_Last synced: 2026-09-14_
