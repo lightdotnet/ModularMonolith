@@ -53,9 +53,10 @@ internal class AddOrderLineCommandHandler(
         entity.AddLine(
             model.ProductId,
             priceInfo.ProductName,
-            // Product.Sku is nullable since it can be cleared (RemoveProductSkuCommand); an order
-            // line still needs a plain string snapshot, so an already-cleared SKU snapshots as
-            // empty rather than null — not spelled out by the retype plan, smallest reasonable call.
+            // Product.Sku is nullable since it can be cleared (Product.UpdateSku(null), through
+            // UpsertProductCommand); an order line still needs a plain string snapshot, so an
+            // already-cleared SKU snapshots as empty rather than null — not spelled out by the
+            // retype plan, smallest reasonable call.
             priceInfo.Sku ?? string.Empty,
             model.Quantity,
             unitPrice,

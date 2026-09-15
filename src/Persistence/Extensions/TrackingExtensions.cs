@@ -1,4 +1,4 @@
-﻿using Light.Domain.Entities.Interfaces;
+using Light.Domain.Entities.Interfaces;
 using Light.Domain.ValueObjects;
 
 namespace StarterKit.Persistence.Extensions;
@@ -10,9 +10,12 @@ public static class TrackingExtensions
     {
         var changeTracker = context.ChangeTracker;
 
-        // fix null value when delete for Entities inherited ISoftDelete & ValueObjects
+        // fix null value when delete for Entities inherited ISoftDelete & ValueObjects: only for
+        // table-split owned references (OwnsOne, e.g. User.Status/Product.Price/Product.VatRate) —
+        // FindOwnership().IsUnique is true there and false for an owned collection (OwnsMany, e.g.
+        // Product.Images), where Deleted is a real row delete that must go through untouched.
         changeTracker.Entries<ValueObject>()
-            .Where(x => x.State is EntityState.Deleted)
+            .Where(x => x.State is EntityState.Deleted && x.Metadata.FindOwnership() is { IsUnique: true })
             .ToList()
             .ForEach(e => e.State = EntityState.Unchanged);
 

@@ -1,3 +1,4 @@
+using Light.Domain.Entities;
 using Light.Domain.Entities.Interfaces;
 using Light.Exceptions;
 using StarterKit.Shared.Entities;
@@ -143,6 +144,11 @@ public class Product : AuditableEntity<long>, ISoftDelete
         _images.RemoveAll(x => x.Url == url);
     }
 
+    public void RemoveImages()
+    {
+        _images.Clear();
+    }
+
     public void Activate()
     {
         Status = ProductStatus.Active;
@@ -154,9 +160,16 @@ public class Product : AuditableEntity<long>, ISoftDelete
     }
 
     /// <summary>Frees the SKU for reuse by a new product. Always safe — no invariant to guard.</summary>
-    public void ClearSku()
+    public void UpdateSku(string? sku)
     {
-        Sku = null;
+        if (string.IsNullOrEmpty(sku))
+        {
+            Sku = null;
+        }
+        else if (Sku?.Value != sku)
+        {
+            Sku = new Sku(sku);
+        }
     }
 
     /// <summary>

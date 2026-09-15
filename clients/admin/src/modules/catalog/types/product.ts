@@ -27,25 +27,16 @@ export interface ProductDto {
   images: ProductImageDto[];
 }
 
-/** Mirrors Catalog.Contracts/Products/CreateProductRequest.cs */
-export interface CreateProductRequest {
+/** Mirrors Catalog.Contracts/Products/UpsertProductRequest.cs */
+export interface UpsertProductRequest {
   categoryId: string;
   name: string;
   description?: string;
-  sku: string;
+  sku?: string;
   price: number;
   currency: string;
   vatRate: number;
-}
-
-/** Mirrors Catalog.Contracts/Products/UpdateProductRequest.cs — omits `sku`, immutable post-create. */
-export interface UpdateProductRequest {
-  categoryId: string;
-  name: string;
-  description?: string;
-  price: number;
-  currency: string;
-  vatRate: number;
+  images: ProductImageDto[];
 }
 
 /** Mirrors Catalog.Contracts/Products/AddProductImageRequest.cs */

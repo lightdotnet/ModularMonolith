@@ -22,9 +22,8 @@ import {
 import { useGuardedAction } from "@/hooks/use-guarded-action";
 import { activateProductAction } from "@/modules/catalog/api/activate-product-action";
 import { deactivateProductAction } from "@/modules/catalog/api/deactivate-product-action";
-import { CreateProductDialog } from "@/modules/catalog/components/create-product-dialog";
-import { EditProductDialog } from "@/modules/catalog/components/edit-product-dialog";
-import { ManageProductImagesDialog } from "@/modules/catalog/components/manage-product-images-dialog";
+import { ProductImageThumbnail } from "@/modules/catalog/components/product-image-thumbnail";
+import { ProductPanel } from "@/modules/catalog/components/product-panel";
 import type { CategoryTreeNodeDto } from "@/modules/catalog/types/category";
 import { ProductStatus, type ProductDto } from "@/modules/catalog/types/product";
 
@@ -71,12 +70,9 @@ export function ProductsDataTable({
   const [isPending, startTransition] = useTransition();
   const [, runToggle] = useGuardedAction();
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [createDialogKey, setCreateDialogKey] = useState(0);
-  const [editOpen, setEditOpen] = useState(false);
-  const [editDialogKey, setEditDialogKey] = useState(0);
-  const [imagesOpen, setImagesOpen] = useState(false);
-  const [imagesDialogKey, setImagesDialogKey] = useState(0);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [panelKey, setPanelKey] = useState(0);
+  const [panelMode, setPanelMode] = useState<"create" | "edit">("create");
   const [selectedProduct, setSelectedProduct] = useState<ProductDto | null>(null);
 
   const [pendingSearch, setPendingSearch] = useState(searchValue);
@@ -123,8 +119,10 @@ export function ProductsDataTable({
           label: "Create product",
           icon: Plus,
           onClick: () => {
-            setCreateDialogKey((key) => key + 1);
-            setCreateOpen(true);
+            setPanelMode("create");
+            setSelectedProduct(null);
+            setPanelKey((key) => key + 1);
+            setPanelOpen(true);
           },
         },
       ]
@@ -133,11 +131,18 @@ export function ProductsDataTable({
   const baseColumns: DataTableColumn<ProductDto>[] = [
     {
       id: "product",
-      header: "Name",
+      header: "Product",
       hideable: false,
-      cell: (product) => <span className="font-medium">{product.name}</span>,
+      cell: (product) => (
+        <div className="flex items-center gap-3">
+          <ProductImageThumbnail url={product.images[0]?.url} />
+          <div className="flex flex-col">
+            <span className="font-medium">{product.name}</span>
+            <span className="text-xs text-muted-foreground">{product.sku}</span>
+          </div>
+        </div>
+      ),
     },
-    { id: "sku", header: "SKU", cell: (product) => product.sku },
     { id: "category", header: "Category", cell: (product) => categoryName(product.categoryId) },
     { id: "price", header: "Price", cell: (product) => formatPrice(product.price, product.currency) },
     { id: "vatRate", header: "VAT %", cell: (product) => product.vatRate },
@@ -178,21 +183,13 @@ export function ProductsDataTable({
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
                   onClick={() => {
+                    setPanelMode("edit");
                     setSelectedProduct(product);
-                    setEditDialogKey((key) => key + 1);
-                    setEditOpen(true);
+                    setPanelKey((key) => key + 1);
+                    setPanelOpen(true);
                   }}
                 >
                   Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setSelectedProduct(product);
-                    setImagesDialogKey((key) => key + 1);
-                    setImagesOpen(true);
-                  }}
-                >
-                  Manage images
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleToggleStatus(product)}>
                   {product.status === ProductStatus.Active ? "Deactivate" : "Activate"}
@@ -262,27 +259,14 @@ export function ProductsDataTable({
           description: "Try adjusting your search, category or status filter.",
         }}
       />
-      <CreateProductDialog
-        key={`create-${createDialogKey}`}
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        categories={categories}
-        onCreated={() => router.refresh()}
-      />
-      <EditProductDialog
-        key={`edit-${editDialogKey}`}
-        open={editOpen}
-        onOpenChange={setEditOpen}
+      <ProductPanel
+        key={`panel-${panelKey}`}
+        open={panelOpen}
+        onOpenChange={setPanelOpen}
+        mode={panelMode}
         product={selectedProduct}
         categories={categories}
-        onUpdated={() => router.refresh()}
-      />
-      <ManageProductImagesDialog
-        key={`images-${imagesDialogKey}`}
-        open={imagesOpen}
-        onOpenChange={setImagesOpen}
-        product={selectedProduct}
-        onChanged={() => router.refresh()}
+        onSaved={() => router.refresh()}
       />
     </>
   );

@@ -131,8 +131,9 @@ Endpoints this client consumes, by module:
 - **locations** — `location/tree`, `location/{id}` (GET/PUT/DELETE), `location/{id}/move`,
   `location` (POST); `location_type` (GET/POST/PUT/DELETE).
 - **catalog** — `category/tree`, `category/{id}` (GET/PUT/DELETE), `category/{id}/children`,
-  `category/{id}/move` (PUT), `category` (POST); `product` (GET, paginated search / POST),
-  `product/{id}` (GET/PUT), `product/{id}/{activate,deactivate}` (PUT), `product/{id}/image`
+  `category/{id}/move` (PUT), `category` (POST); `product` (GET, paginated search), `product/{id}`
+  (GET); `product/{id?}` (PUT — upserts: creates when `id` is omitted, updates when present, images
+  included both ways), `product/{id}/{activate,deactivate}` (PUT), `product/{id}/image`
   (POST/DELETE).
 - **approvals** — `modules/approvals/api/approvals.api.ts` (admin, `approval.requests.view_all`):
   `approval` (GET search / POST test request). `user-approvals.api.ts` (self-service, server-scoped
@@ -210,4 +211,4 @@ for inspection. `token-cipher.ts` uses Node's `crypto` and `proxy.ts` has no exp
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-12_
+_Last synced: 2026-09-15_

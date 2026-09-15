@@ -190,6 +190,14 @@ No cycles found among internal imports.
   imperative reset, so each table/tree bumps a per-dialog key counter on open, forcing a fresh
   instance (fresh action state, fresh form state, fresh detail fetch).
 
+- **`Sheet` (right-side panel) as a mutation-form container, not just a read-only viewer.**
+  `approval-history-sheet.tsx` was the first `Sheet` consumer (read-only approval detail);
+  `modules/catalog/components/product-panel.tsx` is the second, and the first that submits a
+  `useActionState`-backed form — it merges what would otherwise be separate create/edit
+  dialogs (plus inline image-URL management) into one right-side panel. Follows the same
+  controlled-form-state-alongside-`useActionState` + bumped-remount-`key` pattern below; `Sheet` vs.
+  `Dialog` is a per-screen call (a wider/richer form reads better as a panel), not a hard rule.
+
 - **Generic presentational `DataTable<TData>`.** `components/shared/data-table/` composes a toolbar,
   a body (skeleton / empty / error states), and a windowed-pagination footer — fully prop-controlled,
   no dependency on any feature or data-fetching library, every prop beyond `columns`/`data`/`rowKey`
@@ -313,4 +321,4 @@ none exists. `pnpm-workspace.yaml` only configures build-script approval, not a 
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-11_
+_Last synced: 2026-09-15_

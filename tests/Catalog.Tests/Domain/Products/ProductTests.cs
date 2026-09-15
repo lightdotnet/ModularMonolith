@@ -224,7 +224,7 @@ public class ProductTests
         var product = Product.Create("category-1", "Widget", null, ValidSku(), ValidPrice(), ValidVat());
 
         // Act
-        product.ClearSku();
+        product.UpdateSku(null);
 
         // Assert
         Assert.Null(product.Sku);
@@ -235,10 +235,10 @@ public class ProductTests
     {
         // Arrange
         var product = Product.Create("category-1", "Widget", null, ValidSku(), ValidPrice(), ValidVat());
-        product.ClearSku();
+        product.UpdateSku(null);
 
         // Act
-        product.ClearSku();
+        product.UpdateSku(null);
 
         // Assert
         Assert.Null(product.Sku);

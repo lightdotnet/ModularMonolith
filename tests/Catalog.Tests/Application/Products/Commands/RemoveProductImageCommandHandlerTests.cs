@@ -1,4 +1,5 @@
 using Catalog.Tests.TestSupport;
+using Microsoft.EntityFrameworkCore;
 using StarterKit.Catalog.Api.Application.Products.Commands;
 using StarterKit.Catalog.Api.Domain.Categories;
 using StarterKit.Catalog.Api.Domain.Products;
@@ -19,6 +20,7 @@ public class RemoveProductImageCommandHandlerTests
         var product = await SeedProductAsync(host, category.Id);
         product.AddImage(new ProductImageUrl("https://example.com/a.png"));
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        host.Context.ChangeTracker.Clear();
         var handler = new RemoveProductImageCommandHandler(host.Context);
 
         // Act
@@ -28,7 +30,9 @@ public class RemoveProductImageCommandHandlerTests
 
         // Assert
         Assert.True(result.IsSuccess);
-        var updated = await host.Context.Products.FindAsync([product.Id], TestContext.Current.CancellationToken);
+        var updated = await host.Context.Products
+            .Include(x => x.Images)
+            .SingleAsync(x => x.Id == product.Id, TestContext.Current.CancellationToken);
         Assert.Empty(updated!.Images);
     }
 

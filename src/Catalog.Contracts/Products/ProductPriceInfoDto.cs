@@ -11,7 +11,7 @@ public class ProductPriceInfoDto : BaseDto<long>
 {
     public string ProductName { get; set; } = null!;
 
-    /// <summary><c>null</c> once cleared via <c>RemoveProductSkuCommand</c> — see <c>Product.Sku</c>.</summary>
+    /// <summary><c>null</c> once cleared via <c>Product.UpdateSku(null)</c> (through <c>UpsertProductCommand</c>) — see <c>Product.Sku</c>.</summary>
     public string? Sku { get; set; }
 
     public decimal Price { get; set; }

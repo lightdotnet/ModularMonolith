@@ -3,10 +3,9 @@ import { guardCall, guardResponseCall } from "@/lib/server/call-guard";
 import type { ApiResponse, PagedResult, Result } from "@/types/api";
 import type {
   AddProductImageRequest,
-  CreateProductRequest,
   ProductDto,
   ProductSearchParams,
-  UpdateProductRequest,
+  UpsertProductRequest,
 } from "../types/product";
 
 const { requestJson } = catalogApi;
@@ -30,15 +29,9 @@ export function getProductById(id: string) {
   return guardCall(() => requestJson<Result<ProductDto>>(`product/${id}`));
 }
 
-export function createProduct(request: CreateProductRequest) {
-  return guardCall(() =>
-    requestJson<Result<string>>("product", { method: "POST", body: request }),
-  );
-}
-
-export function updateProduct(id: string, request: UpdateProductRequest) {
+export function upsertProduct(id: string | undefined, request: UpsertProductRequest) {
   return guardResponseCall(() =>
-    requestJson<ApiResponse>(`product/${id}`, { method: "PUT", body: request }),
+    requestJson<ApiResponse>(id ? `product/${id}` : "product", { method: "PUT", body: request }),
   );
 }
 

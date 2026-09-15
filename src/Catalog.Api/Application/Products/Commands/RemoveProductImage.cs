@@ -23,6 +23,7 @@ internal class RemoveProductImageCommandHandler(CatalogDbContext context)
     {
         var entity = await context.Products
             .Where(new ProductByIdSpec(request.Id))
+            .Include(i => i.Images)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (entity is null)

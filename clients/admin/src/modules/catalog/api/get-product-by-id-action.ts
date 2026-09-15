@@ -9,7 +9,7 @@ export interface GetProductByIdState {
   error?: string;
 }
 
-/** Used by the manage-images dialog to re-fetch the product's image list after each mutation. */
+/** Used by the product panel to fetch the authoritative current product (incl. its image list) when opened in edit mode. */
 export async function getProductByIdAction(id: string): Promise<GetProductByIdState> {
   const session = await resolveSession();
   if (!session) {

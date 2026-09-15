@@ -78,7 +78,7 @@ export function LocationsMasterDetail({
       <Card>
         {canManage && (
           <CardHeader>
-            <Button size="sm" onClick={() => openCreate(null)}>
+            <Button className="w-fit" size="sm" onClick={() => openCreate(null)}>
               <Plus />
               Add top-level location
             </Button>

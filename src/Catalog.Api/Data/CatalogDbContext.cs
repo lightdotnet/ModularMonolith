@@ -60,9 +60,9 @@ public class CatalogDbContext(
 
             // Filtered unique index, deliberately not scoped by Deleted: a soft-deleted product's
             // still-assigned SKU continues to occupy the constraint until explicitly cleared via
-            // ClearSku/RemoveProductSkuCommand — reuse requires that explicit step, soft-delete
-            // alone does not free it. Nulls (a cleared SKU) are excluded so any number of products
-            // can share a cleared SKU.
+            // Product.UpdateSku(null) (through UpsertProductCommand) — reuse requires that explicit
+            // step, soft-delete alone does not free it. Nulls (a cleared SKU) are excluded so any
+            // number of products can share a cleared SKU.
             entity.HasIndex(x => x.Sku).IsUnique().HasFilter("[Sku] IS NOT NULL");
 
             entity.HasIndex(x => x.CategoryId);

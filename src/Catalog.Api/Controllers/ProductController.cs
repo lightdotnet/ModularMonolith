@@ -24,18 +24,11 @@ public class ProductController : VersionedApiController
         return Ok(await Mediator.Send(new GetProductByIdQuery(id)));
     }
 
-    [HttpPost]
+    [HttpPut("{id?}")]
     [MustHavePermission(CatalogPermissions.Products.Manage)]
-    public async Task<IActionResult> PostAsync([FromBody] CreateProductRequest request)
+    public async Task<IActionResult> UpsertAsync([FromRoute] long? id, [FromBody] UpsertProductRequest request)
     {
-        return Ok(await Mediator.Send(new CreateProductCommand(request)));
-    }
-
-    [HttpPut("{id}")]
-    [MustHavePermission(CatalogPermissions.Products.Manage)]
-    public async Task<IActionResult> PutAsync([FromRoute] long id, [FromBody] UpdateProductRequest request)
-    {
-        return Ok(await Mediator.Send(new UpdateProductCommand(id, request)));
+        return Ok(await Mediator.Send(new UpsertProductCommand(id, request)));
     }
 
     [HttpPut("{id}/activate")]
@@ -64,13 +57,6 @@ public class ProductController : VersionedApiController
     public async Task<IActionResult> RemoveImageAsync([FromRoute] long id, [FromQuery] string url)
     {
         return Ok(await Mediator.Send(new RemoveProductImageCommand(id, url)));
-    }
-
-    [HttpDelete("{id}/sku")]
-    [MustHavePermission(CatalogPermissions.Products.Manage)]
-    public async Task<IActionResult> RemoveSkuAsync([FromRoute] long id)
-    {
-        return Ok(await Mediator.Send(new RemoveProductSkuCommand(id)));
     }
 
     [HttpDelete("{id}")]

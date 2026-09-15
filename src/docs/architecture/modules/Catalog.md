@@ -8,12 +8,12 @@ discriminator, no allowed-parent-type rule, so `Create`/`Rename`/`Move` carry no
 of their own beyond keeping every state transition behind a guarded method. `Product` is the sellable
 item — SKU, price, VAT rate, category assignment, and a small gallery of image URLs — with every
 transition (`Create`/`Rename`/`UpdateDescription`/`Reprice`/`UpdateVatRate`/`Recategorize`/
-`AddImage`/`RemoveImage`/`Activate`/`Deactivate`/`ClearSku`/`Delete`) behind a guarded method. Unlike
+`AddImage`/`RemoveImage`/`Activate`/`Deactivate`/`UpdateSku`/`Delete`) behind a guarded method. Unlike
 every other aggregate in this repo (including `Category`), `Product.Id` is a database-generated
 `bigint IDENTITY(1,1)` rather than an app-generated string GUID, and `Product` is the repo's first
 active soft-delete instance (`ISoftDelete`, backed by a query filter that hides deleted rows from
-every default read) — see Notable Conventions for both. `Sku` is nullable: `ClearSku` frees it for
-reuse by a new product, but a soft-deleted product's SKU is not freed automatically — see Notable
+every default read) — see Notable Conventions for both. `Sku` is nullable: `UpdateSku(null)` frees it
+for reuse by a new product, but a soft-deleted product's SKU is not freed automatically — see Notable
 Conventions for the reuse mechanics. Pricing uses two genuinely shared-kernel value objects,
 `Money`/`VatPercentage` (`src/Shared/ValueObjects/`) — `Product` was their first consumer;
 `Orders.Api`'s `Order`/`OrderLine`/`OrderFee`/`Payment` now also consume `Money`, and `OrderLine`
@@ -30,8 +30,8 @@ the same structural convention as `Organization`/`Approval`/`LeaveManagement`/`L
 
 | Project | Responsibility | Notes |
 |---|---|---|
-| `Catalog.Contracts` | DTOs, requests, enums, and the permission catalog, organized into per-feature subfolders — `Common/` (`ProductStatus`: `Active`/`Inactive`), `Categories/` (`CategoryDto`, `CategoryTreeNodeDto` (adds a `Children` list), `CreateCategoryRequest`, `UpdateCategoryRequest`, `MoveCategoryRequest`), `Products/` (`ProductDto` (flattens `Money`/`VatPercentage` to scalar `Price`/`Currency`/`VatRate`, never a nested value-object shape; nullable `Sku`), `ProductImageDto`, `ProductPriceInfoDto` (the cross-module pricing projection, also nullable `Sku`), `ProductSearchRequest`, `CreateProductRequest`, `UpdateProductRequest`, `AddProductImageRequest`), `Services/` (`ICatalogPricingService` — the module's cross-module seam, keyed by `long productId`, see Notable Conventions), `Authorization/` (`CatalogPermissions`, `CatalogPermissionProvider`). Every Request DTO carries its own `AbstractValidator<TRequest>` **in the same file** — the two-layer FluentValidation convention `Location` established (see Notable Conventions). Declares `Lightsoft.AspNetCore.Authorization` directly. |
-| `Catalog.Api` | Single project organized by folder: `Domain/{Categories,Products}` (`Domain/Categories/Category.cs` + `CategoryByIdSpec.cs`; `Domain/Products/Product.cs` (`AuditableEntity<long>`, `ISoftDelete`) + `Sku.cs` + `ProductImageUrl.cs` + `ProductByIdSpec.cs` — see Notable Conventions for the `Specification<T>` pattern), `Data/` (`CatalogDbContext`, `CatalogContextInitialiser`), `Application/{Categories,Products}/{Commands,Queries}` (every handler owns its business logic directly against `CatalogDbContext` — no service-class indirection — plus a thin per-command `AbstractValidator`, see Notable Conventions; `Products/Commands` includes `CreateProduct`/`UpdateProduct`/`ActivateProduct`/`DeactivateProduct`/`AddProductImage`/`RemoveProductImage`/`RemoveProductSku`/`DeleteProduct`), `Services/` (`CatalogPricingService`, `internal`, implementing `ICatalogPricingService`), `Controllers/` (`CategoryController`, `ProductController`), `CatalogModule.cs` (DI: DbContext + `ICatalogPricingService` + permission provider). |
+| `Catalog.Contracts` | DTOs, requests, enums, and the permission catalog, organized into per-feature subfolders — `Common/` (`ProductStatus`: `Active`/`Inactive`), `Categories/` (`CategoryDto`, `CategoryTreeNodeDto` (adds a `Children` list), `CreateCategoryRequest`, `UpdateCategoryRequest`, `MoveCategoryRequest`), `Products/` (`ProductDto` (flattens `Money`/`VatPercentage` to scalar `Price`/`Currency`/`VatRate`, never a nested value-object shape; nullable `Sku`), `ProductImageDto`, `ProductPriceInfoDto` (the cross-module pricing projection, also nullable `Sku`), `ProductSearchRequest`, `UpsertProductRequest`, `AddProductImageRequest`), `Services/` (`ICatalogPricingService` — the module's cross-module seam, keyed by `long productId`, see Notable Conventions), `Authorization/` (`CatalogPermissions`, `CatalogPermissionProvider`). Every Request DTO carries its own `AbstractValidator<TRequest>` **in the same file** — the two-layer FluentValidation convention `Location` established (see Notable Conventions). Declares `Lightsoft.AspNetCore.Authorization` directly. |
+| `Catalog.Api` | Single project organized by folder: `Domain/{Categories,Products}` (`Domain/Categories/Category.cs` + `CategoryByIdSpec.cs`; `Domain/Products/Product.cs` (`AuditableEntity<long>`, `ISoftDelete`) + `Sku.cs` + `ProductImageUrl.cs` + `ProductByIdSpec.cs` — see Notable Conventions for the `Specification<T>` pattern), `Data/` (`CatalogDbContext`, `CatalogContextInitialiser`), `Application/{Categories,Products}/{Commands,Queries}` (every handler owns its business logic directly against `CatalogDbContext` — no service-class indirection — plus a thin per-command `AbstractValidator`, see Notable Conventions; `Products/Commands` includes `UpsertProduct`/`ActivateProduct`/`DeactivateProduct`/`AddProductImage`/`RemoveProductImage`/`DeleteProduct`), `Services/` (`CatalogPricingService`, `internal`, implementing `ICatalogPricingService`), `Controllers/` (`CategoryController`, `ProductController`), `CatalogModule.cs` (DI: DbContext + `ICatalogPricingService` + permission provider). |
 
 ## Public Contract
 
@@ -49,19 +49,18 @@ class level):
 | `api/v{version}/category/{id}` | DELETE | `catalog.categories.manage` | Route `id` | `Result`; blocked if the category still has child categories or products assigned |
 
 `ProductController` (route `product`, `[MustHavePermission(CatalogPermissions.Products.View)]` at
-class level; every route id is `long`):
+class level; every route id is `long`). `Category` keeps separate Create/Update commands, but
+`Product` upserts through one command — see Notable Conventions for why:
 
 | Route | Verb | Permission | Request | Response |
 |---|---|---|---|---|
 | `api/v{version}/product` | GET | `catalog.products.view` | `ProductSearchRequest` (`SearchQuery` base — `SearchValue` + paging — plus `CategoryId`/`Status` filters) | `PagedResult<ProductDto>`, filtered by category/status/`Name.Contains(SearchValue)`, ordered by `Created` desc |
 | `api/v{version}/product/{id}` | GET | `catalog.products.view` | Route `id` | `Result<ProductDto>` — hand-mapped from the materialised entity, not an EF `Select` projection (see Notable Conventions) |
-| `api/v{version}/product` | POST | `catalog.products.manage` | `CreateProductRequest` | `Result<long>` (new id); validates the category exists, pre-checks SKU uniqueness with `IgnoreQueryFilters()` (equality filter on the `HasConversion`-mapped `Sku`, see Notable Conventions), then `Product.Create` with a constructed `Sku`/`Money`/`VatPercentage` |
-| `api/v{version}/product/{id}` | PUT | `catalog.products.manage` | `UpdateProductRequest` | `Result`; one general-purpose update (`Rename`+`UpdateDescription`+`Reprice`+`UpdateVatRate`+`Recategorize` together) — `Sku` is immutable post-create |
+| `api/v{version}/product/{id?}` | PUT | `catalog.products.manage` | `UpsertProductRequest` | `Result<long>` (the product's id, new or existing); validates the category exists and pre-checks SKU uniqueness with `IgnoreQueryFilters()` (equality filter on the `HasConversion`-mapped `Sku`, see Notable Conventions); `id` omitted constructs `Sku`/`Money`/`VatPercentage` and calls `Product.Create` (`Sku` required on this path), `id` present loads the entity (`.Include(x => x.Images)`) and calls `Rename`+`UpdateDescription`+`Reprice`+`UpdateVatRate`+`Recategorize`+`UpdateSku` together (`Sku` optional — empty clears it); both paths replace `Images` wholesale (`RemoveImages()` then re-`AddImage` every entry in the request, not a diff) |
 | `api/v{version}/product/{id}/activate` | PUT | `catalog.products.manage` | Route `id` | `Result`; `Product.Activate` |
 | `api/v{version}/product/{id}/deactivate` | PUT | `catalog.products.manage` | Route `id` | `Result`; `Product.Deactivate` |
 | `api/v{version}/product/{id}/image` | POST | `catalog.products.manage` | `AddProductImageRequest { Url, SortOrder? }` | `Result`; `Product.AddImage` |
 | `api/v{version}/product/{id}/image` | DELETE | `catalog.products.manage` | Query `url` | `Result`; `Product.RemoveImage(url)` removes every image matching the url |
-| `api/v{version}/product/{id}/sku` | DELETE | `catalog.products.manage` | Route `id` | `Result`; `Product.ClearSku()`, loaded with `IgnoreQueryFilters()` so an already-soft-deleted product's SKU can still be freed for reuse (see Notable Conventions) |
 | `api/v{version}/product/{id}` | DELETE | `catalog.products.manage` | Route `id` | `Result`; `Product.Delete()` guards `Status == Inactive` (throws `ConflictException` otherwise), then `context.Products.Remove(entity)` — the soft-delete plumbing intercepts that `Remove()` call (see Notable Conventions) |
 
 Every action across both controllers dispatches a mediator command/query under
@@ -123,8 +122,8 @@ DTO instead of an EF `Select` projection — `Sku` is a `HasConversion`-mapped s
 established precedent in this repo for composing further member access (`x.Sku.Value`) inside a
 server-translated `Select`; loading the entity sidesteps the question (see `CatalogPricingService`'s
 class doc). The default query (used by all three) transparently excludes soft-deleted products via the
-`Product` query filter; `RemoveProductSkuCommandHandler` and `CreateProductCommandHandler`'s SKU
-uniqueness pre-check both call `IgnoreQueryFilters()` deliberately (see Notable Conventions).
+`Product` query filter; `UpsertProductCommandHandler`'s SKU-uniqueness pre-check (both the create and
+update path) calls `IgnoreQueryFilters()` deliberately (see Notable Conventions).
 
 Migrations exist for **MSSQL only so far**: `src/Migrations/MSSQL/Catalog/` holds a single migration
 (`CreateCatalogSchema`) — not yet a squashed baseline (per the dev-migration-squash convention,
@@ -209,27 +208,46 @@ other module's `Contracts` seam.
   `InternalsVisibleTo("StarterKit.Catalog.Api")` and `InternalsVisibleTo("StarterKit.Orders.Api")` to
   reach `Update`, alongside its existing `InternalsVisibleTo("Framework.Tests")`. See
   [../architecture.md § Shared Kernel](../architecture.md#shared-kernel--common-building-blocks).
+- **`Product` uses a single `UpsertProductCommand` instead of separate Create/Update commands** —
+  `Id is null` creates, `Id is { }` updates, sharing one `UpsertProductRequest` field set for both
+  paths (including `Images`, so images are settable at creation time too, not only after). `Category`
+  in this same module still keeps separate `CreateCategoryCommand`/`UpdateCategoryCommand` — the split
+  is a deliberate per-aggregate call, not a module-wide convention change: `UpsertProductCommand`
+  exists so the admin client's product form can submit one shape for both create and edit.
 - **`Sku` is a nullable, converted-scalar value object (`HasConversion`), not an owned type** —
   deliberately does not derive from `Light.Domain.ValueObjects.ValueObject` (that base exists to
-  survive the tracked-owned-type `Deleted`/`Added` replace hazard described above, which only applies
+  survive the tracked-owned-type `Deleted`/`Added` replace hazard described below, which only applies
   to owned navigations, not a converted scalar) — the same shape `Orders.Api`'s `OrderCode` is
-  explicitly modeled on. Set once at `Create` and thereafter only ever moves toward `null` via
-  `ClearSku()` — there is no "change SKU" operation. Reuse is deliberately **not** automatic on
-  soft-delete: the filtered unique index (`WHERE [Sku] IS NOT NULL`, see Data Access) is *not* scoped
-  by `Deleted`, so a soft-deleted product's SKU keeps blocking reuse until `RemoveProductSkuCommand`
-  (`DELETE /product/{id}/sku`) explicitly clears it — only then can a new `CreateProduct` claim that
-  SKU value. `RemoveProductSkuCommandHandler` and `CreateProductCommandHandler`'s SKU-uniqueness
-  pre-check both call `IgnoreQueryFilters()` for this reason — without it, a soft-deleted holder's SKU
-  would look "available" right up until `SaveChanges` threw a raw DB unique-constraint violation.
-  Uniqueness itself stays belt-and-suspenders: the handler pre-check plus this DB index.
+  explicitly modeled on. `Product.UpdateSku(string? sku)` is the one mutator covering all three cases —
+  set at `Create`, reassigned to a different value, or cleared to `null` — called from
+  `UpsertProductCommandHandler`'s update path; the request-level `Sku` is optional, but
+  `UpsertProductCommandValidator` requires it `NotEmpty` when `Id is null` (creating), since only the
+  command — not `UpsertProductRequestValidator` — knows whether this is a create or an update. Reuse is
+  deliberately **not** automatic on soft-delete: the filtered unique index (`WHERE [Sku] IS NOT NULL`,
+  see Data Access) is *not* scoped by `Deleted`, so a soft-deleted product's SKU keeps blocking reuse
+  until an explicit `UpdateSku(null)` (via the same upsert endpoint) clears it — only then can a new
+  product claim that SKU value. `UpsertProductCommandHandler`'s SKU-uniqueness pre-check (both paths)
+  calls `IgnoreQueryFilters()` for this reason — without it, a soft-deleted holder's SKU would look
+  "available" right up until `SaveChanges` threw a raw DB unique-constraint violation. Uniqueness
+  itself stays belt-and-suspenders: the handler pre-check plus this DB index.
 - **`ProductImageUrl` is an owned collection (`OwnsMany`) with no in-place `Update`** — unlike `Money`/
   `VatPercentage`'s single table-split references, a collection member is always fully added or
-  removed via `Product.AddImage`/`RemoveImage`, so it never needs one.
+  removed via `Product.AddImage`/`RemoveImage`, so it never needs one. It also derives from
+  `Light.Domain.ValueObjects.ValueObject` (equality on `Url`+`SortOrder`) — unlike `Sku` above, this
+  one *is* an owned navigation, just a collection one rather than a table-split reference. That
+  distinction is why `TrackingExtensions.AuditEntries`'s `Deleted`→`Unchanged` reset guard (written for
+  `Money`/`VatPercentage`-style table-split owned references, see the bullet above) is scoped to
+  `x.Metadata.FindOwnership() is { IsUnique: true }` — `true` for a table-split `OwnsOne`, `false` for
+  an `OwnsMany` collection — so a genuinely removed `ProductImageUrl` row keeps its `Deleted` state and
+  is actually deleted, instead of being silently reset back to `Unchanged` (which used to make
+  `RemoveImage`/an image-list replace a silent no-op). `UpsertProductCommandHandler`'s update path
+  always `.Include(x => x.Images)` before touching them, then replaces the list wholesale
+  (`RemoveImages()` + re-`AddImage` every entry) rather than diffing it.
 - **Domain aggregates hold only real domain rules — not input-shape validation** — the same
   project-wide convention `Location` established (see
   [../../conventions/coding-conventions.md](../../conventions/coding-conventions.md)).
   `CreateCategoryCommandHandler`'s parent-existence/name-uniqueness checks and
-  `CreateProductCommandHandler`'s category-existence/SKU-uniqueness checks are handler-level guards,
+  `UpsertProductCommandHandler`'s category-existence/SKU-uniqueness checks are handler-level guards,
   not domain invariants.
 - **FluentValidation, two layers** — the same convention `Location` introduced (see
   [../../conventions/coding-conventions.md](../../conventions/coding-conventions.md)): each `Contracts`
@@ -237,7 +255,9 @@ other module's `Contracts` seam.
   mediator command has a thin `AbstractValidator<TCommand>` (same file as the command+handler)
   validating the route-level `Id` (`GreaterThan(0)` for `Product`'s numeric id, `NotEmpty` for
   `Category`'s string id) directly and delegating to the Contracts validator via
-  `RuleFor(x => x.Model).SetValidator(new XRequestValidator())`.
+  `RuleFor(x => x.Model).SetValidator(new XRequestValidator())`. `UpsertProductCommandValidator` also
+  carries the one rule that can't live on `UpsertProductRequestValidator` — `Sku` required only when
+  `Id is null` — since the request validator has no visibility into whether this is a create or update.
 - **`CatalogPermissions` has only `View`/`Manage`, not the four-way `View`/`Create`/`Update`/`Delete`
   split most other modules use** — mirrors `Location`'s per-module simplification.
 - **`ICatalogPricingService`/`CatalogPricingService` is the module's cross-module DI seam**, same role
@@ -258,4 +278,4 @@ other module's `Contracts` seam.
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-14_
+_Last synced: 2026-09-15_
