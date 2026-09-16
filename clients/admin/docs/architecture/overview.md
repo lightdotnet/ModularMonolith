@@ -24,6 +24,13 @@ routes, backend contract surface, and the auth flow.
 - **Catalog** (`/catalog`) against `Catalog.Api` — a Products tab (paginated/searchable data table
   filterable by category and status, create/edit, activate/deactivate, image management) and, gated
   by `catalog.categories.view`, a Categories tab (recursive tree with create/edit/move/delete).
+- **Orders** (`/orders`) against `Orders.Api` — a draft-then-build workflow through one two-phase
+  `OrderPanel` Dialog: Phase A creates the draft header (location + currency), Phase B (the same
+  Dialog, remounted) builds it — an on-demand product search-and-add (no min-char gate, unlike this
+  app's other async pickers), per-line quantity/sale-price editing, order-level discount and fee
+  management, place/cancel. The order list (`OrdersDataTable`) is responsive: the full column set on
+  desktop collapses into one stacked card-style block per row (status/location/total/date) below the
+  `sm` breakpoint, filterable by location and status.
 - **Approvals** (`/approvals`) against `Approval.Api` — a generic multi-level approval workflow: the
   caller's pending decisions and own requests, plus (for `approval.requests.view_all`) an admin
   view-all and a "Create test request" harness that builds an arbitrary-length approver chain.
@@ -82,24 +89,25 @@ routes, backend contract surface, and the auth flow.
 | Employees | `/organization/employees` | Gated. Search/paginate; tabbed edit dialog (Details / Departments & Teams / Login) |
 | Locations | `/location` | Gated. Recursive tree + Location Types tab |
 | Catalog | `/catalog` | Gated `catalog.products.view`. Products tab (search/paginate/filter by category+status, create/edit, activate/deactivate, images) + Categories tab (`catalog.categories.view`, recursive tree create/edit/move/delete) |
+| Orders | `/orders` | Gated `orders.orders.view`; create/build/place/cancel gated `orders.orders.manage`. Two-phase `OrderPanel` Dialog (create draft → build), responsive list (card-style row on mobile) filterable by location/status |
 | Approvals | `/approvals` | Gated `approval.requests.view`; view-all panel + "Create test request" gated `approval.requests.view_all` |
 | Leave requests | `/leave-requests`, `/leave-requests/[id]` | **No permission gate** — any session. `leave.requests.manage` unlocks an "All requests" tab + delete-any |
 
 Every `page.tsx` is a one-line re-export from a feature/module barrel. `constants/nav-items.ts`
 assembles `NAV_ITEMS` from each feature's own `NavItem`: `[home, Administration group, Organization
-group, /approvals, /leave-requests, Retail group, Settings]`, where the Retail group holds Location
-and Catalog. `/administration`, `/organization`, `/retail`, `/settings` have
+group, /approvals, /leave-requests, Retail group, Settings]`, where the Retail group holds Location,
+Catalog, and Orders. `/administration`, `/organization`, `/retail`, `/settings` have
 no `page.tsx` and 404 if followed; being ungated they still show in the sidebar and ⌘K palette.
 
 ## Backend Integration
 
-Real, but partial. `lib/server/api-clients.ts` registers seven backend clients — `Identity`,
-`Notifications`, `Organization`, `Location`, `Approval`, `LeaveManagement`, `Catalog` — each resolving
-its own `*_API_BASE_URL` env var (the base URL owns its full path prefix; `http.ts` prepends nothing).
-`lib/server/backend-api.ts`'s `createBackendApiClient(client)` factory produces seven ready instances
-(`identityApi` … `locationApi` … `leaveManagementApi` … `catalogApi`); auth is attached by a
-request-handler pipeline (`bearerTokenHandler` reads the ambient session), not a passed token. The
-seven backends are logically separate modules currently co-hosted in one process
+Real, but partial. `lib/server/api-clients.ts` registers eight backend clients — `Identity`,
+`Notifications`, `Organization`, `Location`, `Approval`, `LeaveManagement`, `Catalog`, `Orders` — each
+resolving its own `*_API_BASE_URL` env var (the base URL owns its full path prefix; `http.ts` prepends
+nothing). `lib/server/backend-api.ts`'s `createBackendApiClient(client)` factory produces eight ready
+instances (`identityApi` … `locationApi` … `leaveManagementApi` … `catalogApi` … `ordersApi`); auth is
+attached by a request-handler pipeline (`bearerTokenHandler` reads the ambient session), not a passed
+token. The eight backends are logically separate modules currently co-hosted in one process
 (`StarterKit.WebApi`).
 Error handling, the envelope contract, and the permanent-vs-transient refresh-failure distinction are
 covered in [architecture.md § Key Design Patterns](./architecture.md#key-design-patterns).
@@ -135,6 +143,12 @@ Endpoints this client consumes, by module:
   (GET); `product/{id?}` (PUT — upserts: creates when `id` is omitted, updates when present, images
   included both ways), `product/{id}/{activate,deactivate}` (PUT), `product/{id}/image`
   (POST/DELETE).
+- **orders** — `order` (GET search / POST create), `order/{id}` (GET), `order/{id}/line` (POST),
+  `order/{id}/line/{lineId}/{quantity,sale_price}` (PUT), `order/{id}/line/{lineId}` (DELETE),
+  `order/{id}/discount` (PUT/DELETE), `order/{id}/fee` (POST), `order/{id}/fee/{feeId}` (DELETE),
+  `order/{id}/place` (PUT), `order/{id}/cancel` (PUT). `addOrderLine` is the one place a bigint id
+  (`productId`) is coerced to a JSON number rather than sent as a string, since `Orders.Contracts`
+  has no `[JsonNumberHandling]` relaxation for it.
 - **approvals** — `modules/approvals/api/approvals.api.ts` (admin, `approval.requests.view_all`):
   `approval` (GET search / POST test request). `user-approvals.api.ts` (self-service, server-scoped
   by `UserApprovalController`): `approval/user` (GET / POST), `approval/user/{id}`,
@@ -211,4 +225,4 @@ for inspection. `token-cipher.ts` uses Node's `crypto` and `proxy.ts` has no exp
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-15_
+_Last synced: 2026-09-16_

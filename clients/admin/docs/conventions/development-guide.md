@@ -10,7 +10,7 @@ How to set up, run, and make common changes to `clients/admin`. Architectural ba
   `@types/node` is `^26.5.1`.
 - **pnpm**: required (`pnpm-lock.yaml` is the only lockfile). Version not pinned (no `packageManager`).
 - **A reachable backend**: login, profile, notifications, and every feature page make real HTTP calls.
-  All five `*_API_BASE_URL` vars must point at a running instance (currently one co-hosted backend).
+  All eight `*_API_BASE_URL` vars must point at a running instance (currently one co-hosted backend).
   SignalR notifications additionally need the backend reachable **directly from the browser**
   (`SIGNALR_HUB_URL` resolvable + backend CORS allowing the admin origin).
 
@@ -37,7 +37,7 @@ server-only (never `NEXT_PUBLIC_`):
 
 | Var | Purpose |
 |---|---|
-| `IDENTITY_API_BASE_URL`, `NOTIFICATIONS_API_BASE_URL`, `ORGANIZATION_API_BASE_URL`, `APPROVAL_API_BASE_URL`, `LEAVE_MANAGEMENT_API_BASE_URL` | Base URL per backend module. Must include the full path prefix (e.g. `api/v1/`) and a trailing slash — `lib/server/http.ts` prepends nothing. Configured independently even though they currently share one host. |
+| `IDENTITY_API_BASE_URL`, `NOTIFICATIONS_API_BASE_URL`, `ORGANIZATION_API_BASE_URL`, `LOCATION_API_BASE_URL`, `APPROVAL_API_BASE_URL`, `LEAVE_MANAGEMENT_API_BASE_URL`, `CATALOG_API_BASE_URL`, `ORDERS_API_BASE_URL` | Base URL per backend module. Must include the full path prefix (e.g. `api/v1/`) and a trailing slash — `lib/server/http.ts` prepends nothing. Configured independently even though they currently share one host. |
 | `TOKEN_ENCRYPTION_KEY` | 32-byte base64 key (`openssl rand -base64 32`). AES-256-GCM key for the `admin_session` cookie. `lib/server/config.ts` throws if unset; read on every request. |
 | `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | Base64 AES key Next.js uses at **build time** to salt Server Action IDs. Not read by app code. If unset, a fresh key per build ⇒ every deploy breaks open tabs with "Failed to find Server Action". Optional locally; must be set and **constant forever** on deployed servers. |
 | `SIGNALR_HUB_URL` | Absolute URL to the backend SignalR hub. Read server-side and handed to the browser at connect time by a Server Action (not inlined), so it's a runtime setting — change it by editing the server `.env` and restarting, no rebuild. |
@@ -103,4 +103,4 @@ and the auth flow in [§ Auth Flow](../architecture/overview.md#auth-flow). Beyo
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-10_
+_Last synced: 2026-09-16_

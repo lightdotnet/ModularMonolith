@@ -20,7 +20,7 @@ Package manager: pnpm (`pnpm-lock.yaml`). `pnpm-workspace.yaml` exists but only 
 Two top-level roots hold feature/module code, verified via directory listing of both:
 
 - `src/features/home/` — the one feature that stayed here; every other feature moved under `src/modules/`.
-- `src/modules/<domain>/<name>/` — `identity/{auth,user-profile,users,roles}`, `notifications` (flat, no further nesting), `organization/{companies,departments,employees}`, and `approvals` (new). A prior sync's docs described everything under `src/features/<name>/` — that layout no longer exists except for `home`.
+- `src/modules/<domain>/<name>/` — `identity/{auth,user-profile,users,roles}`, `notifications` (flat, no further nesting), `organization/{companies,departments,employees}`, `approvals`, and `orders` (new, flat). A prior sync's docs described everything under `src/features/<name>/` — that layout no longer exists except for `home`. (`location` and `catalog` also exist under `src/modules/` but are not re-verified in this enumeration — out of scope for this sync.)
 
 ## Circular References
 
@@ -39,6 +39,7 @@ None found among internal module imports. `components/ui/*` is not an absolutely
 | `modules/notifications/components/user-select.tsx` | `modules/identity/users/api/search-users-action` | Server Action, never barrel-exported |
 | `modules/organization/employees/components/user-select.tsx` | `modules/identity/users/api/search-users-action` | Same as above — second duplicate consumer |
 | `modules/approvals/components/approver-select.tsx` | `modules/identity/users/api/search-users-action` | Same as above — third duplicate consumer |
+| `modules/orders/components/product-select.tsx` | `modules/catalog/api/search-products-action` | Server Action, never barrel-exported by `catalog` |
 | `modules/organization/employees/components/employee-login-tab.tsx` | `modules/identity/users/api/get-user-detail-action` | Server Action, never barrel-exported |
 | `modules/organization/departments/components/company-filter.tsx` | `modules/organization/companies/components/company-select` | Component not re-exported by the `companies` barrel |
 | `modules/organization/employees/components/create-employee-dialog.tsx` | `modules/organization/companies/components/company-select` | Same as above |
@@ -48,7 +49,7 @@ None found among internal module imports. `components/ui/*` is not an absolutely
 
 | Importer (all `"use client"` except `nav-items.ts`, which is imported by the client-side `Sidebar`) | Imports directly | Also exported (unused) via the target barrel |
 |---|---|---|
-| `constants/nav-items.ts` | 8 `constants/nav-item.ts` files: `features/home`, `identity/{users,roles}`, `notifications`, `organization/{companies,departments,employees}`, `approvals` | Each module's `NavItem` constant, plus that barrel's Server Component |
+| `constants/nav-items.ts` | 12 `constants/nav-item.ts` files: `features/home`, `identity/{users,roles}`, `notifications`, `organization/{companies,departments,employees}`, `location`, `catalog`, `orders`, `approvals`, `leave-requests` | Each module's `NavItem` constant, plus that barrel's Server Component |
 | `components/layout/topbar.tsx` | `modules/notifications/components/notification-bell` | `NotificationBell` is in the `notifications` barrel |
 | `modules/organization/employees/components/edit-employee-dialog.tsx` | `modules/organization/departments/api/{get-org-unit-tree-action,get-employee-levels-action}` | Both are in the `departments` barrel |
 
@@ -75,4 +76,4 @@ Not applicable — this is a client-app dependency graph, not backend.
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-10_
+_Last synced: 2026-09-16_

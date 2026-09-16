@@ -190,6 +190,14 @@ No cycles found among internal imports.
   imperative reset, so each table/tree bumps a per-dialog key counter on open, forcing a fresh
   instance (fresh action state, fresh form state, fresh detail fetch).
 
+- **Two-phase Dialog: draft-then-build in one remounted container.** `modules/orders/components/order-panel.tsx`
+  uses one `Dialog` for both halves of creating an order: Phase A (no `orderId` yet) is the create-draft
+  form; on success the same Dialog re-renders as Phase B, the line-item/discount/fee builder, keyed off
+  the now-known `orderId`. `OrdersDataTable` bumps a remount `key` on open, the same
+  controlled-form-state-alongside-`useActionState` pattern other dialogs use. Chose `Dialog` over `Sheet`
+  after an early `Sheet` version clipped the builder's content at panel width; see the `Sheet` bullet
+  below for when a `Sheet` is still the right call.
+
 - **`Sheet` (right-side panel) as a mutation-form container, not just a read-only viewer.**
   `approval-history-sheet.tsx` was the first `Sheet` consumer (read-only approval detail);
   `modules/catalog/components/product-panel.tsx` is the second, and the first that submits a
@@ -278,7 +286,11 @@ exception set — see [dependency-graph.md](./dependency-graph.md#circular-refer
 ## Shared Kernel / Common Building Blocks
 
 - `components/ui/*` — the app's own primitive layer; `combobox.tsx` (+ `popover`/`command`) is the
-  shadcn-style single-select, currently used only by `identity/users`' edit dialog.
+  shadcn-style single-select, currently used only by `identity/users`' edit dialog. `number-input.tsx`
+  (`NumberInput`) is a hand-written text input (`inputMode="decimal"`, not native `type="number"`) for
+  editable numeric fields across the app — groups the integer part by thousands live as the user types
+  and preserves cursor position across the reformat, while leaving the fraction part untouched so a
+  trailing typed zero is never dropped.
 - `components/foundation/*` — serve only `components/command/*`, the virtualized DataTable body, and
   (`portal-container.ts`) the Dialog/Popover nesting fix.
 - `components/shared/data-table/*` — the generic list-table block; consumed by every list-bearing
@@ -321,4 +333,4 @@ none exists. `pnpm-workspace.yaml` only configures build-script approval, not a 
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-15_
+_Last synced: 2026-09-16_
