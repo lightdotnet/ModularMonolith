@@ -12,7 +12,7 @@ organized by folder, or, if complex enough, split Clean-Architecture-style into
 `<Module>.Domain`/`.Application`/`.Infrastructure`/`.Api`. Every module also gets a
 `<Module>.Contracts` seam — the only project other modules or the host may reference.
 
-Seven modules exist. Six are a single `.Api` project plus `.Contracts`; **Identity** additionally has
+Eight modules exist. Seven are a single `.Api` project plus `.Contracts`; **Identity** additionally has
 `Identity.Web` (a Razor Pages login host inside the same bounded context — see its module doc). The
 `.Api` suffix is a deliberate future-extraction candidate. Structural summary only — full layering per
 module doc:
@@ -26,6 +26,7 @@ module doc:
 | LeaveManagement | `LeaveManagement.Api` + `.Contracts` | Workflow rules live on the `LeaveRequest` aggregate (`Create`/`LinkApprovalRequest`/`Resubmit`/`ReviseDetails`/`ApplyApprovalOutcome`, same throw-then-translate shape as `Approval`); `LeaveRequestApprovalCoordinator` is the shared seam for cross-row/cross-module orchestration (Approval reconcile, overlap check, approver resolution) the command handlers and the reconciliation sweep all call into; the leave-request read queries touch neither | `tests/LeaveManagement.Tests`, 122 |
 | Location | `Location.Api` + `.Contracts` | Handlers own their `LocationDbContext` logic directly, same as `Organization`/`LeaveManagement`; the allowed-parent-type invariant lives on the `Location`/`LocationType` aggregates, input-shape validation is FluentValidation's job (see § Key Design Patterns) | `tests/Location.Tests`, 114 |
 | Catalog | `Catalog.Api` + `.Contracts` | Handlers own their `CatalogDbContext` logic directly, same as `Organization`/`LeaveManagement`/`Location`; `Category`/`Product` guard state transitions via behaviour methods but carry no invariant heavier than Location's (no type discriminator) | `tests/Catalog.Tests`, 111 |
+| Orders | `Orders.Api` + `.Contracts` | Handlers own their `OrdersDbContext` logic directly, same as `Organization`/`LeaveManagement`/`Location`/`Catalog`; workflow rules (draft-only editing, `Place`/`Cancel`/`MarkFulfilled` state transitions) live on the `Order` aggregate, with `Payment` as a separate aggregate root sharing the same `DbContext` | `tests/Orders.Tests`, 121 |
 
 Below the module layer: `src/Shared` (leaf) and `src/Persistence` (→ `Shared`) are the pre-module
 shared kernel; `src/Infrastructure` (→ `Shared`) is cross-cutting infra, no longer holding EF Core
@@ -35,7 +36,7 @@ across all modules that page.
 
 ## Hosts
 
-`StarterKit.WebApi` is the primary, full deployable process — it wires all seven modules via
+`StarterKit.WebApi` is the primary, full deployable process — it wires all eight modules via
 `app.MapEndpoints(...)`, maps the `Notifications` SignalR hub at `/signalr-hub`, co-hosts the
 `Identity.Web` Razor Pages login (`AddIdentityWeb` + `UseIdentityWeb`), and owns the API
 authentication composition (`Authentication/ApiAuthenticationExtensions.AddApiAuthentication`).
@@ -56,12 +57,13 @@ discipline) but it holds informally — `Controllers/` call only services/`Media
 The "no module references another module's internals" rule is **verified across every module** —
 every cross-module dependency reaches only the target's `Contracts` seam, with no reference the other
 direction and no cycle. `Identity.Web → Identity.Api` is a direct internal reference but stays inside
-the Identity bounded context, so it is not a cross-module edge. The full list of the five compliant
+the Identity bounded context, so it is not a cross-module edge. The full list of the seven compliant
 cross-module edges is in [dependency-graph.md § Cross-Module Boundary Violations](dependency-graph.md#cross-module-boundary-violations-backend-only);
 the project-reference diagram is in [§ Circular References](dependency-graph.md#circular-references).
-`Location` and `Catalog` are the exceptions worth naming: neither has an outgoing cross-module
-dependency, and neither's own cross-module seam (`ILocationDirectoryService`/`ICatalogPricingService`)
-has a consumer yet.
+`Orders` is the first (and so far only) consumer of either `Location`'s `ILocationDirectoryService` or
+`Catalog`'s `ICatalogPricingService` — `CreateOrderCommandHandler` calls the former to validate
+`LocationId`, and `AddOrderLineCommandHandler` calls the latter to resolve current pricing. Neither
+`Location` nor `Catalog` has any outgoing cross-module dependency of its own.
 
 Note the Identity↔Notifications edge flipped this session: `Identity.Api` no longer references
 `Notifications.Contracts`; instead `Notifications.Api → Identity.Contracts` (welcome-mail handlers
@@ -95,8 +97,14 @@ reacting to Identity's integration events).
   - `LeaveManagement` — subscribes to `ApprovalFinalizedIntegrationEvent` to reconcile the local
     `LeaveRequest.Status`, with `LeaveRequestReconciliationService` (a `BackgroundService`, the only
     one in the backend) as the periodic delivery backstop. `Organization`/`Location`/`Catalog` use no events.
+  - `Orders` — `OrderPlacedIntegrationEvent`, published by `PlaceOrderCommandHandler` directly after
+    `SaveChangesAsync` commits (best-effort, logged-not-thrown), for a future module (e.g. Inventory)
+    to subscribe to; no handler exists yet. `Order` also raises in-module `BaseEntity` domain events
+    (`OrderPlacedEvent`/`OrderCancelledEvent`/`OrderFulfilledEvent`) dispatched the same
+    `publisher.DispatchDomainEvents(this)` way from `OrdersDbContext.SaveChangesAsync`, but none has a
+    subscriber yet either — see [modules/Orders.md](modules/Orders.md).
   The repo-wide `DispatchDomainEventsExtensions` convention (`src/Persistence`, meant to run inside a
-  module's `SaveChangesAsync`) is wired only in `Approval`; the `Identity` gap is
+  module's `SaveChangesAsync`) is wired in `Approval` and `Orders`; the `Identity` gap is
   [known-debt.md](../known-debt.md) P6.
 - **Authentication composition is host-owned, two-layer.** `Identity.Api` registers only token
   *services* (`AddJwtTokenServices` — signing, token/hub-token issuers, session + auth services), no
@@ -113,7 +121,7 @@ reacting to Identity's integration events).
 - **Extension-method DI registration** — each feature area exposes `Add<Feature>`/`Use<Feature>`.
 - **CQRS at the controller boundary, three shapes.** Every controller action binds a `Contracts` DTO
   and dispatches an `internal` mediator command/query. `Identity`/`Notifications` forward to a service
-  class ([known-debt.md](../known-debt.md) D1); `Organization`/`LeaveManagement`/`Location`/`Catalog`
+  class ([known-debt.md](../known-debt.md) D1); `Organization`/`LeaveManagement`/`Location`/`Catalog`/`Orders`
   hold the DbContext logic directly; `Approval` splits by audience, with the write-path workflow rules on the
   `ApprovalRequest` aggregate behind a thin `IApprovalService`. See each module doc.
 - **Audience-split controllers + real-time push** in `Notifications` — an admin controller (explicit
@@ -121,7 +129,7 @@ reacting to Identity's integration events).
   one table, plus a push-only SignalR hub at `/signalr-hub` (path configurable via `Notifications:Hub:Path`).
 - **Validation is two-layered FluentValidation, established by `Location` (first real per-module
   usage — the pipeline behavior and assembly-scan wiring already existed, but no module had a
-  registered validator before it) and adopted identically by `Catalog`.** Each `Contracts` request DTO carries its own
+  registered validator before it) and adopted identically by `Catalog` and `Orders`.** Each `Contracts` request DTO carries its own
   `AbstractValidator<TRequest>` in the same file (field-shape rules only); each mediator command has a
   thin `AbstractValidator<TCommand>` (same file as the command+handler) validating route-level
   primitives directly and delegating to the Contracts validator via
@@ -140,8 +148,9 @@ reacting to Identity's integration events).
   `ReflectionHelper`, and `ValueObjects/Money`/`ValueObjects/VatPercentage` — guarded amount/currency
   and percentage value objects, each with an `internal Update` that mutates the tracked instance in
   place (same pattern as `LeaveManagement`'s `DateRange.Update`); `Catalog.Api`'s `Product` aggregate
-  is their only consumer today, reached via a scoped `InternalsVisibleTo("StarterKit.Catalog.Api")`
-  grant alongside the existing `InternalsVisibleTo("Framework.Tests")`. Covered by
+  and `Orders.Api`'s `Order`/`OrderLine`/`OrderFee`/`Payment` aggregates are their consumers, each
+  reached via its own scoped `InternalsVisibleTo` grant (`"StarterKit.Catalog.Api"`,
+  `"StarterKit.Orders.Api"`) alongside the existing `InternalsVisibleTo("Framework.Tests")`. Covered by
   `tests/Framework.Tests/Shared/{Money,VatPercentage}Tests.cs`.
 - **`src/Infrastructure`** (→ `Shared`) — CORS, health checks, Mapster config, module/endpoint base
   classes (`AppModule`, `AppModuleEndpoint`), API controller base classes + `BasicAuthAttribute`,
@@ -163,7 +172,7 @@ reacting to Identity's integration events).
 
 ## Module/Route Boundaries
 
-`StarterKit.WebApi` wires all six modules via `app.MapEndpoints(...)`, maps the `Notifications`
+`StarterKit.WebApi` wires all eight modules via `app.MapEndpoints(...)`, maps the `Notifications`
 SignalR hub at `/signalr-hub`, and serves the `Identity.Web` login Razor Pages under `/Account/*`.
 The full route/permission inventory per module lives in each module doc's § Public Contract.
 
@@ -184,4 +193,4 @@ are tracked here:
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-12_
+_Last synced: 2026-09-16_

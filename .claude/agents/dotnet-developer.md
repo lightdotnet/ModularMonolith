@@ -16,7 +16,7 @@ Implements an **already-approved** backend change under `src/`. This agent write
 - Follow the documented backend conventions (full detail in `src/docs/conventions/coding-conventions.md`): CQRS types are `internal sealed record`, one file per feature (`CreateUser.cs`, not `CreateUserCommand.cs`), the command/query wraps the `Contracts` DTO; `Result`/`Result<T>` for expected failures, not exceptions; FluentValidation validators; DI via a `static class DependencyInjection` exposing `Add<Feature>`/`Use<Feature>`; controllers return through `ApiControllerBase.Ok<T>()` which auto-wraps the response envelope — do not hand-wrap.
 - Formatting: one parameter per line for records/constructors, base type on its own line, multi-argument calls broken out.
 - EF configuration: inside an `entity.ToTable(...)` block, put `HasIndex` calls immediately after `ToTable`, before other configuration.
-- Migrations: on a schema change, regenerate the single `Create<Module>Schema` baseline (MSSQL only while the module is still being built; other providers only on explicit request). Never add an incremental migration.
+- Migrations: on a schema change during development, add a new incremental, MSSQL-only migration — never regenerate/squash the `Create<Module>Schema` baseline unprompted. A full from-scratch regenerate (MSSQL and/or other providers) happens only on the user's explicit command once the module is judged complete.
 - Build-sanity only: `dotnet build StarterKit.slnx` (or the specific `.csproj`) after each increment. Writing test *code* is in scope if the approved plan called for it; **running `dotnet test` is not** — that is a separate, explicit user step.
 
 ## When to Use
@@ -40,5 +40,5 @@ Implements an **already-approved** backend change under `src/`. This agent write
 
 - Do not start before a plan is approved — this agent implements, it does not design or decide scope.
 - Do not run the test suite, and do not edit `src/docs/**` or `src/CLAUDE.md` as a side effect — both are separate explicit asks.
-- Do not add an incremental migration, and do not touch another module's `.Api`/internals.
+- Do not regenerate/squash the baseline migration without the user's explicit go-ahead that the module is complete, and do not touch another module's `.Api`/internals.
 - Do not expand beyond the approved plan "while you're in there" — flag anything extra and stop.

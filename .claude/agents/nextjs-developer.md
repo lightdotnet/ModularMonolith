@@ -15,7 +15,7 @@ Implements an **already-approved** change under `clients/admin/`. This agent wri
 - Apply the approved change under `clients/admin/src/`, matching the surrounding feature's conventions (full detail in `clients/admin/docs/conventions/coding-conventions.md`).
 - Feature/module code lives under `src/modules/<domain>/<name>/` (or `features/home/`) with an `index.ts` barrel; cross-feature imports go through that barrel — only the documented exceptions bypass it (see `clients/admin/docs/architecture/dependency-graph.md`).
 - One consolidated `<feature>.api.ts` per feature (functions ordered get / create / update / delete); Server Actions stay one file per action.
-- `lib/server/*` is server-only — never import it from a Client Component; `lib/shared/*` is the client-safe split. Page permission gates go through `lib/server/require-permission.tsx`; backend calls go through one of the five named clients in `lib/server/backend-api.ts`.
+- `lib/server/*` is server-only — never import it from a Client Component; `lib/shared/*` is the client-safe split. Page permission gates go through `lib/server/require-permission.tsx`; backend calls go through one of the named clients in `lib/server/backend-api.ts` (one per backend module — check that file for the current list).
 - Render null/empty values blank — no "—" placeholder fallback.
 - The backend response is always envelope-wrapped (`Result`/`ApiResponse`), so a bare-looking service return type is not a bug to "fix".
 - Never move an access token outside the encrypted `admin_session` httpOnly cookie — the one exception is the deliberate SignalR-handshake token action.

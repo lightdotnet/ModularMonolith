@@ -21,17 +21,18 @@ ASP.NET Core (C#) **Modular Monolith** — one solution (`StarterKit.slnx`). `sr
 | LeaveManagement | `src/LeaveManagement.Api` + `src/LeaveManagement.Contracts` | Self-service CRUD for employee leave requests — delegates the actual approval workflow entirely to `Approval` via `IApprovalService` and resolves approvers/display names via `Organization`'s `IOrgDirectoryService`; has no decide/approve endpoint of its own. |
 | Location | `src/Location.Api` + `src/Location.Contracts` | Self-referencing physical-location hierarchy (`Location`: Store/Warehouse/Terminal/Bin or any other data-driven type) plus a data-driven `LocationType` catalog replacing what would otherwise be a hardcoded enum — each type declares its own allowed-parent-type rule. Also exposes `ILocationDirectoryService`, a cross-module seam with no current consumers (built ahead of a future Catalog/Orders/Inventory-style module). |
 | Catalog | `src/Catalog.Api` + `src/Catalog.Contracts` | Self-referencing product-category tree (`Category`) plus `Product` CRUD/search/activate-deactivate/image management, priced via the shared `Money`/`VatPercentage` value objects. Also exposes `ICatalogPricingService`, a cross-module seam with no current consumers (built ahead of a future Orders/Inventory-style module). |
+| Orders | `src/Orders.Api` + `src/Orders.Contracts` | Owns the sale lifecycle — draft cart through placement, payment reconciliation, fulfillment, or cancellation — via the `Order` aggregate and a separate `Payment` aggregate sharing one `OrdersDbContext`. Consumes `Catalog`'s `ICatalogPricingService` and `Location`'s `ILocationDirectoryService` — the first real cross-module consumer of either seam. |
 
 Plus shared/host projects: `src/Shared` (shared kernel, leaf), `src/Infrastructure` (cross-cutting infra), `src/Persistence` (EF Core concerns), `src/StarterKit.WebApi` (composition-root host).
 
 ## Design Approach
 
-Backend design is **DDD-first**: model the domain deliberately before writing handlers — aggregate boundaries and invariants, entity vs. value object, domain events for cross-aggregate/cross-module reactions, and business rules living on the aggregate/entity rather than in a `CommandHandler` or service (an anemic model is a smell). `Organization`/`Approval`/`LeaveManagement`/`Location`/`Catalog`'s `Domain/<Feature>/` folders are the pattern; each module doc's § Notable Conventions has the specifics. Stay pragmatic — plain enums where a value object adds nothing, `Light.Specification` only for reused/special-case predicates. Input-shape validation (required/length/enum-range checks) is not a domain rule — it belongs in FluentValidation on the incoming request, not the aggregate; `Location`'s `Domain/` is the reference for this split (see [docs/conventions/coding-conventions.md](docs/conventions/coding-conventions.md)).
+Backend design is **DDD-first**: model the domain deliberately before writing handlers — aggregate boundaries and invariants, entity vs. value object, domain events for cross-aggregate/cross-module reactions, and business rules living on the aggregate/entity rather than in a `CommandHandler` or service (an anemic model is a smell). `Organization`/`Approval`/`LeaveManagement`/`Location`/`Catalog`/`Orders`'s `Domain/<Feature>/` folders are the pattern; each module doc's § Notable Conventions has the specifics. Stay pragmatic — plain enums where a value object adds nothing, `Light.Specification` only for reused/special-case predicates. Input-shape validation (required/length/enum-range checks) is not a domain rule — it belongs in FluentValidation on the incoming request, not the aggregate; `Location`'s `Domain/` is the reference for this split (see [docs/conventions/coding-conventions.md](docs/conventions/coding-conventions.md)).
 
 ## Architectural Constraints ("do not" rules)
 
 - **Every module's `<Module>.Contracts` project is the only seam other modules or the host may reference.** Never reference another module's internals (its single-project folders, or a split module's `Domain`/`Application`/`Infrastructure`/`Api`) directly. (`Identity.Web → Identity.Api` is allowed — both are the same module.)
-- **One `DbContext` per module is the default**, even when modules share one physical database (current state: `Identity`/`Notifications`/`Organization`/`Approval`/`LeaveManagement`/`Location`/`Catalog` share one DB, separated by schema/table).
+- **One `DbContext` per module is the default**, even when modules share one physical database (current state: `Identity`/`Notifications`/`Organization`/`Approval`/`LeaveManagement`/`Location`/`Catalog`/`Orders` share one DB, separated by schema/table).
 - Full module structure convention (single-project vs. Clean-Architecture split, `.Api`-suffix naming) — see [docs/architecture/architecture.md § Layering](docs/architecture/architecture.md#layering).
 
 ## Architecture
@@ -39,7 +40,7 @@ Backend design is **DDD-first**: model the domain deliberately before writing ha
 - [docs/architecture/overview.md](docs/architecture/overview.md) — solution overview, dependency graph summary, entry points.
 - [docs/architecture/architecture.md](docs/architecture/architecture.md) — layering, dependency direction, key design patterns, shared kernel.
 - [docs/architecture/dependency-graph.md](docs/architecture/dependency-graph.md) — package references, circular-reference/boundary-violation check.
-- [docs/architecture/modules/Identity.md](docs/architecture/modules/Identity.md) / [docs/architecture/modules/Notifications.md](docs/architecture/modules/Notifications.md) / [docs/architecture/modules/Organization.md](docs/architecture/modules/Organization.md) / [docs/architecture/modules/Approval.md](docs/architecture/modules/Approval.md) / [docs/architecture/modules/LeaveManagement.md](docs/architecture/modules/LeaveManagement.md) / [docs/architecture/modules/Location.md](docs/architecture/modules/Location.md) / [docs/architecture/modules/Catalog.md](docs/architecture/modules/Catalog.md) — per-module deep dive.
+- [docs/architecture/modules/Identity.md](docs/architecture/modules/Identity.md) / [docs/architecture/modules/Notifications.md](docs/architecture/modules/Notifications.md) / [docs/architecture/modules/Organization.md](docs/architecture/modules/Organization.md) / [docs/architecture/modules/Approval.md](docs/architecture/modules/Approval.md) / [docs/architecture/modules/LeaveManagement.md](docs/architecture/modules/LeaveManagement.md) / [docs/architecture/modules/Location.md](docs/architecture/modules/Location.md) / [docs/architecture/modules/Catalog.md](docs/architecture/modules/Catalog.md) / [docs/architecture/modules/Orders.md](docs/architecture/modules/Orders.md) — per-module deep dive.
 
 ## Conventions
 
@@ -58,6 +59,7 @@ dotnet test tests/Approval.Tests/Approval.Tests.csproj
 dotnet test tests/LeaveManagement.Tests/LeaveManagement.Tests.csproj
 dotnet test tests/Location.Tests/Location.Tests.csproj
 dotnet test tests/Catalog.Tests/Catalog.Tests.csproj
+dotnet test tests/Orders.Tests/Orders.Tests.csproj
 ```
 
 xUnit v3 runs on Microsoft.Testing.Platform. On the .NET 10 SDK `dotnet test` refuses the legacy VSTest path — if it errors with "opt-in to the new dotnet test experience", run the built test executable directly instead (`tests/<Name>/bin/Debug/net10.0/<Name>.exe`, filters: `-class <FQN>` / `-method <FQN>`).
@@ -69,4 +71,4 @@ xUnit v3 runs on Microsoft.Testing.Platform. On the .NET 10 SDK `dotnet test` re
 See [docs/known-debt.md](docs/known-debt.md) — the single, current-state-only list of open backend technical debt/pending architecture decisions. Update it directly when debt is found or resolved; don't re-scatter items back into the architecture docs above.
 
 ---
-_Last synced: 2026-09-12_
+_Last synced: 2026-09-16_

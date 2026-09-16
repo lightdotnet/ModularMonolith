@@ -4,7 +4,7 @@ A starter template monorepo for a full-stack application: a C#/.NET backend orga
 
 ## Status — what's actually built so far
 
-Backend has a working host with **five business modules**; the `admin` client is a real, functioning app (not a UI shell) with no mock data remaining.
+Backend has a working host with **eight business modules**; the `admin` client is a real, functioning app (not a UI shell) with no mock data remaining.
 
 | Piece | Status |
 |---|---|
@@ -15,10 +15,13 @@ Backend has a working host with **five business modules**; the `admin` client is
 | `src/Organization.Api` + `src/Organization.Contracts` — companies, department/team hierarchy (`OrgUnit`), employee levels, employees, optional employee↔Identity-login linking; exposes `IOrgDirectoryService` | ✅ built, tested (`tests/Organization.Tests`, ~63 tests) |
 | `src/Approval.Api` + `src/Approval.Contracts` — generic multi-level approval-request engine driven via `IApprovalService`; not tied to any request type | ✅ built, tested (`tests/Approval.Tests`, ~57 tests) |
 | `src/LeaveManagement.Api` + `src/LeaveManagement.Contracts` — self-service leave requests; delegates the approval workflow to Approval, resolves approvers via Organization | ✅ built, tested (`tests/LeaveManagement.Tests`, ~30 tests) |
-| `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` (design-time EF Core migration projects) | ✅ built — MSSQL covers all five modules; PostgreSQL/Sqlite cover all but Notifications |
+| `src/Location.Api` + `src/Location.Contracts` — self-referencing physical-location hierarchy (`Location`) plus a data-driven `LocationType` catalog with configurable allowed-parent/child rules; exposes `ILocationDirectoryService` | ✅ built, tested (`tests/Location.Tests`, ~114 tests) |
+| `src/Catalog.Api` + `src/Catalog.Contracts` — self-referencing product-category tree (`Category`) plus `Product` CRUD/search/activate-deactivate/image management; exposes `ICatalogPricingService` | ✅ built, tested (`tests/Catalog.Tests`, ~111 tests) |
+| `src/Orders.Api` + `src/Orders.Contracts` — sale lifecycle (draft → placement → payment reconciliation → fulfillment/cancellation) via the `Order` and `Payment` aggregates; consumes Catalog's `ICatalogPricingService` and Location's `ILocationDirectoryService` | ✅ built, tested (`tests/Orders.Tests`, ~121 tests) |
+| `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` (design-time EF Core migration projects) | ✅ built — MSSQL covers all eight modules; PostgreSQL/Sqlite cover only Identity/Organization/Approval/LeaveManagement (missing Notifications, Location, Catalog, Orders) |
 | `src/StarterKit.WebApi` (composition-root host) | ✅ built — runnable API |
 | `tests/Framework.Tests` (xUnit v3, shared kernel/infra/persistence) | ✅ built — ~69 tests |
-| `clients/admin` (Next.js admin console) | ✅ built — real auth (password or Microsoft); full CRUD for Users/Roles, Organization (companies/departments/employees), a generic Approvals workflow, and self-service Leave requests; real-time Notifications; permission-gated nav |
+| `clients/admin` (Next.js admin console) | ✅ built — real auth (password or Microsoft); full CRUD for Users/Roles, Organization (companies/departments/employees), Retail administration (Locations, Catalog categories/products), Orders (two-phase draft-then-build order creation), a generic Approvals workflow, and self-service Leave requests; real-time Notifications; permission-gated nav |
 | Additional `clients/*` apps (e.g. a primary end-user app) | ❌ not yet created |
 
 ## Structure
@@ -41,19 +44,28 @@ StarterKit.slnx
 ├── src/Approval.Api               → Approval.Contracts, Infrastructure, Persistence, Notifications.Contracts
 ├── src/LeaveManagement.Contracts  → Shared
 ├── src/LeaveManagement.Api        → LeaveManagement.Contracts, Infrastructure, Persistence, Approval.Contracts, Organization.Contracts
-├── src/Migrations/MSSQL           → all five *.Api projects, Infrastructure, Persistence, Shared
+├── src/Location.Contracts         → Shared
+├── src/Location.Api               → Location.Contracts, Infrastructure, Persistence
+├── src/Catalog.Contracts          → Shared
+├── src/Catalog.Api                → Catalog.Contracts, Infrastructure, Persistence
+├── src/Orders.Contracts           → Shared, Catalog.Contracts, Location.Contracts
+├── src/Orders.Api                 → Orders.Contracts, Infrastructure, Persistence, Catalog.Contracts, Location.Contracts
+├── src/Migrations/MSSQL           → all eight *.Api projects, Infrastructure, Persistence, Shared
 ├── src/Migrations/PostgreSQL      → Identity/Organization/Approval/LeaveManagement *.Api, Infrastructure, Persistence, Shared
 ├── src/Migrations/Sqlite          → Identity/Organization/Approval/LeaveManagement *.Api, Infrastructure, Persistence, Shared
-├── src/StarterKit.WebApi          → all five *.Api projects, Identity.Web, Infrastructure, Shared (composition-root host)
+├── src/StarterKit.WebApi          → all eight *.Api projects, Identity.Web, Infrastructure, Shared (composition-root host)
 ├── tests/Framework.Tests          → Shared, Infrastructure, Persistence
 ├── tests/Identity.Tests           → Identity.Api, Shared
 ├── tests/Organization.Tests       → Organization.Api, Identity.Contracts, Shared
 ├── tests/Approval.Tests           → Approval.Api, Approval.Contracts, Shared
 ├── tests/LeaveManagement.Tests    → LeaveManagement.Api, Approval.Contracts, Organization.Contracts, Shared
+├── tests/Location.Tests           → Location.Api, Shared
+├── tests/Catalog.Tests            → Catalog.Api, Shared
+├── tests/Orders.Tests             → Orders.Api, Orders.Contracts, Shared
 └── clients/admin                  (Next.js app — HTTP/JSON only, no shared source with src/)
 ```
 
-Every module reaches another module only through its `<Module>.Contracts` seam — never its `.Api` internals. The five cross-module edges: `Identity → Notifications.Contracts` (welcome email), `Organization → Identity.Contracts` (employee-login), `Approval → Notifications.Contracts` (notify on decision), `LeaveManagement → Approval.Contracts` (approval workflow) and `LeaveManagement → Organization.Contracts` (approver directory). `Identity.Web → Identity.Api` is an intra-module reference (same bounded context), not a cross-module edge.
+Every module reaches another module only through its `<Module>.Contracts` seam — never its `.Api` internals. The seven cross-module edges: `Identity → Notifications.Contracts` (welcome email), `Organization → Identity.Contracts` (employee-login), `Approval → Notifications.Contracts` (notify on decision), `LeaveManagement → Approval.Contracts` (approval workflow), `LeaveManagement → Organization.Contracts` (approver directory), `Orders → Catalog.Contracts` (product pricing via `ICatalogPricingService`), and `Orders → Location.Contracts` (fulfillment location via `ILocationDirectoryService`). `Identity.Web → Identity.Api` is an intra-module reference (same bounded context), not a cross-module edge.
 
 ## Architecture Diagram
 
@@ -86,24 +98,41 @@ graph TD
         LvC["LeaveManagement.Contracts"]
         LvA["LeaveManagement.Api"]
     end
+    subgraph Location
+        LoC["Location.Contracts"]
+        LoA["Location.Api"]
+    end
+    subgraph Catalog
+        CaC["Catalog.Contracts"]
+        CaA["Catalog.Api"]
+    end
+    subgraph Orders
+        OdC["Orders.Contracts"]
+        OdA["Orders.Api"]
+    end
 
     Infra --> Shared
     Persistence --> Shared
-    IdC & NoC & OrC & ApC & LvC --> Shared
+    IdC & NoC & OrC & ApC & LvC & LoC & CaC & OdC --> Shared
     IdA --> IdC
     IdW --> IdA
     NoA --> NoC
     OrA --> OrC
     ApA --> ApC
     LvA --> LvC
+    LoA --> LoC
+    CaA --> CaC
+    OdA --> OdC
 
     IdA -. welcome email .-> NoC
     OrA -. employee-login .-> IdC
     ApA -. notify on decision .-> NoC
     LvA -. approval workflow .-> ApC
     LvA -. approver directory .-> OrC
+    OdA -. product pricing .-> CaC
+    OdA -. fulfillment location .-> LoC
 
-    Host --> IdA & IdW & NoA & OrA & ApA & LvA
+    Host --> IdA & IdW & NoA & OrA & ApA & LvA & LoA & CaA & OdA
     Admin -. HTTP/JSON .-> Host
 
     classDef leaf fill:#2f6f4f,stroke:#1e4a34,color:#fff;
@@ -158,11 +187,11 @@ sequenceDiagram
 | Layer | Stack |
 |---|---|
 | Backend runtime | ASP.NET Core (C#), `net10.0` |
-| Backend architecture | Modular Monolith — flat projects under `src/`: five modules (`Identity`, `Notifications`, `Organization`, `Approval`, `LeaveManagement`), each an `<Module>.Api` + `<Module>.Contracts` pair (Identity also ships `Identity.Web`, a Razor Pages login host), plus the shared kernel (`Shared`, `Infrastructure`, `Persistence`) and the `StarterKit.WebApi` composition-root host. One `DbContext` per module, all sharing one physical database separated by schema |
+| Backend architecture | Modular Monolith — flat projects under `src/`: eight modules (`Identity`, `Notifications`, `Organization`, `Approval`, `LeaveManagement`, `Location`, `Catalog`, `Orders`), each an `<Module>.Api` + `<Module>.Contracts` pair (Identity also ships `Identity.Web`, a Razor Pages login host), plus the shared kernel (`Shared`, `Infrastructure`, `Persistence`) and the `StarterKit.WebApi` composition-root host. One `DbContext` per module, all sharing one physical database separated by schema |
 | Backend data access | EF Core — provider-configurable via `DbProvider` in `appsettings.json` (`InMemory` / `PostgreSQL` / `MSSQL` / `Sqlite`), with a design-time migrations project per relational provider (`src/Migrations/{MSSQL,PostgreSQL,Sqlite}`) |
 | Vendor framework | `Lightsoft.*` package family (mediator, `Result`/`Paged` contracts, domain base types, ASP.NET Core authorization/modularity/CORS helpers, caching (`Lightsoft.Caching`, config-driven in-memory/Redis switch), Serilog) |
-| Testing | xUnit v3 on Microsoft.Testing.Platform — `tests/{Framework,Identity,Organization,Approval,LeaveManagement}.Tests` (~69 / ~100 / ~63 / ~57 / ~30 tests). No dedicated test project for Notifications yet; no mocking library beyond `Moq` for cross-module seam interfaces — otherwise hand-written fakes / real in-memory DbContexts |
-| Clients | `clients/admin/` — Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, pnpm. Real auth (encrypted-cookie sessions, password or Microsoft, proactive token refresh), CRUD for Identity / Organization / Approvals / Leave requests against the five backend modules, real-time Notifications via SignalR (browser connects directly to the backend). No mock data. Currently the only client app |
+| Testing | xUnit v3 on Microsoft.Testing.Platform — `tests/{Framework,Identity,Organization,Approval,LeaveManagement,Location,Catalog,Orders}.Tests` (~69 / ~100 / ~63 / ~57 / ~30 / ~114 / ~111 / ~121 tests respectively). No dedicated test project for Notifications yet; no mocking library beyond `Moq` for cross-module seam interfaces — otherwise hand-written fakes / real in-memory DbContexts |
+| Clients | `clients/admin/` — Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, pnpm. Real auth (encrypted-cookie sessions, password or Microsoft, proactive token refresh), CRUD for Identity / Organization / Location / Catalog / Orders / Approvals / Leave requests against the eight backend modules, real-time Notifications via SignalR (browser connects directly to the backend). No mock data. Currently the only client app |
 
 ## Getting Started
 
@@ -181,7 +210,7 @@ Configure the DB provider and connection string in `src/StarterKit.WebApi/appset
 ```bash
 cd clients/admin
 pnpm install
-cp .env.example .env.local   # set the five *_API_BASE_URL vars, IDENTITY_WEB_BASE_URL, TOKEN_ENCRYPTION_KEY, SIGNALR_HUB_URL
+cp .env.example .env.local   # set the eight *_API_BASE_URL vars, IDENTITY_WEB_BASE_URL, TOKEN_ENCRYPTION_KEY, SIGNALR_HUB_URL
 pnpm dev
 ```
 

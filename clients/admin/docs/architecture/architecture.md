@@ -131,10 +131,10 @@ No cycles found among internal imports.
 
 - **Auth-token injection via a request-handler pipeline.** `http.ts` has no `accessToken` option — it
   takes `handlers` run before `fetch`. `lib/server/backend-api.ts`'s `createBackendApiClient(client)`
-  factory pre-wires `bearerTokenHandler` (reads the ambient session) and a fixed backend client; five
-  instances (`identityApi`/`notificationsApi`/`organizationApi`/`approvalApi`/`leaveManagementApi`)
-  cover the five backend modules. Pre-session call sites pass `explicitBearerTokenHandler(token)`
-  instead. `http.ts` never imports sessions.
+  factory pre-wires `bearerTokenHandler` (reads the ambient session) and a fixed backend client; eight
+  instances (`identityApi`/`notificationsApi`/`organizationApi`/`locationApi`/`approvalApi`/
+  `leaveManagementApi`/`catalogApi`/`ordersApi`) cover the eight backend modules. Pre-session call sites
+  pass `explicitBearerTokenHandler(token)` instead. `http.ts` never imports sessions.
 
 - **Session freshness moved off blocking middleware into a client-driven gate.** `proxy.ts` now only
   enforces the 7-day cap and the `/login` redirect. `components/layout/session-gate.tsx` (mounted in
