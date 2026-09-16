@@ -18,6 +18,7 @@ const API_BASE_URL_ENV_VARS: Record<ApiClientName, string> = {
   [ApiClients.LeaveManagement]: "LEAVE_MANAGEMENT_API_BASE_URL",
   [ApiClients.Location]: "LOCATION_API_BASE_URL",
   [ApiClients.Catalog]: "CATALOG_API_BASE_URL",
+  [ApiClients.Orders]: "ORDERS_API_BASE_URL",
 };
 
 /**
