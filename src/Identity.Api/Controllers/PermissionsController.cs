@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using StarterKit.Infrastructure.Endpoints;
 
 namespace StarterKit.Identity.Api.Controllers;
