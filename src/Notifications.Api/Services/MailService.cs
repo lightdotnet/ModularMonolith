@@ -1,4 +1,4 @@
-﻿using Light.Smtp;
+using Light.Smtp;
 using StarterKit.Notifications.Contracts.Services;
 
 namespace StarterKit.Notifications.Api.Services;

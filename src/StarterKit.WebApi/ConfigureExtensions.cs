@@ -1,4 +1,4 @@
-﻿using Asp.Versioning.Conventions;
+using Asp.Versioning.Conventions;
 using FluentValidation;
 using Light.AspNetCore.Builder;
 using Light.AspNetCore.Middlewares;

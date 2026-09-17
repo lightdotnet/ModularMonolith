@@ -1,4 +1,4 @@
-﻿namespace StarterKit.Identity.Api.Jwt;
+namespace StarterKit.Identity.Api.Jwt;
 
 public class JwtOptions
 {

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using StarterKit.Identity.Api.Entities;
 using StarterKit.Persistence.Extensions;
 using StarterKit.Shared;

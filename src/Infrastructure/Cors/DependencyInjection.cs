@@ -1,4 +1,4 @@
-﻿using Light.AspNetCore.Cors;
+using Light.AspNetCore.Cors;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 

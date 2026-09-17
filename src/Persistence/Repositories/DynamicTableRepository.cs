@@ -1,4 +1,4 @@
-﻿using Light.Extensions.DynamicObject;
+using Light.Extensions.DynamicObject;
 
 namespace StarterKit.Persistence.Repositories;
 

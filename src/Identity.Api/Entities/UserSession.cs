@@ -1,4 +1,4 @@
-﻿using Light.Domain;
+using Light.Domain;
 using Light.Domain.Entities;
 
 namespace StarterKit.Identity.Api.Entities;

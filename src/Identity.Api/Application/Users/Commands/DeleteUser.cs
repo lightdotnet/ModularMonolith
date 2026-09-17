@@ -1,4 +1,4 @@
-﻿using StarterKit.Identity.Contracts.Services;
+using StarterKit.Identity.Contracts.Services;
 
 namespace StarterKit.Identity.Api.Application.Users.Commands;
 

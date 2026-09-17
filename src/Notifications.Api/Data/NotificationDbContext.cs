@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using StarterKit.Notifications.Api.Entities;
 using StarterKit.Persistence.Context;
 using StarterKit.Persistence.Extensions;

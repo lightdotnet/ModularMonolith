@@ -1,4 +1,4 @@
-﻿using Light.EntityFrameworkCore.Extensions;
+using Light.EntityFrameworkCore.Extensions;
 using Light.Specification;
 using Mapster;
 using Microsoft.EntityFrameworkCore;

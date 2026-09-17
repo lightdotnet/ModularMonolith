@@ -1,4 +1,4 @@
-﻿using Light.EntityFrameworkCore.Repositories;
+using Light.EntityFrameworkCore.Repositories;
 using Light.Extensions.Caching;
 using Microsoft.Extensions.Logging;
 

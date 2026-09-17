@@ -1,4 +1,4 @@
-﻿namespace StarterKit.Organization.Api.Domain.Employees;
+namespace StarterKit.Organization.Api.Domain.Employees;
 
 public class EmployeeByIdSpec : Specification<Employee>
 {

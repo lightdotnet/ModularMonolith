@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using StarterKit.Shared.Entities;
 
 namespace StarterKit.Persistence.Extensions;

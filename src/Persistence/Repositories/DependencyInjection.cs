@@ -1,4 +1,4 @@
-﻿namespace StarterKit.Persistence.Repositories;
+namespace StarterKit.Persistence.Repositories;
 
 public static class DependencyInjection
 {

@@ -1,4 +1,4 @@
-﻿using Light.AspNetCore.Authorization;
+using Light.AspNetCore.Authorization;
 
 namespace StarterKit.Identity.Contracts.Authorization;
 

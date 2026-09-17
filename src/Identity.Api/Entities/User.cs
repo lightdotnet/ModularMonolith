@@ -1,4 +1,4 @@
-﻿using Light.Domain;
+using Light.Domain;
 using Light.Domain.Entities.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using StarterKit.Identity.Contracts;

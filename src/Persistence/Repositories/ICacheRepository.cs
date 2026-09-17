@@ -1,4 +1,4 @@
-﻿namespace StarterKit.Persistence.Repositories;
+namespace StarterKit.Persistence.Repositories;
 
 /// <summary>
 ///     Can be used to auto load list of T on cache,

@@ -1,4 +1,4 @@
-﻿using StarterKit.Notifications.Contracts.SystemNotifications;
+using StarterKit.Notifications.Contracts.SystemNotifications;
 
 namespace StarterKit.Notifications.Contracts.Services;
 

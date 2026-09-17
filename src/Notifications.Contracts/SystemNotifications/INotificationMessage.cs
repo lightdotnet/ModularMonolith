@@ -1,4 +1,4 @@
-﻿namespace StarterKit.Notifications.Contracts.SystemNotifications;
+namespace StarterKit.Notifications.Contracts.SystemNotifications;
 
 public interface INotificationMessage
 { }

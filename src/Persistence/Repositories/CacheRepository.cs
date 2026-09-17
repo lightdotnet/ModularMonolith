@@ -1,4 +1,4 @@
-﻿using Light.Extensions.Caching;
+using Light.Extensions.Caching;
 using Microsoft.Extensions.Logging;
 
 namespace StarterKit.Persistence.Repositories;

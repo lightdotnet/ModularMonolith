@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using StarterKit.Persistence.MigrationSupport;
 
 namespace StarterKit.Notifications.Api.Data;
