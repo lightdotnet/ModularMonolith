@@ -6,6 +6,8 @@ public sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbC
 {
     public DbSet<TestAggregate> Aggregates => Set<TestAggregate>();
 
+    public DbSet<TestCreationOnlyEntity> CreationOnlyEntities => Set<TestCreationOnlyEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<TestAggregate>().OwnsOne(a => a.Note);

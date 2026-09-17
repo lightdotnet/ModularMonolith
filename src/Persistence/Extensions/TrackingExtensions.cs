@@ -5,67 +5,83 @@ namespace StarterKit.Persistence.Extensions;
 
 public static class TrackingExtensions
 {
-    public static void AuditEntries<TContext>(this TContext context, string? userId, DateTimeOffset auditTime, bool enableSoftDelete = false)
+    public static void AuditEntries<TContext>(this TContext context,
+        string? userId,
+        DateTimeOffset auditTime,
+        bool enableSoftDelete = false)
         where TContext : DbContext
     {
         var changeTracker = context.ChangeTracker;
 
-        // fix null value when delete for Entities inherited ISoftDelete & ValueObjects: only for
-        // table-split owned references (OwnsOne, e.g. User.Status/Product.Price/Product.VatRate) —
-        // FindOwnership().IsUnique is true there and false for an owned collection (OwnsMany, e.g.
-        // Product.Images), where Deleted is a real row delete that must go through untouched.
-        changeTracker.Entries<ValueObject>()
-            .Where(x => x.State is EntityState.Deleted && x.Metadata.FindOwnership() is { IsUnique: true })
-            .ToList()
-            .ForEach(e => e.State = EntityState.Unchanged);
-
-        if (enableSoftDelete)
+        // Handle owned ValueObjects.
+        //
+        // OwnsOne / table-split owned reference:
+        //     IsUnique == true
+        //
+        // OwnsMany:
+        //     IsUnique == false
+        //     => real row delete, so leave untouched.
+        foreach (var entry in changeTracker.Entries<ValueObject>())
         {
-            // auto set Deleted & DeletedBy for Entities inherited ISoftDelete
-            changeTracker.Entries<ISoftDelete>()
-                .Where(x => x.State is EntityState.Deleted)
-                .ToList()
-                .ForEach(e =>
-                {
-                    e.Entity.Deleted = auditTime;
-                    e.Entity.DeletedBy = userId;
-                    e.State = EntityState.Modified;
-                });
+            if (entry.State == EntityState.Deleted &&
+                entry.Metadata.FindOwnership() is { IsUnique: true })
+            {
+                entry.State = EntityState.Unchanged;
+            }
         }
 
-        // tracking creation time for Entities inherited IHasCreationTime
-        changeTracker.Entries<IHasCreationTime>()
-            .Where(x => x.State is EntityState.Added)
-            .ToList()
-            .ForEach(e =>
+        // Handle soft delete first.
+        //
+        // Deleted -> Modified so that the entity will be UPDATEd instead
+        // of DELETEd.
+        if (enableSoftDelete)
+        {
+            foreach (var entry in changeTracker.Entries<ISoftDelete>())
             {
-                e.Entity.Created = auditTime;
-            });
+                if (entry.State != EntityState.Deleted)
+                    continue;
 
-        // tracking modification time for Entities inherited IHasModificationTime
-        changeTracker.Entries<IHasModificationTime>()
-            .Where(x => x.State is EntityState.Modified)
-            .ToList()
-            .ForEach(e =>
-            {
-                e.Entity.LastModified = auditTime;
-            });
+                entry.Entity.Deleted = auditTime;
+                entry.Entity.DeletedBy = userId;
+                entry.State = EntityState.Modified;
+            }
+        }
 
-        // tracking users actions for Entities inherited IHasAuditUser
-        changeTracker.Entries<IHasAuditUser>()
-            .Where(x => x.State is EntityState.Added or EntityState.Modified)
-            .ToList()
-            .ForEach(e =>
+        // Handle all audit-related entities in a single enumeration.
+        foreach (var entry in changeTracker.Entries<IHasAudit>())
+        {
+            switch (entry.State)
             {
-                switch (e.State)
-                {
-                    case EntityState.Added:
-                        e.Entity.CreatedBy = userId;
+                case EntityState.Added:
+                    {
+                        if (entry.Entity is IHasCreationTime creationTime)
+                        {
+                            creationTime.Created = auditTime;
+                        }
+
+                        if (entry.Entity is IHasAuditUser auditUser)
+                        {
+                            auditUser.CreatedBy = userId;
+                        }
+
                         break;
-                    case EntityState.Modified:
-                        e.Entity.LastModifiedBy = userId;
+                    }
+
+                case EntityState.Modified:
+                    {
+                        if (entry.Entity is IHasModificationTime modificationTime)
+                        {
+                            modificationTime.LastModified = auditTime;
+                        }
+
+                        if (entry.Entity is IHasAuditUser auditUser)
+                        {
+                            auditUser.LastModifiedBy = userId;
+                        }
+
                         break;
-                }
-            });
+                    }
+            }
+        }
     }
 }

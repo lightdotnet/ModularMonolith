@@ -2,8 +2,8 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
-    <AspnetVersion>10.0.11</AspnetVersion>
-    <LightVersion>2.0.0</LightVersion>
+    <AspnetVersion>10.0.12</AspnetVersion>
+    <LightVersion>2.0.1</LightVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Core -->
@@ -30,7 +30,7 @@
     <PackageVersion Include="Lightsoft.AspNetCore.Swagger" Version="$(LightVersion)" />
     <PackageVersion Include="Lightsoft.Caching" Version="$(LightVersion)" />
     <PackageVersion Include="Lightsoft.EntityFrameworkCore" Version="$(LightVersion)" />
-    <PackageVersion Include="Lightsoft.Extensions" Version="2.0.1-preview.2" />
+    <PackageVersion Include="Lightsoft.Extensions" Version="$(LightVersion)" />
     <PackageVersion Include="Lightsoft.EventBus" Version="0.2.1" />
     <PackageVersion Include="Lightsoft.EventBus.MassTransit.RabbitMQ" Version="0.2.1" />
     <PackageVersion Include="Lightsoft.FileGenerator" Version="$(LightVersion)" />
@@ -38,7 +38,7 @@
     <PackageVersion Include="Lightsoft.Result" Version="2.1.1" />
     <PackageVersion Include="Lightsoft.Serilog" Version="$(LightVersion)" />
     <PackageVersion Include="Lightsoft.SharedKernel" Version="$(LightVersion)" />
-    <PackageVersion Include="Lightsoft.SmtpMail" Version="2.0.1-preview.1" />
+    <PackageVersion Include="Lightsoft.SmtpMail" Version="$(LightVersion)" />
     <!-- Miscellaneous -->
     <PackageVersion Include="AspNetCore.HealthChecks.UI.Client" Version="9.0.0" />
     <PackageVersion Include="FluentValidation" Version="12.1.1" />

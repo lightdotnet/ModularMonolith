@@ -98,6 +98,38 @@ public class TrackingExtensionsTests
     }
 
     [Fact]
+    public void AuditEntries_ShouldSetCreationTime_ForEntityImplementingOnlyCreationTimeInterface()
+    {
+        // Arrange
+        using var context = TestDbContext.CreateInMemory();
+        var entity = new TestCreationOnlyEntity();
+        context.Add(entity);
+        var auditTime = DateTimeOffset.UtcNow;
+
+        // Act
+        context.AuditEntries("user-1", auditTime);
+
+        // Assert
+        Assert.Equal(auditTime, entity.Created);
+    }
+
+    [Fact]
+    public void AuditEntries_ShouldNotThrow_WhenModifiedEntityLacksModificationOrAuditUserInterfaces()
+    {
+        // Arrange
+        using var context = TestDbContext.CreateInMemory();
+        var entity = new TestCreationOnlyEntity();
+        context.Add(entity);
+        context.Entry(entity).State = EntityState.Modified;
+
+        // Act
+        var exception = Record.Exception(() => context.AuditEntries("user-1", DateTimeOffset.UtcNow));
+
+        // Assert
+        Assert.Null(exception);
+    }
+
+    [Fact]
     public void AuditEntries_ShouldResetDeletedValueObjectEntries_ToUnchanged_RegardlessOfSoftDelete()
     {
         // Arrange
