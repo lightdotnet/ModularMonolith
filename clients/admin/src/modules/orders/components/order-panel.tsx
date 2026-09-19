@@ -11,6 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useActionSuccessToast } from "@/hooks/use-action-success-toast";
 import { useGuardedAction } from "@/hooks/use-guarded-action";
 import { createOrderAction, type CreateOrderFormState } from "@/modules/orders/api/create-order-action";
+import { fulfillOrderAction } from "@/modules/orders/api/fulfill-order-action";
 import { getOrderByIdAction } from "@/modules/orders/api/get-order-by-id-action";
 import { placeOrderAction } from "@/modules/orders/api/place-order-action";
 import { AddOrderLineForm } from "@/modules/orders/components/add-order-line-form";
@@ -21,7 +22,9 @@ import { OrderFeeList } from "@/modules/orders/components/order-fee-list";
 import { OrderLineList } from "@/modules/orders/components/order-line-list";
 import { OrderStatusBadge } from "@/modules/orders/components/order-status-badge";
 import { OrderSummaryFooter } from "@/modules/orders/components/order-summary-footer";
+import { PaymentsSection } from "@/modules/orders/components/payments-section";
 import { OrderStatus, type OrderDto } from "@/modules/orders/types/order";
+import type { OrderTypeDto } from "@/modules/orders/types/order-type";
 import type { LocationTreeNodeDto } from "@/modules/location/types/location";
 
 const initialCreateState: CreateOrderFormState = {};
@@ -32,8 +35,12 @@ interface OrderPanelProps {
   /** `null` opens the panel in create mode (Phase A); a value resumes/views that order (Phase B). */
   orderId: string | null;
   locations: LocationTreeNodeDto[];
-  /** Called after a mutation that should refresh the outer orders list (place/cancel — the two that change what the default list shows). */
+  feeTypes: OrderTypeDto[];
+  paymentTypes: OrderTypeDto[];
+  /** Called after a mutation that should refresh the outer orders list (place/cancel/fulfill/payments — anything that changes what the default list shows). */
   onChanged: () => void;
+  canViewPayments: boolean;
+  canManagePayments: boolean;
 }
 
 /**
@@ -44,7 +51,17 @@ interface OrderPanelProps {
  * same builder UI, just read-only (see each child component's `readOnly` guard) —
  * no separate view-only component.
  */
-export function OrderPanel({ open, onOpenChange, orderId, locations, onChanged }: OrderPanelProps) {
+export function OrderPanel({
+  open,
+  onOpenChange,
+  orderId,
+  locations,
+  feeTypes,
+  paymentTypes,
+  onChanged,
+  canViewPayments,
+  canManagePayments,
+}: OrderPanelProps) {
   const [createState, createFormAction, creating] = useActionState(createOrderAction, initialCreateState);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(orderId);
   const [locationId, setLocationId] = useState("");
@@ -53,6 +70,7 @@ export function OrderPanel({ open, onOpenChange, orderId, locations, onChanged }
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [placing, runPlace] = useGuardedAction();
+  const [fulfilling, runFulfill] = useGuardedAction();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   useActionSuccessToast(createState, "Order created.", () => {
@@ -113,6 +131,18 @@ export function OrderPanel({ open, onOpenChange, orderId, locations, onChanged }
   function handleCancelled() {
     refresh();
     onChanged();
+  }
+
+  function handleFulfill() {
+    if (!order) return;
+    runFulfill(
+      () => fulfillOrderAction(order.id),
+      "Order fulfilled.",
+      () => {
+        refresh();
+        onChanged();
+      },
+    );
   }
 
   const readOnly = order ? order.status !== OrderStatus.Draft : false;
@@ -206,7 +236,20 @@ export function OrderPanel({ open, onOpenChange, orderId, locations, onChanged }
                     <OrderDiscountEditor order={order} readOnly={readOnly} refresh={refresh} />
 
                     <Separator />
-                    <OrderFeeList order={order} readOnly={readOnly} refresh={refresh} />
+                    <OrderFeeList order={order} readOnly={readOnly} refresh={refresh} feeTypes={feeTypes} />
+
+                    {canViewPayments && (
+                      <>
+                        <Separator />
+                        <PaymentsSection
+                          order={order}
+                          canView={canViewPayments}
+                          canManage={canManagePayments}
+                          refresh={refresh}
+                          paymentTypes={paymentTypes}
+                        />
+                      </>
+                    )}
                   </div>
 
                   <OrderSummaryFooter
@@ -214,6 +257,8 @@ export function OrderPanel({ open, onOpenChange, orderId, locations, onChanged }
                     placing={placing}
                     onPlace={handlePlace}
                     onCancel={() => setCancelDialogOpen(true)}
+                    fulfilling={fulfilling}
+                    onFulfill={handleFulfill}
                   />
                 </>
               ) : null}

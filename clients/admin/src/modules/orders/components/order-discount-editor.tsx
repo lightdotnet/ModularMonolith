@@ -61,8 +61,8 @@ export function OrderDiscountEditor({ order, readOnly, refresh }: OrderDiscountE
         <div className="w-40">
           <NativeSelect aria-label="Discount kind" value={kind} onChange={setKind} options={KIND_OPTIONS} />
         </div>
-        <div className="w-32">
-          <NumberInput aria-label="Discount value" value={value} onValueChange={setValue} />
+        <div>
+          <NumberInput aria-label="Discount value" autoWidth value={value} onValueChange={setValue} />
         </div>
         <Button type="button" loading={pending} disabled={!value} onClick={handleApply}>
           Apply

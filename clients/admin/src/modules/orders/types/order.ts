@@ -14,12 +14,6 @@ export enum OrderDiscountKind {
   Percentage = "Percentage",
 }
 
-/** Mirrors Orders.Contracts/Common/OrderFeeType.cs — serialized by name. */
-export enum OrderFeeType {
-  Shipping = "Shipping",
-  Other = "Other",
-}
-
 /**
  * Mirrors Orders.Contracts/Orders/OrderLineDto.cs — `unitPrice`/`vatRate` flatten the domain's
  * `Money`/`VatPercentage` value objects to scalar fields, same convention as `ProductDto`.
@@ -38,13 +32,36 @@ export interface OrderLineDto {
   discountPercentage: number;
 }
 
-/** Mirrors Orders.Contracts/Orders/OrderFeeDto.cs */
+/** Mirrors Orders.Contracts/Orders/OrderFeeDto.cs — `feeTypeName` is a snapshot of the fee type's name taken when the fee was added, not a live lookup. */
 export interface OrderFeeDto {
   id: string;
   orderCode: string;
   name: string;
   amount: number;
-  type: OrderFeeType;
+  feeTypeId: string;
+  feeTypeName: string;
+}
+
+/**
+ * Mirrors Orders.Contracts/Payments/PaymentDto.cs — `id`/`orderId` are backend `long`, typed
+ * `string` here for consistency with every other opaque id in this app (e.g. `OrderLineDto.productId`).
+ * `paymentTypeName` is a snapshot of the payment type's name taken when the payment was recorded,
+ * not a live lookup.
+ */
+export interface PaymentDto {
+  id: string;
+  orderId: string;
+  orderCode: string;
+  amount: number;
+  currency: string;
+  paymentTypeId: string;
+  paymentTypeName: string;
+  paidAt: string;
+  reference?: string | null;
+  recordedByUserId: string;
+  isVoided: boolean;
+  voidedAt?: string | null;
+  voidReason?: string | null;
 }
 
 /**
@@ -109,11 +126,29 @@ export interface ApplyOrderDiscountRequest {
 export interface AddOrderFeeRequest {
   name: string;
   amount: number;
-  type: OrderFeeType;
+  feeTypeId: string;
 }
 
 /** Mirrors Orders.Contracts/Orders/CancelOrderRequest.cs */
 export interface CancelOrderRequest {
+  reason: string;
+}
+
+/**
+ * Mirrors Orders.Contracts/Payments/RecordPaymentRequest.cs — `currency` must exactly equal
+ * `CurrencyConstants.Default` (the server hard-rejects any other value), so the client only ever
+ * sends `order.currency` here rather than exposing a currency picker.
+ */
+export interface RecordPaymentRequest {
+  amount: number;
+  currency: string;
+  paymentTypeId: string;
+  paidAt: string;
+  reference?: string;
+}
+
+/** Mirrors Orders.Contracts/Payments/VoidPaymentRequest.cs */
+export interface VoidPaymentRequest {
   reason: string;
 }
 

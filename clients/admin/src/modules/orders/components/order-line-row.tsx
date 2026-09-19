@@ -78,7 +78,7 @@ export function OrderLineRow({ orderId, line, readOnly, refresh, imageUrl }: Ord
           <div className="flex flex-col items-end gap-2">
             <NumberInput
               aria-label="Quantity"
-              className="w-16"
+              autoWidth
               value={quantity}
               disabled={readOnly}
               onValueChange={setQuantity}
@@ -90,7 +90,8 @@ export function OrderLineRow({ orderId, line, readOnly, refresh, imageUrl }: Ord
                 <span className="text-xs text-muted-foreground">Sale price</span>
                 <NumberInput
                   aria-label="Sale price override"
-                  className="w-24 rounded-none border-0 border-b border-input bg-transparent px-1 text-right focus-visible:ring-0"
+                  autoWidth
+                  className="rounded-none border-0 border-b border-input bg-transparent px-1 text-right focus-visible:ring-0"
                   placeholder={formatNumber(line.unitPrice)}
                   value={salePrice}
                   disabled={readOnly}

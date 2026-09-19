@@ -123,3 +123,9 @@ export function cancelOrder(orderId: string, request: CancelOrderRequest) {
     requestJson<ApiResponse>(`order/${orderId}/cancel`, { method: "PUT", body: request }),
   );
 }
+
+export function fulfillOrder(orderId: string) {
+  return guardResponseCall(() =>
+    requestJson<ApiResponse>(`order/${orderId}/fulfill`, { method: "PUT" }),
+  );
+}

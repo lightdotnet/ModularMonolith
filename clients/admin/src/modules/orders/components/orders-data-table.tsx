@@ -15,10 +15,13 @@ import {
 import { OrderPanel } from "@/modules/orders/components/order-panel";
 import { OrderStatusBadge } from "@/modules/orders/components/order-status-badge";
 import { OrderStatus, type OrderDto } from "@/modules/orders/types/order";
+import type { OrderTypeDto } from "@/modules/orders/types/order-type";
 import type { LocationTreeNodeDto } from "@/modules/location/types/location";
 
 interface OrdersDataTableProps {
   locations: LocationTreeNodeDto[];
+  feeTypes: OrderTypeDto[];
+  paymentTypes: OrderTypeDto[];
   locationId: string;
   status: string;
   records: OrderDto[];
@@ -29,6 +32,8 @@ interface OrdersDataTableProps {
   totalRecords: number;
   error?: DataTableErrorState;
   canManage?: boolean;
+  canViewPayments?: boolean;
+  canManagePayments?: boolean;
 }
 
 const STATUS_OPTIONS = Object.values(OrderStatus).map((value) => ({ value, label: value }));
@@ -43,6 +48,8 @@ function formatAmount(amount: number, currency: string): string {
 
 export function OrdersDataTable({
   locations,
+  feeTypes,
+  paymentTypes,
   locationId,
   status,
   records,
@@ -53,6 +60,8 @@ export function OrdersDataTable({
   totalRecords,
   error,
   canManage,
+  canViewPayments,
+  canManagePayments,
 }: OrdersDataTableProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -250,7 +259,11 @@ export function OrdersDataTable({
         onOpenChange={setPanelOpen}
         orderId={panelOrderId}
         locations={locations}
+        feeTypes={feeTypes}
+        paymentTypes={paymentTypes}
         onChanged={() => router.refresh()}
+        canViewPayments={canViewPayments ?? false}
+        canManagePayments={canManagePayments ?? false}
       />
     </>
   );
