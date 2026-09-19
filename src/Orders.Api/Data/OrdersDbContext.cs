@@ -1,5 +1,6 @@
 using Light.Mediator;
 using Microsoft.Extensions.Logging;
+using StarterKit.Orders.Api.Domain.OrderTypes;
 using StarterKit.Orders.Api.Domain.Orders;
 using StarterKit.Orders.Api.Domain.Payments;
 using StarterKit.Persistence.Context;
@@ -25,6 +26,8 @@ public class OrdersDbContext(
     public virtual DbSet<OrderFee> OrderFees => Set<OrderFee>();
 
     public virtual DbSet<Payment> Payments => Set<Payment>();
+
+    public virtual DbSet<OrderType> OrderTypes => Set<OrderType>();
 
     public override int SaveChanges()
     {
@@ -191,12 +194,18 @@ public class OrdersDbContext(
 
             entity.HasIndex(x => x.OrderId);
 
+            entity.HasIndex(x => x.FeeTypeId);
+
             entity.ConfigureAuditableEntity<OrderFee, long>();
 
             entity.Property(x => x.Name).HasMaxLength(200);
 
             // Plain denormalized snapshot of the parent Order.OrderCode.Value — no FK, no index.
             entity.Property(x => x.OrderCode).HasMaxLength(OrderCode.MaxLength);
+
+            entity.Property(x => x.FeeTypeId).HasMaxLength(450);
+
+            entity.Property(x => x.FeeTypeName).HasMaxLength(200);
 
             entity.OwnsOne(
                 x => x.Amount,
@@ -216,6 +225,8 @@ public class OrdersDbContext(
 
             entity.HasIndex(x => x.OrderId);
 
+            entity.HasIndex(x => x.PaymentTypeId);
+
             entity.ConfigureAuditableEntity<Payment, long>();
 
             entity.Property(x => x.Reference).HasMaxLength(200);
@@ -227,6 +238,10 @@ public class OrdersDbContext(
             // Plain denormalized snapshot of the parent Order.OrderCode.Value — no FK, no index.
             entity.Property(x => x.OrderCode).HasMaxLength(OrderCode.MaxLength);
 
+            entity.Property(x => x.PaymentTypeId).HasMaxLength(450);
+
+            entity.Property(x => x.PaymentTypeName).HasMaxLength(200);
+
             entity.OwnsOne(
                 x => x.Amount,
                 money =>
@@ -237,6 +252,23 @@ public class OrdersDbContext(
                 });
 
             entity.Navigation(x => x.Amount).IsRequired();
+        });
+
+        builder.Entity<OrderType>(entity =>
+        {
+            entity.ToTable(name: "OrderTypes");
+
+            // Composite PK — Id only needs to be unique within a Category, not globally (both
+            // catalogs seed a colliding "OTHER" code). ConfigureAuditableEntity() below still applies
+            // cleanly: it only configures column max lengths (Id/CreatedBy/LastModifiedBy), which is
+            // independent of key shape.
+            entity.HasKey(x => new { x.Id, x.Category });
+
+            entity.ConfigureAuditableEntity();
+
+            entity.Property(x => x.Id).ValueGeneratedNever();
+
+            entity.Property(x => x.Name).HasMaxLength(200);
         });
     }
 

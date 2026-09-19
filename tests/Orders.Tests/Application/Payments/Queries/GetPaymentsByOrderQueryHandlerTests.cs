@@ -1,5 +1,7 @@
 using Orders.Tests.TestSupport;
 using StarterKit.Orders.Api.Application.Payments.Queries;
+using StarterKit.Orders.Api.Domain.OrderTypes;
+using StarterKit.Orders.Contracts.Common;
 using Xunit;
 
 namespace Orders.Tests.Application.Payments.Queries;
@@ -11,6 +13,9 @@ public class GetPaymentsByOrderQueryHandlerTests
     {
         // Arrange
         using var host = new OrdersTestHost();
+        await host.Context.OrderTypes.AddAsync(
+            OrderType.Create("CASH", OrderTypeCategory.Payment, "Cash"),
+            TestContext.Current.CancellationToken);
         var order = OrderBuilder.Placed(host.DateTime.UtcNow, unitPrice: 200m, quantity: 1);
         var otherOrder = OrderBuilder.Placed(host.DateTime.UtcNow, unitPrice: 200m, quantity: 1);
         await host.Context.Orders.AddRangeAsync([order, otherOrder], TestContext.Current.CancellationToken);
@@ -51,6 +56,9 @@ public class GetPaymentsByOrderQueryHandlerTests
     {
         // Arrange
         using var host = new OrdersTestHost();
+        await host.Context.OrderTypes.AddAsync(
+            OrderType.Create("CASH", OrderTypeCategory.Payment, "Cash"),
+            TestContext.Current.CancellationToken);
         var order = OrderBuilder.Placed(host.DateTime.UtcNow, unitPrice: 200m, quantity: 1);
         await host.Context.Orders.AddAsync(order, TestContext.Current.CancellationToken);
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -65,6 +73,9 @@ public class GetPaymentsByOrderQueryHandlerTests
             TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(order.OrderCode.Value, Assert.Single(result).OrderCode);
+        var dto = Assert.Single(result);
+        Assert.Equal(order.OrderCode.Value, dto.OrderCode);
+        Assert.Equal("CASH", dto.PaymentTypeId);
+        Assert.Equal("Cash", dto.PaymentTypeName);
     }
 }

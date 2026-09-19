@@ -18,10 +18,46 @@ namespace MSSQL.Orders
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("orders")
-                .HasAnnotation("ProductVersion", "10.0.11")
+                .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("StarterKit.Orders.Api.Domain.OrderTypes.OrderType", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTimeOffset?>("LastModified")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id", "Category");
+
+                    b.ToTable("OrderTypes", "orders");
+                });
 
             modelBuilder.Entity("StarterKit.Orders.Api.Domain.Orders.Order", b =>
                 {
@@ -110,6 +146,16 @@ namespace MSSQL.Orders
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("FeeTypeId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("FeeTypeName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<DateTimeOffset?>("LastModified")
                         .HasColumnType("datetimeoffset");
 
@@ -130,10 +176,9 @@ namespace MSSQL.Orders
                     b.Property<long>("OrderId")
                         .HasColumnType("bigint");
 
-                    b.Property<int>("Type")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
+
+                    b.HasIndex("FeeTypeId");
 
                     b.HasIndex("OrderId");
 
@@ -218,9 +263,6 @@ namespace MSSQL.Orders
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<int>("Method")
-                        .HasColumnType("int");
-
                     b.Property<string>("OrderCode")
                         .IsRequired()
                         .HasMaxLength(17)
@@ -231,6 +273,16 @@ namespace MSSQL.Orders
 
                     b.Property<DateTimeOffset>("PaidAt")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("PaymentTypeId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("PaymentTypeName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("RecordedByUserId")
                         .IsRequired()
@@ -251,6 +303,8 @@ namespace MSSQL.Orders
                     b.HasKey("Id");
 
                     b.HasIndex("OrderId");
+
+                    b.HasIndex("PaymentTypeId");
 
                     b.ToTable("Payments", "orders");
                 });

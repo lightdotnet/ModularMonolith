@@ -7,10 +7,13 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Orders.Tests" />
+    <!-- Moq's Castle DynamicProxy needs this to mock internal types (e.g. IOrderTypeCache). -->
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
   </ItemGroup>
 
   <ItemGroup>
 	<PackageReference Include="Lightsoft.AspNetCore.Authorization" />
+	<PackageReference Include="Lightsoft.Caching" />
 	<PackageReference Include="Lightsoft.EntityFrameworkCore" />
 	<PackageReference Include="Lightsoft.Mediator" />
 	<PackageReference Include="Lightsoft.Result" />

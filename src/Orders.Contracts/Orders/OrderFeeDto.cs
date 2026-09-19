@@ -1,5 +1,3 @@
-using StarterKit.Orders.Contracts.Common;
-
 namespace StarterKit.Orders.Contracts.Orders;
 
 public class OrderFeeDto : BaseDto<long>
@@ -10,5 +8,7 @@ public class OrderFeeDto : BaseDto<long>
 
     public decimal Amount { get; set; }
 
-    public OrderFeeType Type { get; set; }
+    public string FeeTypeId { get; set; } = null!;
+
+    public string FeeTypeName { get; set; } = null!;
 }

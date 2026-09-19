@@ -1,5 +1,3 @@
-using StarterKit.Orders.Contracts.Common;
-
 namespace StarterKit.Orders.Contracts.Payments;
 
 public class PaymentDto : BaseDto<long>
@@ -12,7 +10,9 @@ public class PaymentDto : BaseDto<long>
 
     public string Currency { get; set; } = null!;
 
-    public PaymentMethod Method { get; set; }
+    public string PaymentTypeId { get; set; } = null!;
+
+    public string PaymentTypeName { get; set; } = null!;
 
     public DateTimeOffset PaidAt { get; set; }
 

@@ -1,6 +1,7 @@
 using StarterKit.Orders.Api.Data;
 using StarterKit.Orders.Api.Domain.Orders;
 using StarterKit.Orders.Api.Domain.Payments;
+using StarterKit.Orders.Api.Services;
 using StarterKit.Shared.ValueObjects;
 
 namespace StarterKit.Orders.Api.Application.Payments.Commands;
@@ -20,7 +21,9 @@ internal sealed class RecordPaymentCommandValidator : AbstractValidator<RecordPa
     }
 }
 
-internal class RecordPaymentCommandHandler(OrdersDbContext context)
+internal class RecordPaymentCommandHandler(
+    OrdersDbContext context,
+    IOrderTypeCache orderTypeCache)
     : ICommandHandler<RecordPaymentCommand, IResult<long>>
 {
     public async Task<IResult<long>> Handle(
@@ -38,11 +41,19 @@ internal class RecordPaymentCommandHandler(OrdersDbContext context)
 
         var model = request.Model;
 
+        // Passing the fixed expected category is itself the guard against e.g. a Fee-category id
+        // being submitted as a payment type — a lookup for the wrong category simply finds nothing.
+        var paymentType = await orderTypeCache.GetAsync(model.PaymentTypeId, OrderTypeCategory.Payment, cancellationToken);
+
+        if (paymentType is null || paymentType.Status != OrderTypeStatus.Active)
+            return Result<long>.NotFound($"Payment type {model.PaymentTypeId} not found or is not active");
+
         var payment = Payment.Create(
             request.OrderId,
             order.OrderCode.Value,
             new Money(model.Amount, model.Currency),
-            model.Method,
+            paymentType.Id,
+            paymentType.Name,
             model.PaidAt,
             model.Reference,
             request.RecordedByUserId);

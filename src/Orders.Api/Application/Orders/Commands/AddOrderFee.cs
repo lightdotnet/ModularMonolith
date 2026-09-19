@@ -1,5 +1,6 @@
 using StarterKit.Orders.Api.Data;
 using StarterKit.Orders.Api.Domain.Orders;
+using StarterKit.Orders.Api.Services;
 using StarterKit.Shared.Constants;
 using StarterKit.Shared.ValueObjects;
 
@@ -18,7 +19,9 @@ internal sealed class AddOrderFeeCommandValidator : AbstractValidator<AddOrderFe
     }
 }
 
-internal class AddOrderFeeCommandHandler(OrdersDbContext context)
+internal class AddOrderFeeCommandHandler(
+    OrdersDbContext context,
+    IOrderTypeCache orderTypeCache)
     : ICommandHandler<AddOrderFeeCommand, IResult<long>>
 {
     public async Task<IResult<long>> Handle(
@@ -35,7 +38,14 @@ internal class AddOrderFeeCommandHandler(OrdersDbContext context)
 
         var model = request.Model;
 
-        entity.AddFee(model.Name, new Money(model.Amount, CurrencyConstants.Default), model.Type);
+        // Passing the fixed expected category is itself the guard against e.g. a Payment-category id
+        // being submitted as a fee type — a lookup for the wrong category simply finds nothing.
+        var feeType = await orderTypeCache.GetAsync(model.FeeTypeId, OrderTypeCategory.Fee, cancellationToken);
+
+        if (feeType is null || feeType.Status != OrderTypeStatus.Active)
+            return Result<long>.NotFound($"Fee type {model.FeeTypeId} not found or is not active");
+
+        entity.AddFee(model.Name, new Money(model.Amount, CurrencyConstants.Default), feeType.Id, feeType.Name);
 
         // Order.AddFee appends to the in-memory collection; the new fee's Id is only populated by
         // the identity column once this SaveChangesAsync commits.

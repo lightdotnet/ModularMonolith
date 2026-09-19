@@ -68,7 +68,8 @@ internal class GetOrderByIdQueryHandler(OrdersDbContext context)
                 OrderCode = x.OrderCode,
                 Name = x.Name,
                 Amount = x.Amount.Amount,
-                Type = x.Type,
+                FeeTypeId = x.FeeTypeId,
+                FeeTypeName = x.FeeTypeName,
             })
             .ToList(),
     };

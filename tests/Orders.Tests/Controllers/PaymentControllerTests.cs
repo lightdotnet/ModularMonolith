@@ -8,7 +8,6 @@ using Orders.Tests.TestSupport;
 using StarterKit.Orders.Api.Application.Payments.Commands;
 using StarterKit.Orders.Api.Application.Payments.Queries;
 using StarterKit.Orders.Api.Controllers;
-using StarterKit.Orders.Contracts.Common;
 using StarterKit.Orders.Contracts.Payments;
 using StarterKit.Shared;
 using StarterKit.Shared.Constants;
@@ -61,7 +60,7 @@ public class PaymentControllerTests
         {
             Amount = 50m,
             Currency = CurrencyConstants.Default,
-            Method = PaymentMethod.Cash,
+            PaymentTypeId = "CASH",
             PaidAt = DateTimeOffset.UtcNow,
         };
         var expected = Result<long>.Success(1);

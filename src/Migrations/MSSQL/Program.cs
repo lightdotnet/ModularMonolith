@@ -58,3 +58,5 @@ await catalogInitialiser.TrySeedAsync();
 var ordersInitialiser = serviceProvider.GetRequiredService<StarterKit.Orders.Api.Data.OrdersContextInitialiser>();
 
 await ordersInitialiser.InitialiseAsync();
+
+await ordersInitialiser.TrySeedAsync();

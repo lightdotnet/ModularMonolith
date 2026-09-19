@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Orders.Tests.TestSupport;
 using StarterKit.Orders.Api.Application.Orders.Commands;
+using StarterKit.Orders.Api.Domain.OrderTypes;
 using StarterKit.Orders.Contracts.Common;
 using StarterKit.Shared.Constants;
 using StarterKit.Shared.ValueObjects;
@@ -31,8 +32,11 @@ public class RemoveOrderFeeCommandHandlerTests
     {
         // Arrange
         using var host = new OrdersTestHost();
+        await host.Context.OrderTypes.AddAsync(
+            OrderType.Create("SHIPPING", OrderTypeCategory.Fee, "Shipping"),
+            TestContext.Current.CancellationToken);
         var order = OrderBuilder.Draft();
-        order.AddFee("Shipping", new Money(10m, CurrencyConstants.Default), OrderFeeType.Shipping);
+        order.AddFee("Shipping", new Money(10m, CurrencyConstants.Default), "SHIPPING", "Shipping");
         await host.Context.Orders.AddAsync(order, TestContext.Current.CancellationToken);
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         var feeId = order.Fees[0].Id;

@@ -1,7 +1,6 @@
 using Light.Exceptions;
 using Orders.Tests.TestSupport;
 using StarterKit.Orders.Api.Domain.Payments;
-using StarterKit.Orders.Contracts.Common;
 using StarterKit.Shared.Constants;
 using StarterKit.Shared.ValueObjects;
 using Xunit;
@@ -21,7 +20,8 @@ public class PaymentTests
             orderId,
             "20260101TESTCODE1",
             new Money(10m, CurrencyConstants.Default),
-            PaymentMethod.Cash,
+            "CASH",
+            "Cash",
             Now,
             null,
             "user-1"));
@@ -36,7 +36,8 @@ public class PaymentTests
             1L,
             "20260101TESTCODE1",
             new Money(10m, CurrencyConstants.Default),
-            PaymentMethod.Cash,
+            "CASH",
+            "Cash",
             Now,
             null,
             recordedByUserId));
@@ -49,7 +50,8 @@ public class PaymentTests
             1L,
             "20260101TESTCODE1",
             new Money(0m, CurrencyConstants.Default),
-            PaymentMethod.Cash,
+            "CASH",
+            "Cash",
             Now,
             null,
             "user-1"));
@@ -59,13 +61,14 @@ public class PaymentTests
     public void Create_ShouldSucceed_AndNotBeVoided()
     {
         // Act
-        var payment = PaymentBuilder.Build(1L, 100m, Now, PaymentMethod.Card, "ref-1", "user-1", "20260101TESTCODE1");
+        var payment = PaymentBuilder.Build(1L, 100m, Now, "CARD", "ref-1", "user-1", "20260101TESTCODE1");
 
         // Assert
         Assert.Equal(1L, payment.OrderId);
         Assert.Equal("20260101TESTCODE1", payment.OrderCode);
         Assert.Equal(100m, payment.Amount.Amount);
-        Assert.Equal(PaymentMethod.Card, payment.Method);
+        Assert.Equal("CARD", payment.PaymentTypeId);
+        Assert.Equal("Cash", payment.PaymentTypeName);
         Assert.Equal(Now, payment.PaidAt);
         Assert.Equal("ref-1", payment.Reference);
         Assert.Equal("user-1", payment.RecordedByUserId);

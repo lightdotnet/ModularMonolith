@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Orders.Tests.TestSupport;
 using StarterKit.Orders.Api.Application.Payments.Commands;
+using StarterKit.Orders.Api.Domain.OrderTypes;
 using StarterKit.Orders.Contracts.Common;
 using StarterKit.Orders.Contracts.Payments;
 using Xunit;
@@ -31,6 +32,9 @@ public class VoidPaymentCommandHandlerTests
         // Arrange — the only payment on this order is the one being voided, so the order should
         // fall all the way back to Placed, not stay Paid because of a stale IsVoided read.
         using var host = new OrdersTestHost();
+        await host.Context.OrderTypes.AddAsync(
+            OrderType.Create("CASH", OrderTypeCategory.Payment, "Cash"),
+            TestContext.Current.CancellationToken);
         var order = OrderBuilder.Placed(host.DateTime.UtcNow, unitPrice: 100m, quantity: 1);
         await host.Context.Orders.AddAsync(order, TestContext.Current.CancellationToken);
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);

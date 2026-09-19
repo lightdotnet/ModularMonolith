@@ -194,7 +194,7 @@ public class OrderControllerTests
     public async Task AddFeeAsync_ShouldDispatchCommand()
     {
         var (controller, mediatorMock) = CreateSut();
-        var request = new AddOrderFeeRequest { Name = "Shipping", Amount = 10m, Type = OrderFeeType.Shipping };
+        var request = new AddOrderFeeRequest { Name = "Shipping", Amount = 10m, FeeTypeId = "SHIPPING" };
         var expected = Result<long>.Success(2);
         mediatorMock
             .Setup(m => m.Send(

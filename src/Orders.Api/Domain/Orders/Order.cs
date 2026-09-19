@@ -191,11 +191,12 @@ public class Order : AuditableEntity<long>
     public void AddFee(
         string name,
         Money amount,
-        OrderFeeType type)
+        string feeTypeId,
+        string feeTypeName)
     {
         EnsureDraft();
 
-        _fees.Add(OrderFee.Create(Id, OrderCode.Value, name, amount, type));
+        _fees.Add(OrderFee.Create(Id, OrderCode.Value, name, amount, feeTypeId, feeTypeName));
     }
 
     public void RemoveFee(long orderFeeId)

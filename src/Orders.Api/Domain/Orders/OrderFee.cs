@@ -19,13 +19,15 @@ public class OrderFee : AuditableEntity<long>
         string orderCode,
         string name,
         Money amount,
-        OrderFeeType type)
+        string feeTypeId,
+        string feeTypeName)
     {
         OrderId = orderId;
         OrderCode = orderCode;
         Name = name;
         Amount = amount;
-        Type = type;
+        FeeTypeId = feeTypeId;
+        FeeTypeName = feeTypeName;
     }
 
     public long OrderId { get; private set; }
@@ -37,7 +39,11 @@ public class OrderFee : AuditableEntity<long>
 
     public Money Amount { get; private set; } = null!;
 
-    public OrderFeeType Type { get; private set; }
+    /// <summary>Plain denormalized id of the <c>FeeTypes</c> catalog entry chosen at <see cref="Create"/> time — no FK, no navigation, same treatment as <see cref="OrderCode"/>.</summary>
+    public string FeeTypeId { get; private set; } = null!;
+
+    /// <summary>Denormalized snapshot of <c>FeeType.Name</c> taken at <see cref="Create"/> time — same treatment as <see cref="OrderCode"/>.</summary>
+    public string FeeTypeName { get; private set; } = null!;
 
     public virtual Order Order { get; private set; } = null!;
 
@@ -46,14 +52,21 @@ public class OrderFee : AuditableEntity<long>
         string orderCode,
         string name,
         Money amount,
-        OrderFeeType type)
+        string feeTypeId,
+        string feeTypeName)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw Invalid(nameof(name), "A fee name is required.");
 
+        if (string.IsNullOrWhiteSpace(feeTypeId))
+            throw Invalid(nameof(feeTypeId), "A fee type is required.");
+
+        if (string.IsNullOrWhiteSpace(feeTypeName))
+            throw Invalid(nameof(feeTypeName), "A fee type name is required.");
+
         ArgumentNullException.ThrowIfNull(amount);
 
-        return new OrderFee(orderId, orderCode, name, amount, type);
+        return new OrderFee(orderId, orderCode, name, amount, feeTypeId, feeTypeName);
     }
 
     private static ValidationException Invalid(

@@ -1,5 +1,4 @@
 using StarterKit.Orders.Api.Domain.Payments;
-using StarterKit.Orders.Contracts.Common;
 using StarterKit.Shared.Constants;
 using StarterKit.Shared.ValueObjects;
 
@@ -12,15 +11,17 @@ internal static class PaymentBuilder
         long orderId,
         decimal amount,
         DateTimeOffset paidAt,
-        PaymentMethod method = PaymentMethod.Cash,
+        string paymentTypeId = "CASH",
         string? reference = null,
         string recordedByUserId = "user-1",
-        string orderCode = "20260101TESTCODE1") =>
+        string orderCode = "20260101TESTCODE1",
+        string paymentTypeName = "Cash") =>
         Payment.Create(
             orderId,
             orderCode,
             new Money(amount, CurrencyConstants.Default),
-            method,
+            paymentTypeId,
+            paymentTypeName,
             paidAt,
             reference,
             recordedByUserId);

@@ -91,7 +91,7 @@ public class OrderTests
         var order = Order.Create("location-1", null, Now, new OrderCode("SNAPSHOT-CODE"));
 
         // Act
-        order.AddFee("Shipping", new Money(1m, CurrencyConstants.Default), OrderFeeType.Shipping);
+        order.AddFee("Shipping", new Money(1m, CurrencyConstants.Default), "SHIPPING", "Shipping");
 
         // Assert
         Assert.Equal("SNAPSHOT-CODE", order.Fees[0].OrderCode);
@@ -102,7 +102,7 @@ public class OrderTests
         yield return [(Action<Order>)(o => OrderBuilder.AddLine(o))];
         yield return [(Action<Order>)(o => o.ApplyDiscount(OrderDiscountKind.FixedAmount, 1m))];
         yield return [(Action<Order>)(o => o.RemoveDiscount())];
-        yield return [(Action<Order>)(o => o.AddFee("Shipping", new Money(1m, CurrencyConstants.Default), OrderFeeType.Shipping))];
+        yield return [(Action<Order>)(o => o.AddFee("Shipping", new Money(1m, CurrencyConstants.Default), "SHIPPING", "Shipping"))];
     }
 
     [Theory]
@@ -423,7 +423,7 @@ public class OrderTests
         // Arrange
         var order = OrderBuilder.DraftWithLine(unitPrice: 100m, quantity: 2);
         order.ApplyDiscount(OrderDiscountKind.FixedAmount, 20m);
-        order.AddFee("Shipping", new Money(10m, CurrencyConstants.Default), OrderFeeType.Shipping);
+        order.AddFee("Shipping", new Money(10m, CurrencyConstants.Default), "SHIPPING", "Shipping");
 
         // Assert
         Assert.Equal(200m, order.Subtotal);

@@ -22,7 +22,8 @@ public class Payment : AuditableEntity<long>
         long orderId,
         string orderCode,
         Money amount,
-        PaymentMethod method,
+        string paymentTypeId,
+        string paymentTypeName,
         DateTimeOffset paidAt,
         string? reference,
         string recordedByUserId)
@@ -30,7 +31,8 @@ public class Payment : AuditableEntity<long>
         OrderId = orderId;
         OrderCode = orderCode;
         Amount = amount;
-        Method = method;
+        PaymentTypeId = paymentTypeId;
+        PaymentTypeName = paymentTypeName;
         PaidAt = paidAt;
         Reference = reference;
         RecordedByUserId = recordedByUserId;
@@ -43,7 +45,11 @@ public class Payment : AuditableEntity<long>
 
     public Money Amount { get; private set; } = null!;
 
-    public PaymentMethod Method { get; private set; }
+    /// <summary>Plain denormalized id of the <c>PaymentTypes</c> catalog entry chosen at <see cref="Create"/> time — no FK, no navigation, same treatment as <see cref="OrderCode"/>.</summary>
+    public string PaymentTypeId { get; private set; } = null!;
+
+    /// <summary>Denormalized snapshot of <c>PaymentType.Name</c> taken at <see cref="Create"/> time — same treatment as <see cref="OrderCode"/>.</summary>
+    public string PaymentTypeName { get; private set; } = null!;
 
     public DateTimeOffset PaidAt { get; private set; }
 
@@ -61,7 +67,8 @@ public class Payment : AuditableEntity<long>
         long orderId,
         string orderCode,
         Money amount,
-        PaymentMethod method,
+        string paymentTypeId,
+        string paymentTypeName,
         DateTimeOffset paidAt,
         string? reference,
         string recordedByUserId)
@@ -72,6 +79,12 @@ public class Payment : AuditableEntity<long>
         if (string.IsNullOrWhiteSpace(recordedByUserId))
             throw Invalid(nameof(recordedByUserId), "A recording user is required.");
 
+        if (string.IsNullOrWhiteSpace(paymentTypeId))
+            throw Invalid(nameof(paymentTypeId), "A payment type is required.");
+
+        if (string.IsNullOrWhiteSpace(paymentTypeName))
+            throw Invalid(nameof(paymentTypeName), "A payment type name is required.");
+
         ArgumentNullException.ThrowIfNull(amount);
 
         if (amount.Amount <= 0)
@@ -81,7 +94,8 @@ public class Payment : AuditableEntity<long>
             orderId,
             orderCode,
             amount,
-            method,
+            paymentTypeId,
+            paymentTypeName,
             paidAt,
             reference,
             recordedByUserId);

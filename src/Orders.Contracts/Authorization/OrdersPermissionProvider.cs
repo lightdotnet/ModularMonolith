@@ -25,5 +25,15 @@ public class OrdersPermissionProvider : IPermissionDefinitionProvider
             OrdersPermissions.Payments.Manage,
             "Manage Payments",
             OrdersPermissions.Group);
+
+        yield return new(
+            OrdersPermissions.OrderTypes.View,
+            "View Order Types",
+            OrdersPermissions.Group);
+
+        yield return new(
+            OrdersPermissions.OrderTypes.Manage,
+            "Manage Order Types",
+            OrdersPermissions.Group);
     }
 }

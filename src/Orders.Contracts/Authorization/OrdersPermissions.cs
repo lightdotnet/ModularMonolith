@@ -17,4 +17,11 @@ public static class OrdersPermissions
 
         public const string Manage = $"{Group}.payments.manage";
     }
+
+    public static class OrderTypes
+    {
+        public const string View = $"{Group}.order_types.view";
+
+        public const string Manage = $"{Group}.order_types.manage";
+    }
 }
