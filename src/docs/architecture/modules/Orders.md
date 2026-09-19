@@ -17,6 +17,11 @@ string snapshot of the parent so a row from either table is self-describing with
 unconstrained `OrderId` (no navigation, no FK) plus its own `OrderCode` snapshot — recording or voiding
 a payment never loads or locks the order graph.
 
+A third, standalone entity, `OrderType`, is a data-driven catalog of fee types and payment types
+(replacing what would otherwise be hardcoded enums). It is administered independently of any order;
+`OrderFee` and `Payment` reference it by plain string id plus a name snapshot, never by FK (see Notable
+Conventions).
+
 `Order` has no idea what a product actually costs or whether a location exists: `AddOrderLineCommandHandler`
 resolves current pricing via `Catalog.Contracts.ICatalogPricingService.GetPriceInfoAsync` and snapshots
 name/price/VAT rate/SKU onto the new `OrderLine`, and `CreateOrderCommandHandler` checks
@@ -32,8 +37,8 @@ same structural convention as `Organization`/`Approval`/`LeaveManagement`/`Locat
 
 | Project | Responsibility | Notes |
 |---|---|---|
-| `Orders.Contracts` | DTOs, requests, enums, and the permission catalog, organized into per-feature subfolders — `Common/` (`OrderStatus`: `Draft`/`Placed`/`PartiallyPaid`/`Paid`/`Fulfilled`/`Cancelled`; `OrderDiscountKind`: `FixedAmount`/`Percentage`; `OrderFeeType`: `Shipping`/`Other`; `PaymentMethod`: `Cash`/`Card`/`BankTransfer`/`Other`), `Orders/` (`OrderDto` (flattens `Order`'s computed `Subtotal`/`DiscountAmount`/`FeesTotal`/`Total` to plain `decimal`s, never a nested value-object shape; includes `IList<OrderLineDto> Lines`/`IList<OrderFeeDto> Fees`), `OrderLineDto`, `OrderFeeDto`, `CreateOrderRequest`, `AddOrderLineRequest`, `UpdateOrderLineQuantityRequest`, `SetOrderLineSalePriceRequest`, `ApplyOrderDiscountRequest`, `AddOrderFeeRequest`, `CancelOrderRequest`, `SearchOrderRequest : SearchQuery`), `Payments/` (`PaymentDto`, `RecordPaymentRequest`, `VoidPaymentRequest`), `Events/` (`OrderPlacedIntegrationEvent(OrderId, LocationId, PlacedAt, IReadOnlyList<OrderLineSnapshot> Lines) : INotification`, `OrderLineSnapshot`), `Authorization/` (`OrdersPermissions`, `OrdersPermissionProvider`). Every Request record carries its own `AbstractValidator<TRequest>` **in the same file** — the same two-layer FluentValidation convention `Location` established. Declares `Lightsoft.AspNetCore.Authorization`, `Lightsoft.Mediator` (for `INotification`) directly; `GlobalUsings.cs` globals `StarterKit.Shared`. Also carries `ProjectReference`s to `Catalog.Contracts` and `Location.Contracts` (see Dependencies — currently unused by any type in this project; every cross-module-looking field here, e.g. `OrderDto.LocationId`, is a plain `string`). |
-| `Orders.Api` | Single project organized by folder: `Domain/Orders/` — the `Order` aggregate (private ctor; `Create` factory; draft-only line/fee/discount editors; `Place`/`Cancel`/`MarkFulfilled`/`ReconcilePaymentStatus`; internal `RotateConcurrencyToken`/`RegenerateOrderCode`), its `OrderCode` value object, its `OrderLine`/`OrderFee` children, the optional owned `OrderDiscount` value object, `OrderByIdSpec`, and three domain events `OrderPlacedEvent`/`OrderCancelledEvent`/`OrderFulfilledEvent` (all `internal sealed record : DomainEvent`, see Notable Conventions — no handler subscribes to any of them yet). `Domain/Payments/` — the separate `Payment` aggregate + `PaymentByIdSpec`. All entities `: AuditableEntity<long>`. `Data/` (`OrdersDbContext`, `OrdersContextInitialiser`). `Application/Orders/{Commands,Queries}` — `CreateOrder`, `AddOrderLine`, `UpdateOrderLineQuantity`, `SetOrderLineSalePrice`, `RemoveOrderLine`, `ApplyOrderDiscount`, `RemoveOrderDiscount`, `AddOrderFee`, `RemoveOrderFee`, `PlaceOrder`, `CancelOrder`, `MarkOrderFulfilled`; `GetOrderById`, `SearchOrders` — every handler owns its `OrdersDbContext` logic directly, no service-class indirection, plus a thin per-command `AbstractValidator`. `Application/Payments/{Commands,Queries}` — `RecordPayment`, `VoidPayment`; `GetPaymentsByOrder`. `Controllers/` (`OrderController`, `PaymentController`). `OrdersModule.cs` (DI: DbContext + permission provider only — unlike `Catalog`/`Location`, `Orders` exposes no cross-module seam of its own, only consumes others'). |
+| `Orders.Contracts` | DTOs, requests, enums, and the permission catalog, organized into per-feature subfolders — `Common/` (`OrderStatus`: `Draft`/`Placed`/`PartiallyPaid`/`Paid`/`Fulfilled`/`Cancelled`; `OrderDiscountKind`: `FixedAmount`/`Percentage`; `OrderTypeCategory`: `Fee`/`Payment`; `OrderTypeStatus`: `Active`/`Inactive`), `Orders/` (`OrderDto` (flattens `Order`'s computed `Subtotal`/`DiscountAmount`/`FeesTotal`/`Total` to plain `decimal`s, never a nested value-object shape; includes `IList<OrderLineDto> Lines`/`IList<OrderFeeDto> Fees`), `OrderLineDto`, `OrderFeeDto`, `CreateOrderRequest`, `AddOrderLineRequest`, `UpdateOrderLineQuantityRequest`, `SetOrderLineSalePriceRequest`, `ApplyOrderDiscountRequest`, `AddOrderFeeRequest`, `CancelOrderRequest`, `SearchOrderRequest : SearchQuery`), `Payments/` (`PaymentDto`, `RecordPaymentRequest`, `VoidPaymentRequest`), `OrderTypes/` (`OrderTypeDto`, `CreateOrderTypeRequest`, `UpdateOrderTypeRequest`), `Events/` (`OrderPlacedIntegrationEvent(OrderId, LocationId, PlacedAt, IReadOnlyList<OrderLineSnapshot> Lines) : INotification`, `OrderLineSnapshot`), `Authorization/` (`OrdersPermissions`, `OrdersPermissionProvider`). Every Request record carries its own `AbstractValidator<TRequest>` **in the same file** — the same two-layer FluentValidation convention `Location` established. Declares `Lightsoft.AspNetCore.Authorization`, `Lightsoft.Mediator` (for `INotification`) directly; `GlobalUsings.cs` globals `StarterKit.Shared`. Also carries `ProjectReference`s to `Catalog.Contracts` and `Location.Contracts` (see Dependencies — currently unused by any type in this project; every cross-module-looking field here, e.g. `OrderDto.LocationId`, is a plain `string`). |
+| `Orders.Api` | Single project organized by folder: `Domain/Orders/` — the `Order` aggregate (private ctor; `Create` factory; draft-only line/fee/discount editors; `Place`/`Cancel`/`MarkFulfilled`/`ReconcilePaymentStatus`; internal `RotateConcurrencyToken`/`RegenerateOrderCode`), its `OrderCode` value object, its `OrderLine`/`OrderFee` children, the optional owned `OrderDiscount` value object, `OrderByIdSpec`, and three domain events `OrderPlacedEvent`/`OrderCancelledEvent`/`OrderFulfilledEvent` (all `internal sealed record : DomainEvent`, see Notable Conventions — no handler subscribes to any of them yet). `Domain/Payments/` — the separate `Payment` aggregate + `PaymentByIdSpec`. `Domain/OrderTypes/` — the `OrderType` catalog entity + `OrderTypeByIdSpec`. `Order`/`OrderLine`/`OrderFee`/`Payment` are `: AuditableEntity<long>`; `OrderType` is string-keyed (see Notable Conventions). `Data/` (`OrdersDbContext`, `OrdersContextInitialiser`). `Services/` (`IOrderTypeCache`/`OrderTypeCache`). `Application/Orders/{Commands,Queries}` — `CreateOrder`, `AddOrderLine`, `UpdateOrderLineQuantity`, `SetOrderLineSalePrice`, `RemoveOrderLine`, `ApplyOrderDiscount`, `RemoveOrderDiscount`, `AddOrderFee`, `RemoveOrderFee`, `PlaceOrder`, `CancelOrder`, `MarkOrderFulfilled`; `GetOrderById`, `SearchOrders` — every handler owns its `OrdersDbContext` logic directly, no service-class indirection, plus a thin per-command `AbstractValidator`. `Application/Payments/{Commands,Queries}` — `RecordPayment`, `VoidPayment`; `GetPaymentsByOrder`. `Application/OrderTypes/{Commands,Queries}` — `CreateOrderType`, `UpdateOrderType`, `DeleteOrderType`; `GetOrderTypes`, `GetOrderTypeById`. `Controllers/` (`OrderController`, `PaymentController`, `OrderTypeController`). `OrdersModule.cs` (DI: DbContext, `IOrderTypeCache`, permission provider — unlike `Catalog`/`Location`, `Orders` exposes no cross-module seam of its own, only consumes others'). |
 
 ## Public Contract
 
@@ -51,7 +56,7 @@ level; every route id is `long`):
 | `api/v{version}/order/{id}/line/{lineId}` | DELETE | `orders.orders.manage` | Route ids | `Result`; `Order.RemoveLine` (draft-only) |
 | `api/v{version}/order/{id}/discount` | PUT | `orders.orders.manage` | `ApplyOrderDiscountRequest { Kind, Value }` | `Result`; `Order.ApplyDiscount` — replaces any existing discount wholesale (draft-only) |
 | `api/v{version}/order/{id}/discount` | DELETE | `orders.orders.manage` | Route `id` | `Result`; `Order.RemoveDiscount` — no-op if there is none (draft-only) |
-| `api/v{version}/order/{id}/fee` | POST | `orders.orders.manage` | `AddOrderFeeRequest { Name, Amount, Type }` | `Result<long>` (new fee id); `Order.AddFee` (draft-only) |
+| `api/v{version}/order/{id}/fee` | POST | `orders.orders.manage` | `AddOrderFeeRequest { Name, Amount, FeeTypeId }` | `Result<long>` (new fee id); the `FeeTypeId` must resolve to an `Active` `Fee`-category `OrderType` (looked up via `IOrderTypeCache`), whose name is snapshotted onto the fee; then `Order.AddFee` (draft-only) |
 | `api/v{version}/order/{id}/fee/{feeId}` | DELETE | `orders.orders.manage` | Route ids | `Result`; `Order.RemoveFee` (draft-only) |
 | `api/v{version}/order/{id}/place` | PUT | `orders.orders.manage` | Route `id` | `Result`; `Order.Place` — requires at least one line, re-validates discount-vs-subtotal and non-negative total, flips `Draft` → `Placed`, queues `OrderPlacedEvent`, then best-effort publishes `OrderPlacedIntegrationEvent` after the commit |
 | `api/v{version}/order/{id}/cancel` | PUT | `orders.orders.manage` | `CancelOrderRequest { Reason }` | `Result`; `Order.Cancel` — only from `Draft`/`Placed`/`PartiallyPaid`, requires a reason, queues `OrderCancelledEvent` |
@@ -63,16 +68,27 @@ level):
 | Route | Verb | Permission | Request | Response |
 |---|---|---|---|---|
 | `api/v{version}/payment/order/{orderId}` | GET | `orders.payments.view` | Route `orderId` | `IReadOnlyList<PaymentDto>`, ordered by `Created` desc |
-| `api/v{version}/payment/order/{orderId}` | POST | `orders.payments.manage` | `RecordPaymentRequest { Amount, Currency, Method, PaidAt, Reference? }` | `Result<long>` (new payment id); `Payment.Create`, then `Order.ReconcilePaymentStatus` recomputes `AmountPaid`/`Status` from the sum of all non-voided payments including this new one |
+| `api/v{version}/payment/order/{orderId}` | POST | `orders.payments.manage` | `RecordPaymentRequest { Amount, Currency, PaymentTypeId, PaidAt, Reference? }` | `Result<long>` (new payment id); the `PaymentTypeId` must resolve to an `Active` `Payment`-category `OrderType` (name snapshotted onto the payment), then `Payment.Create`, then `Order.ReconcilePaymentStatus` recomputes `AmountPaid`/`Status` from the sum of all non-voided payments including this new one |
 | `api/v{version}/payment/{id}/void` | PUT | `orders.payments.manage` | `VoidPaymentRequest { Reason }` | `Result`; `Payment.Void` (does not delete — the audit trail of who recorded/voided and why is kept), then `Order.ReconcilePaymentStatus` recomputes from the remaining non-voided sum |
 
-Every action across both controllers dispatches a mediator command/query under
-`Application/{Orders,Payments}/{Commands,Queries}` — handlers own their `OrdersDbContext` logic
+`OrderTypeController` (route `order_type`, `[MustHavePermission(OrdersPermissions.OrderTypes.View)]` at
+class level; a composite `{category}/{id}` address because `Id` is only unique within a category):
+
+| Route | Verb | Permission | Request | Response |
+|---|---|---|---|---|
+| `api/v{version}/order_type` | GET | `orders.order_types.view` | Optional `?category=` (`Fee`/`Payment`) | All order types, or only those of one category |
+| `api/v{version}/order_type/{category}/{id}` | GET | `orders.order_types.view` | Route `category`, `id` | `Result<OrderTypeDto>` |
+| `api/v{version}/order_type` | POST | `orders.order_types.manage` | `CreateOrderTypeRequest` (carries the caller-supplied `Id` code, `Category`, `Name`) | `Result`; category and id are immutable after creation |
+| `api/v{version}/order_type/{category}/{id}` | PUT | `orders.order_types.manage` | `UpdateOrderTypeRequest` | `Result`; updates the mutable fields (name, status) only |
+| `api/v{version}/order_type/{category}/{id}` | DELETE | `orders.order_types.manage` | Route `category`, `id` | `Result`; unconditional — there is no in-use guard, since orders keep their own id + name snapshot |
+
+Every action across the three controllers dispatches a mediator command/query under
+`Application/{Orders,Payments,OrderTypes}/{Commands,Queries}` — handlers own their `OrdersDbContext` logic
 directly, same shape as `Organization`/`LeaveManagement`/`Location`/`Catalog`. Neither
 `ICatalogPricingService` nor `ILocationDirectoryService` has an HTTP surface of its own here — both are
 DI-only seams this module calls into (see Dependencies).
 
-`OrdersPermissions.{Orders,Payments}` each expose only `View`/`Manage` — not the four-way
+`OrdersPermissions.{Orders,Payments,OrderTypes}` each expose only `View`/`Manage` — not the four-way
 `View`/`Create`/`Update`/`Delete` split most other modules use, same per-module simplification
 `Location`/`Catalog` already use.
 
@@ -83,8 +99,9 @@ DI-only seams this module calls into (see Dependencies).
 `DbConnectionNames.Orders` aliases `DbConnectionNames.Default` ("DefaultConnection") — same physical
 database/connection string as every other module, separated only by schema (`orders`) + table name.
 
-Four tables, all keyed by a database-generated `bigint IDENTITY(1,1)` (`AuditableEntity<long>`, the
-same numeric-key base `Catalog.Api`'s `Product` uses):
+Five tables. `Orders`/`OrderLines`/`OrderFees`/`Payments` are keyed by a database-generated
+`bigint IDENTITY(1,1)` (`AuditableEntity<long>`, the same numeric-key base `Catalog.Api`'s `Product`
+uses); `OrderTypes` has a composite string key (below):
 
 - **`Orders`** — index on `LocationId`; unique index on `OrderCode` (a `HasConversion`-mapped scalar
   column, `HasMaxLength(OrderCode.MaxLength)` = 17, not an owned type — same treatment as `Catalog`'s
@@ -109,15 +126,23 @@ same numeric-key base `Catalog.Api`'s `Product` uses):
   required table-split owned types (same row); `RequestedSalePrice` is an **optional** table-split
   owned `Money` — `null` when the line sells at `UnitPrice`, mutated in place via `Money.Update` when
   already present, plain assignment on first set or clear.
-- **`OrderFees`** — index on `OrderId`. `Name` max length 200, `OrderCode` max length 17 (denormalized
-  snapshot, same treatment as `OrderLines.OrderCode`). `Amount` is a required table-split owned `Money`.
-- **`Payments`** — index on `OrderId` only — **no FK/navigation configured at all** (not even
-  `Restrict`), because `Payment` is a separate aggregate root that deliberately never loads or locks
-  the `Order` graph to record a payment (see Notable Conventions). `Reference` max length 200,
-  `RecordedByUserId` max length 450, `VoidReason` max length 1000, `OrderCode` max length 17
-  (denormalized snapshot). `Amount` is a required table-split owned `Money`.
+- **`OrderFees`** — indexes on `OrderId` and `FeeTypeId`. `Name` max length 200, `OrderCode` max length
+  17 (denormalized snapshot, same treatment as `OrderLines.OrderCode`). `FeeTypeId` (max length 450) and
+  `FeeTypeName` (max length 200) are plain columns — **no FK** to `OrderTypes` — holding the fee type's
+  code and an immutable name snapshot. `Amount` is a required table-split owned `Money`.
+- **`Payments`** — indexes on `OrderId` and `PaymentTypeId` — **no FK/navigation configured at all** to
+  `Orders` (not even `Restrict`), because `Payment` is a separate aggregate root that deliberately never
+  loads or locks the `Order` graph to record a payment (see Notable Conventions). `Reference` max length
+  200, `RecordedByUserId` max length 450, `VoidReason` max length 1000, `OrderCode` max length 17
+  (denormalized snapshot). `PaymentTypeId` (max length 450) / `PaymentTypeName` (max length 200) mirror
+  the `OrderFees` type columns, again with no FK. `Amount` is a required table-split owned `Money`.
+- **`OrderTypes`** — the fee/payment type catalog. Composite primary key `(Id, Category)` with
+  `Id` `ValueGeneratedNever()` (a caller-supplied string code such as `SHIPPING`/`CASH`) — unique only
+  within a `Category` (`Fee`/`Payment`), so the same code (e.g. `OTHER`) legitimately exists once per
+  category. `Name` max length 200, plus a `Status` (`Active`/`Inactive`). Configured with the
+  parameterless `ConfigureAuditableEntity()` (string-keyed audit columns).
 
-All four call `entity.ConfigureAuditableEntity<TEntity, long>()`; `SaveChanges[Async]` calls
+All five call `entity.ConfigureAuditableEntity...()`; `SaveChanges[Async]` calls
 `TrackingExtensions.AuditEntries(currentUser.UserId, clock.AuditTime, enableSoftDelete: false)` — no
 entity implements `ISoftDelete`, so this module has no soft-delete support at all (contrast `Catalog`'s
 `Product`). The synchronous `SaveChanges` override stays audit + token-rotation only, matching
@@ -136,11 +161,15 @@ table-split `Money`/`VatPercentage`/`OrderDiscount` columns and the `HasConversi
 load automatically with the entity. `Mapster` is still declared as a package reference in
 `Orders.Api.csproj`, but nothing in this module currently calls into it.
 
-Migrations exist for **MSSQL only so far**: `src/Migrations/MSSQL/Orders/` holds a single migration
-(`CreateOrdersSchema`) — not yet a squashed baseline (per the dev-migration-squash convention,
-squashing happens once a module is judged complete), and it is also the only migration to date. The
-`PostgreSQL`/`Sqlite` migration projects do not yet reference `Orders.Api` at all. `src/Migrations/MSSQL/Program.cs`
-calls only `OrdersContextInitialiser.InitialiseAsync()` — no seed data.
+`OrdersContextInitialiser.InitialiseAsync()` applies migrations; `TrySeedAsync()` idempotently seeds the
+`OrderTypes` catalog (each row looked up by its composite `(Id, Category)` key before insert): fee types
+`SHIPPING`/`OTHER`, payment types `CASH`/`CARD`/`BANK_TRANSFER`/`OTHER`. `src/Migrations/MSSQL/Program.cs`
+calls both.
+
+Migrations exist for **MSSQL only so far**: `src/Migrations/MSSQL/Orders/` holds incremental migrations
+(starting at `CreateOrdersSchema`) — not yet a squashed baseline (per the dev-migration-squash
+convention, squashing happens once a module is judged complete). The `PostgreSQL`/`Sqlite` migration
+projects do not yet reference `Orders.Api` at all.
 
 ## Dependencies
 
@@ -172,7 +201,8 @@ cross-module dependency is one layer down, in `Orders.Api` (the table above).
 No business module references `Orders.Api`/`Orders.Contracts` — confirmed via `ProjectReference` search
 across `src/`. Orders is, so far, purely a **consumer** of other modules' seams (`Catalog`'s
 `ICatalogPricingService`, `Location`'s `ILocationDirectoryService`), not a provider of one of its own —
-unlike `Catalog`/`Location`, `OrdersModule.cs` registers no cross-module DI interface.
+unlike `Catalog`/`Location`, `OrdersModule.cs` registers no cross-module DI interface (`IOrderTypeCache`
+is module-local, `internal` in implementation).
 
 ## Notable Conventions
 
@@ -181,8 +211,26 @@ unlike `Catalog`/`Location`, `OrdersModule.cs` registers no cross-module DI inte
   string-GUID id that `Catalog`'s `Product` introduced (see [Catalog.md](Catalog.md) Notable
   Conventions) — smaller/faster PKs, natural sort order, and compact values for the denormalized
   cross-aggregate snapshots this module leans on (`OrderLine.ProductId`, every child's `OrderCode`
-  string). `ConfigureAuditableEntity<TEntity, long>()` is used throughout; there is no string-keyed
-  entity in this module.
+  string). `OrderType` is the one exception: a string-keyed catalog entity (see below).
+- **`OrderType` is a data-driven, admin-manageable catalog with a `Category` discriminator, replacing
+  hardcoded fee-type/payment-method enums.** One flat entity serves both catalogs (`Fee`/`Payment`)
+  rather than two near-identical tables; its `Id` is a caller-supplied string code, unique only per
+  category, hence the composite `(Id, Category)` key — consequently every lookup, route, and command
+  carries both parts. Category and id are immutable after creation; only name/status change. It mirrors
+  `Location`'s `LocationType` catalog precedent (see [Location.md](Location.md)) but is flat — no
+  hierarchy or parent rules.
+- **`OrderTypeCache` is a hand-written, module-local, full-table cache** (`IOrderTypeCache`:
+  `GetAllAsync`/`GetAsync(id, category)`/`ReloadAsync`), reloaded after every catalog write — deliberately
+  not the generic `ICacheRepository<T>`, for the same reason `Location`'s `LocationTypeCache` avoids it
+  (the write path is owned by this module's own handlers, so exclusivity holds by construction). It is
+  registered scoped and used by `AddOrderFee`/`RecordPayment` to validate the type.
+- **`OrderFee`/`Payment` reference their catalog entry by a plain string id, not an FK, plus an immutable
+  name snapshot** (`FeeTypeId`/`FeeTypeName`, `PaymentTypeId`/`PaymentTypeName`) captured at creation —
+  the same one-time-snapshot treatment as `OrderCode` and `OrderLine`'s product fields. `AddOrderFee`/
+  `RecordPayment` look the type up in the fixed expected category (a fee request can never resolve a
+  `Payment`-category entry of the same code) and require it to be `Active`; renaming, deactivating, or
+  deleting a type afterwards never changes what an existing order displays, which is also why catalog
+  deletion needs no in-use guard. DTOs expose both id and name.
 - **`OrderCode` is a unique, human-readable reference, modeled directly on `Catalog`'s `Sku`** (plain
   sealed class, manual `Equals`/`GetHashCode`/`ToString`, self-validating ctor, not
   `Light.Domain.ValueObjects.ValueObject`, mapped as a `HasConversion` scalar with a real unique index —
@@ -260,15 +308,15 @@ unlike `Catalog`/`Location`, `OrdersModule.cs` registers no cross-module DI inte
 - **`OrdersPermissions` has only `View`/`Manage` per feature, not the four-way
   `View`/`Create`/`Update`/`Delete` split most other modules use** — same per-module simplification
   `Location`/`Catalog` already use.
-- **Migration is MSSQL-only, a single unsquashed migration** — see Data Access. Treat `Orders` as
-  mid-development, not yet at the "template baseline" state `Organization`/`Approval`/`LeaveManagement`
-  are in.
+- **Migration is MSSQL-only and unsquashed** — see Data Access. Treat `Orders` as mid-development, not
+  yet at the "template baseline" state `Organization`/`Approval`/`LeaveManagement` are in.
 - `Specification<T>` (vendor `Light.Specification`) is used only for the by-id lookups (`OrderByIdSpec`,
-  `PaymentByIdSpec`), reused across several handlers each — same policy as every other module.
+  `PaymentByIdSpec`, `OrderTypeByIdSpec`), reused across several handlers each — same policy as every
+  other module.
 
 ## Notes
 
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-14_
+_Last synced: 2026-09-19_

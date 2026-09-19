@@ -21,7 +21,7 @@ ASP.NET Core (C#) **Modular Monolith** — one solution (`StarterKit.slnx`). `sr
 | LeaveManagement | `src/LeaveManagement.Api` + `src/LeaveManagement.Contracts` | Self-service CRUD for employee leave requests — delegates the actual approval workflow entirely to `Approval` via `IApprovalService` and resolves approvers/display names via `Organization`'s `IOrgDirectoryService`; has no decide/approve endpoint of its own. |
 | Location | `src/Location.Api` + `src/Location.Contracts` | Self-referencing physical-location hierarchy (`Location`: Store/Warehouse/Terminal/Bin or any other data-driven type) plus a data-driven `LocationType` catalog replacing what would otherwise be a hardcoded enum — each type declares its own allowed-parent-type rule. Also exposes `ILocationDirectoryService`, a cross-module seam with no current consumers (built ahead of a future Catalog/Orders/Inventory-style module). |
 | Catalog | `src/Catalog.Api` + `src/Catalog.Contracts` | Self-referencing product-category tree (`Category`) plus `Product` CRUD/search/activate-deactivate/image management, priced via the shared `Money`/`VatPercentage` value objects. Also exposes `ICatalogPricingService`, a cross-module seam with no current consumers (built ahead of a future Orders/Inventory-style module). |
-| Orders | `src/Orders.Api` + `src/Orders.Contracts` | Owns the sale lifecycle — draft cart through placement, payment reconciliation, fulfillment, or cancellation — via the `Order` aggregate and a separate `Payment` aggregate sharing one `OrdersDbContext`. Consumes `Catalog`'s `ICatalogPricingService` and `Location`'s `ILocationDirectoryService` — the first real cross-module consumer of either seam. |
+| Orders | `src/Orders.Api` + `src/Orders.Contracts` | Owns the sale lifecycle — draft cart through placement, payment reconciliation, fulfillment, or cancellation — via the `Order` aggregate and a separate `Payment` aggregate sharing one `OrdersDbContext`, plus a data-driven `OrderType` catalog (fee/payment types). Consumes `Catalog`'s `ICatalogPricingService` and `Location`'s `ILocationDirectoryService` — the first real cross-module consumer of either seam. |
 
 Plus shared/host projects: `src/Shared` (shared kernel, leaf), `src/Infrastructure` (cross-cutting infra), `src/Persistence` (EF Core concerns), `src/StarterKit.WebApi` (composition-root host).
 
@@ -71,4 +71,4 @@ xUnit v3 runs on Microsoft.Testing.Platform. On the .NET 10 SDK `dotnet test` re
 See [docs/known-debt.md](docs/known-debt.md) — the single, current-state-only list of open backend technical debt/pending architecture decisions. Update it directly when debt is found or resolved; don't re-scatter items back into the architecture docs above.
 
 ---
-_Last synced: 2026-09-16_
+_Last synced: 2026-09-19_
