@@ -23,6 +23,7 @@
     <ProjectReference Include="..\Identity.Api\Identity.Api.csproj" />
 	<ProjectReference Include="..\Identity.Web\Identity.Web.csproj" />
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\Inventory.Api\Inventory.Api.csproj" />
     <ProjectReference Include="..\LeaveManagement.Api\LeaveManagement.Api.csproj" />
     <ProjectReference Include="..\Location.Api\Location.Api.csproj" />
     <ProjectReference Include="..\Notifications.Api\Notifications.Api.csproj" />

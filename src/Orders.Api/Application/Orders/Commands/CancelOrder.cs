@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using StarterKit.Inventory.Contracts.Services;
 using StarterKit.Orders.Api.Data;
 using StarterKit.Orders.Api.Domain.Orders;
 using StarterKit.Shared;
@@ -19,9 +21,15 @@ internal sealed class CancelOrderCommandValidator : AbstractValidator<CancelOrde
     }
 }
 
+/// <summary>
+/// The cancel is committed first; stock is then restored best-effort. The restore is idempotent, so
+/// a failure here is only logged — it under-counts stock until a retry, and never blocks the cancel.
+/// </summary>
 internal class CancelOrderCommandHandler(
     OrdersDbContext context,
-    IDateTime clock)
+    IInventoryService inventoryService,
+    IDateTime clock,
+    ILogger<CancelOrderCommandHandler> logger)
     : ICommandHandler<CancelOrderCommand, IResult>
 {
     public async Task<IResult> Handle(
@@ -35,9 +43,29 @@ internal class CancelOrderCommandHandler(
         if (entity is null)
             return Result.NotFound($"Order {request.Id} not found");
 
+        var wasPlaced = entity.PlacedAt is not null;
+
         entity.Cancel(request.CancelledByUserId, request.Model.Reason, clock.UtcNow);
 
         await context.SaveChangesAsync(cancellationToken);
+
+        if (wasPlaced)
+        {
+            try
+            {
+                await inventoryService.RestoreForOrderAsync(
+                    entity.Id,
+                    request.CancelledByUserId,
+                    cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    ex,
+                    "Failed to restore stock for cancelled order {OrderId}.",
+                    entity.Id);
+            }
+        }
 
         return Result.Success();
     }

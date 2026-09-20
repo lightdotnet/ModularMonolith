@@ -60,3 +60,8 @@ var ordersInitialiser = serviceProvider.GetRequiredService<StarterKit.Orders.Api
 await ordersInitialiser.InitialiseAsync();
 
 await ordersInitialiser.TrySeedAsync();
+
+// Inventory module
+var inventoryInitialiser = serviceProvider.GetRequiredService<StarterKit.Inventory.Api.Data.InventoryContextInitialiser>();
+
+await inventoryInitialiser.InitialiseAsync();

@@ -101,7 +101,7 @@ public class OrderController(ICurrentUser currentUser) : VersionedApiController
     [MustHavePermission(OrdersPermissions.Orders.Manage)]
     public async Task<IActionResult> PlaceAsync([FromRoute] long id)
     {
-        return Ok(await Mediator.Send(new PlaceOrderCommand(id)));
+        return Ok(await Mediator.Send(new PlaceOrderCommand(id, _currentUserId)));
     }
 
     [HttpPut("{id}/cancel")]

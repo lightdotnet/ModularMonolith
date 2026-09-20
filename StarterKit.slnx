@@ -19,6 +19,10 @@
     <Project Path="src/Identity.Contracts/Identity.Contracts.csproj" />
     <Project Path="src/Identity.Web/Identity.Web.csproj" />
   </Folder>
+  <Folder Name="/src/inventory-module/">
+    <Project Path="src/Inventory.Api/Inventory.Api.csproj" />
+    <Project Path="src/Inventory.Contracts/Inventory.Contracts.csproj" />
+  </Folder>
   <Folder Name="/src/leave-management-module/">
     <Project Path="src/LeaveManagement.Api/LeaveManagement.Api.csproj" />
     <Project Path="src/LeaveManagement.Contracts/LeaveManagement.Contracts.csproj" />
@@ -54,6 +58,7 @@
     <Project Path="tests/Catalog.Tests/Catalog.Tests.csproj" />
     <Project Path="tests/Framework.Tests/Framework.Tests.csproj" />
     <Project Path="tests/Identity.Tests/Identity.Tests.csproj" />
+    <Project Path="tests/Inventory.Tests/Inventory.Tests.csproj" />
     <Project Path="tests/LeaveManagement.Tests/LeaveManagement.Tests.csproj" />
     <Project Path="tests/Location.Tests/Location.Tests.csproj" />
     <Project Path="tests/Orders.Tests/Orders.Tests.csproj" />

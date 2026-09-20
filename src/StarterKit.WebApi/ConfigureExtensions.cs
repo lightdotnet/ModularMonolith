@@ -15,6 +15,7 @@ using StarterKit.Infrastructure.Cors;
 using StarterKit.Infrastructure.HealthChecks;
 using StarterKit.Infrastructure.Modularity;
 using StarterKit.Infrastructure.Services;
+using StarterKit.Inventory.Api;
 using StarterKit.LeaveManagement.Api;
 using StarterKit.Locations.Api;
 using StarterKit.Notifications.Api;
@@ -41,6 +42,7 @@ public static class ConfigureExtensions
             typeof(LocationModule).Assembly,
             typeof(CatalogModule).Assembly,
             typeof(OrdersModule).Assembly,
+            typeof(InventoryModule).Assembly,
         ];
 
     public static IServiceCollection ConfigureServices(this IServiceCollection services, IConfiguration configuration)

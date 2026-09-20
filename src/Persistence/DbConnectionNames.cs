@@ -17,4 +17,6 @@ public abstract class DbConnectionNames
     public const string Location = Default;
 
     public const string Orders = Default;
+
+    public const string Inventory = Default;
 }

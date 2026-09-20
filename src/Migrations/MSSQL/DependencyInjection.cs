@@ -5,6 +5,7 @@ using StarterKit.Approval.Api.Data;
 using StarterKit.Catalog.Api.Data;
 using StarterKit.Identity.Api.Entities;
 using StarterKit.Infrastructure;
+using StarterKit.Inventory.Api.Data;
 using StarterKit.LeaveManagement.Api.Data;
 using StarterKit.Locations.Api.Data;
 using StarterKit.Notifications.Api.Data;
@@ -39,6 +40,8 @@ public static class DependencyInjection
         services.AddLocation(configuration);
 
         services.AddOrders(configuration);
+
+        services.AddInventory(configuration);
 
         return services;
     }
@@ -185,5 +188,20 @@ public static class DependencyInjection
                 .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
 
         services.AddScoped<OrdersContextInitialiser>();
+    }
+
+    private static void AddInventory(this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString(DbConnectionNames.Inventory);
+
+        services.AddDbContext<InventoryDbContext>(options =>
+            options
+                .UseSqlServer(connectionString, o =>
+                {
+                    o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName);
+                })
+                .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
+
+        services.AddScoped<InventoryContextInitialiser>();
     }
 }
