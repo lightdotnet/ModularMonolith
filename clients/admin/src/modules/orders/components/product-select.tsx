@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CheckIcon, ChevronsUpDownIcon, Loader2Icon } from "lucide-react";
+import { CheckIcon, ChevronsUpDownIcon, Loader2Icon, XIcon } from "lucide-react";
 import { cn } from "@/lib/shared/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +26,8 @@ interface ProductSelectProps {
   value: string;
   onValueChange: (product: ProductDto) => void;
   placeholder?: string;
+  /** Shows a clear (X) button inside the trigger once a product is selected. Omit for required fields. */
+  onClear?: () => void;
 }
 
 /**
@@ -37,7 +39,12 @@ interface ProductSelectProps {
  * `components/ui/*` primitive) — kept local to Orders rather than shared with
  * Catalog since the two pickers aren't otherwise related.
  */
-export function ProductSelect({ value, onValueChange, placeholder = "Select a product" }: ProductSelectProps) {
+export function ProductSelect({
+  value,
+  onValueChange,
+  placeholder = "Select a product",
+  onClear,
+}: ProductSelectProps) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [options, setOptions] = React.useState<ProductDto[]>([]);
@@ -70,48 +77,69 @@ export function ProductSelect({ value, onValueChange, placeholder = "Select a pr
     setOpen(false);
   }
 
+  const showClear = !!onClear && !!value;
   const triggerLabel = value ? (selectedLabel ?? value) : placeholder;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
+    <div className="relative">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            data-placeholder={!value || undefined}
+            className="w-full justify-between font-normal data-placeholder:text-muted-foreground"
+          >
+            <span className="min-w-0 flex-1 truncate text-left">{triggerLabel}</span>
+            <ChevronsUpDownIcon
+              className={cn("size-4 shrink-0 text-muted-foreground", showClear && "invisible")}
+            />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-0">
+          <Command shouldFilter={false}>
+            <CommandInput placeholder="Search products..." value={query} onValueChange={setQuery} />
+            <CommandList>
+              {loading ? (
+                <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+                  <Loader2Icon className="size-4 animate-spin" />
+                  Searching...
+                </div>
+              ) : (
+                <>
+                  <CommandEmpty>No products found.</CommandEmpty>
+                  <CommandGroup>
+                    {options.map((product) => (
+                      <CommandItem key={product.id} value={product.id} onSelect={() => handleSelect(product)}>
+                        <CheckIcon className={cn(product.id === value ? "opacity-100" : "opacity-0")} />
+                        <span className="truncate">{optionLabel(product)}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+
+      {showClear && (
+        <button
           type="button"
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          data-placeholder={!value || undefined}
-          className="w-full justify-between font-normal data-placeholder:text-muted-foreground"
+          aria-label="Clear selection"
+          onClick={(event) => {
+            event.stopPropagation();
+            setOpen(false);
+            setSelectedLabel(null);
+            onClear?.();
+          }}
+          className="absolute top-1/2 right-2 flex size-4 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
         >
-          <span className="line-clamp-1">{triggerLabel}</span>
-          <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-0">
-        <Command shouldFilter={false}>
-          <CommandInput placeholder="Search products..." value={query} onValueChange={setQuery} />
-          <CommandList>
-            {loading ? (
-              <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
-                <Loader2Icon className="size-4 animate-spin" />
-                Searching...
-              </div>
-            ) : (
-              <>
-                <CommandEmpty>No products found.</CommandEmpty>
-                <CommandGroup>
-                  {options.map((product) => (
-                    <CommandItem key={product.id} value={product.id} onSelect={() => handleSelect(product)}>
-                      <CheckIcon className={cn(product.id === value ? "opacity-100" : "opacity-0")} />
-                      <span className="truncate">{optionLabel(product)}</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+          <XIcon className="size-3.5" />
+        </button>
+      )}
+    </div>
   );
 }

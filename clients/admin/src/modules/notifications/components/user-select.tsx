@@ -115,7 +115,7 @@ export function UserSelect({
                 triggerClassName,
               )}
             >
-              <span className="line-clamp-1 flex items-center gap-1.5">
+              <span className="min-w-0 flex-1 truncate text-left">
                 {triggerLabel}
               </span>
               <ChevronsUpDownIcon

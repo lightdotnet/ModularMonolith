@@ -103,7 +103,7 @@ export function ApproverSelect({
           data-placeholder={!value || undefined}
           className="w-full justify-between font-normal data-placeholder:text-muted-foreground"
         >
-          <span className="line-clamp-1">{triggerLabel}</span>
+          <span className="min-w-0 flex-1 truncate text-left">{triggerLabel}</span>
           <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>

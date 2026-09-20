@@ -100,6 +100,9 @@ export function SendNotificationDialog({
                   fromName: getDisplayName(user),
                 }))
               }
+              onClear={() =>
+                setValues((previous) => ({ ...previous, fromUserId: "", fromName: "" }))
+              }
               triggerClassName="w-full"
               placeholder="Send as system or select a user"
             />
