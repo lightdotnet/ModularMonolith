@@ -45,4 +45,5 @@ export const leaveManagementApi = createBackendApiClient(ApiClients.LeaveManagem
 export const locationApi = createBackendApiClient(ApiClients.Location);
 export const catalogApi = createBackendApiClient(ApiClients.Catalog);
 export const ordersApi = createBackendApiClient(ApiClients.Orders);
+export const inventoryApi = createBackendApiClient(ApiClients.Inventory);
 

@@ -13,6 +13,7 @@ import { EMPLOYEES_NAV_ITEM } from "@/modules/organization/employees/constants/n
 import { LOCATION_NAV_ITEM } from "@/modules/location/constants/nav-item";
 import { CATALOG_NAV_ITEM } from "@/modules/catalog/constants/nav-item";
 import { ORDERS_NAV_ITEM } from "@/modules/orders/constants/nav-item";
+import { INVENTORY_NAV_ITEM } from "@/modules/inventory/constants/nav-item";
 import { APPROVALS_NAV_ITEM } from "@/modules/approvals/constants/nav-item";
 import { LEAVE_REQUESTS_NAV_ITEM } from "@/modules/leave-requests/constants/nav-item";
 import type { NavItem } from "@/types/nav";
@@ -49,6 +50,7 @@ export const NAV_ITEMS: NavItem[] = [
       LOCATION_NAV_ITEM,
       CATALOG_NAV_ITEM,
       ORDERS_NAV_ITEM,
+      INVENTORY_NAV_ITEM,
     ],
   },
   {

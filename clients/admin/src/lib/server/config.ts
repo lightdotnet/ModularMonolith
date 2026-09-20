@@ -19,6 +19,7 @@ const API_BASE_URL_ENV_VARS: Record<ApiClientName, string> = {
   [ApiClients.Location]: "LOCATION_API_BASE_URL",
   [ApiClients.Catalog]: "CATALOG_API_BASE_URL",
   [ApiClients.Orders]: "ORDERS_API_BASE_URL",
+  [ApiClients.Inventory]: "INVENTORY_API_BASE_URL",
 };
 
 /**
