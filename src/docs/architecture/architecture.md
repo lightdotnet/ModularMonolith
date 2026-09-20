@@ -12,7 +12,7 @@ organized by folder, or, if complex enough, split Clean-Architecture-style into
 `<Module>.Domain`/`.Application`/`.Infrastructure`/`.Api`. Every module also gets a
 `<Module>.Contracts` seam — the only project other modules or the host may reference.
 
-Eight modules exist. Seven are a single `.Api` project plus `.Contracts`; **Identity** additionally has
+Nine modules exist. Eight are a single `.Api` project plus `.Contracts`; **Identity** additionally has
 `Identity.Web` (a Razor Pages login host inside the same bounded context — see its module doc). The
 `.Api` suffix is a deliberate future-extraction candidate. Structural summary only — full layering per
 module doc:
@@ -26,7 +26,8 @@ module doc:
 | LeaveManagement | `LeaveManagement.Api` + `.Contracts` | Workflow rules live on the `LeaveRequest` aggregate (`Create`/`LinkApprovalRequest`/`Resubmit`/`ReviseDetails`/`ApplyApprovalOutcome`, same throw-then-translate shape as `Approval`); `LeaveRequestApprovalCoordinator` is the shared seam for cross-row/cross-module orchestration (Approval reconcile, overlap check, approver resolution) the command handlers and the reconciliation sweep all call into; the leave-request read queries touch neither | `tests/LeaveManagement.Tests`, 122 |
 | Location | `Location.Api` + `.Contracts` | Handlers own their `LocationDbContext` logic directly, same as `Organization`/`LeaveManagement`; the allowed-parent-type invariant lives on the `Location`/`LocationType` aggregates, input-shape validation is FluentValidation's job (see § Key Design Patterns) | `tests/Location.Tests`, 114 |
 | Catalog | `Catalog.Api` + `.Contracts` | Handlers own their `CatalogDbContext` logic directly, same as `Organization`/`LeaveManagement`/`Location`; `Category`/`Product` guard state transitions via behaviour methods but carry no invariant heavier than Location's (no type discriminator) | `tests/Catalog.Tests`, 111 |
-| Orders | `Orders.Api` + `.Contracts` | Handlers own their `OrdersDbContext` logic directly, same as `Organization`/`LeaveManagement`/`Location`/`Catalog`; workflow rules (draft-only editing, `Place`/`Cancel`/`MarkFulfilled` state transitions) live on the `Order` aggregate, with `Payment` as a separate aggregate root sharing the same `DbContext` | `tests/Orders.Tests`, 121 |
+| Orders | `Orders.Api` + `.Contracts` | Handlers own their `OrdersDbContext` logic directly, same as `Organization`/`LeaveManagement`/`Location`/`Catalog`; workflow rules (draft-only editing, `Place`/`Cancel`/`MarkFulfilled` state transitions) live on the `Order` aggregate, with `Payment` as a separate aggregate root sharing the same `DbContext` | `tests/Orders.Tests`, 175 |
+| Inventory | `Inventory.Api` + `.Contracts` | Handlers own their `InventoryDbContext` logic directly, same as `Organization`/`LeaveManagement`/`Location`/`Catalog`/`Orders`; the no-oversell invariant lives on the `StockLevel` aggregate (`Apply` throws `ConflictException`), with the internal `StockLedger` service coordinating `StockLevel` and the immutable `StockAdjustment` ledger in one commit | `tests/Inventory.Tests`, 51 |
 
 Below the module layer: `src/Shared` (leaf) and `src/Persistence` (→ `Shared`) are the pre-module
 shared kernel; `src/Infrastructure` (→ `Shared`) is cross-cutting infra, no longer holding EF Core
@@ -36,7 +37,7 @@ across all modules that page.
 
 ## Hosts
 
-`StarterKit.WebApi` is the primary, full deployable process — it wires all eight modules via
+`StarterKit.WebApi` is the primary, full deployable process — it wires all nine modules via
 `app.MapEndpoints(...)`, maps the `Notifications` SignalR hub at `/signalr-hub`, co-hosts the
 `Identity.Web` Razor Pages login (`AddIdentityWeb` + `UseIdentityWeb`), and owns the API
 authentication composition (`Authentication/ApiAuthenticationExtensions.AddApiAuthentication`).
@@ -57,13 +58,17 @@ discipline) but it holds informally — `Controllers/` call only services/`Media
 The "no module references another module's internals" rule is **verified across every module** —
 every cross-module dependency reaches only the target's `Contracts` seam, with no reference the other
 direction and no cycle. `Identity.Web → Identity.Api` is a direct internal reference but stays inside
-the Identity bounded context, so it is not a cross-module edge. The full list of the seven compliant
+the Identity bounded context, so it is not a cross-module edge. The full list of the nine compliant
 cross-module edges is in [dependency-graph.md § Cross-Module Boundary Violations](dependency-graph.md#cross-module-boundary-violations-backend-only);
 the project-reference diagram is in [§ Circular References](dependency-graph.md#circular-references).
-`Orders` is the first (and so far only) consumer of either `Location`'s `ILocationDirectoryService` or
+`Orders` is the first (and so far only) consumer of `Location`'s `ILocationDirectoryService` or
 `Catalog`'s `ICatalogPricingService` — `CreateOrderCommandHandler` calls the former to validate
-`LocationId`, and `AddOrderLineCommandHandler` calls the latter to resolve current pricing. Neither
-`Location` nor `Catalog` has any outgoing cross-module dependency of its own.
+`LocationId`, and `AddOrderLineCommandHandler` calls the latter to resolve current pricing. `Orders`
+also consumes `Inventory`'s `IInventoryService` — synchronously and in-process, not via an integration
+event (see § Key Design Patterns) — from `PlaceOrderCommandHandler`/`CancelOrderCommandHandler`.
+`Inventory` in turn consumes `Location`'s `ILocationDirectoryService` itself (its second consumer,
+after Orders), to validate `LocationId` on every stock movement. Neither `Location` nor `Catalog` has
+any outgoing cross-module dependency of its own; `Inventory` has no outgoing dependency on `Orders`.
 
 Note the Identity↔Notifications edge flipped this session: `Identity.Api` no longer references
 `Notifications.Contracts`; instead `Notifications.Api → Identity.Contracts` (welcome-mail handlers
@@ -98,14 +103,30 @@ reacting to Identity's integration events).
     `LeaveRequest.Status`, with `LeaveRequestReconciliationService` (a `BackgroundService`, the only
     one in the backend) as the periodic delivery backstop. `Organization`/`Location`/`Catalog` use no events.
   - `Orders` — `OrderPlacedIntegrationEvent`, published by `PlaceOrderCommandHandler` directly after
-    `SaveChangesAsync` commits (best-effort, logged-not-thrown), for a future module (e.g. Inventory)
-    to subscribe to; no handler exists yet. `Order` also raises in-module `BaseEntity` domain events
+    `SaveChangesAsync` commits (best-effort, logged-not-thrown), for any future consumer; no handler
+    exists yet. `Inventory` deliberately does **not** subscribe to it — stock decrement instead goes
+    through the synchronous seam described below, because the strict no-oversell requirement needs the
+    decrement to reject an oversell before `Orders` itself commits, a guarantee a best-effort async
+    event cannot give. `Order` also raises in-module `BaseEntity` domain events
     (`OrderPlacedEvent`/`OrderCancelledEvent`/`OrderFulfilledEvent`) dispatched the same
     `publisher.DispatchDomainEvents(this)` way from `OrdersDbContext.SaveChangesAsync`, but none has a
     subscriber yet either — see [modules/Orders.md](modules/Orders.md).
   The repo-wide `DispatchDomainEventsExtensions` convention (`src/Persistence`, meant to run inside a
   module's `SaveChangesAsync`) is wired in `Approval` and `Orders`; the `Identity` gap is
   [known-debt.md](../known-debt.md) P6.
+- **Synchronous, DI-only cross-module seam as a second integration mechanism, distinct from the
+  event-based pattern above.** `Orders.Api → Inventory.Contracts`'s `IInventoryService` is called
+  directly and synchronously, in the same request/`DbContext` scope, rather than through a published
+  `INotification`: `PlaceOrderCommandHandler` calls `IInventoryService.DecrementForOrderAsync` *before*
+  its own `SaveChangesAsync`, so an oversell (`ConflictException`) prevents the order from ever being
+  persisted, and a subsequent `Orders` save failure triggers a best-effort compensating
+  `RestoreForOrderAsync` call. `CancelOrderCommandHandler` mirrors this the other way — the cancel
+  commits first, then a best-effort `RestoreForOrderAsync` runs, logged-not-thrown on failure. This
+  trades the event-based pattern's full decoupling for a synchronous correctness guarantee (an
+  all-or-nothing check) the fire-and-forget `OrderPlacedIntegrationEvent` cannot offer. It leaves one
+  accepted, self-healing crash window (a process death between Inventory's own commit and Orders'
+  commit) — see [known-debt.md](../known-debt.md) and
+  [modules/Inventory.md § Notable Conventions](modules/Inventory.md#notable-conventions).
 - **Authentication composition is host-owned, two-layer.** `Identity.Api` registers only token
   *services* (`AddJwtTokenServices` — signing, token/hub-token issuers, session + auth services), no
   scheme. `Identity.Web` registers the cookie + Microsoft OIDC schemes. The co-host
@@ -121,7 +142,7 @@ reacting to Identity's integration events).
 - **Extension-method DI registration** — each feature area exposes `Add<Feature>`/`Use<Feature>`.
 - **CQRS at the controller boundary, three shapes.** Every controller action binds a `Contracts` DTO
   and dispatches an `internal` mediator command/query. `Identity`/`Notifications` forward to a service
-  class ([known-debt.md](../known-debt.md) D1); `Organization`/`LeaveManagement`/`Location`/`Catalog`/`Orders`
+  class ([known-debt.md](../known-debt.md) D1); `Organization`/`LeaveManagement`/`Location`/`Catalog`/`Orders`/`Inventory`
   hold the DbContext logic directly; `Approval` splits by audience, with the write-path workflow rules on the
   `ApprovalRequest` aggregate behind a thin `IApprovalService`. See each module doc.
 - **Audience-split controllers + real-time push** in `Notifications` — an admin controller (explicit
@@ -129,7 +150,7 @@ reacting to Identity's integration events).
   one table, plus a push-only SignalR hub at `/signalr-hub` (path configurable via `Notifications:Hub:Path`).
 - **Validation is two-layered FluentValidation, established by `Location` (first real per-module
   usage — the pipeline behavior and assembly-scan wiring already existed, but no module had a
-  registered validator before it) and adopted identically by `Catalog` and `Orders`.** Each `Contracts` request DTO carries its own
+  registered validator before it) and adopted identically by `Catalog`, `Orders`, and `Inventory`.** Each `Contracts` request DTO carries its own
   `AbstractValidator<TRequest>` in the same file (field-shape rules only); each mediator command has a
   thin `AbstractValidator<TCommand>` (same file as the command+handler) validating route-level
   primitives directly and delegating to the Contracts validator via
@@ -172,7 +193,7 @@ reacting to Identity's integration events).
 
 ## Module/Route Boundaries
 
-`StarterKit.WebApi` wires all eight modules via `app.MapEndpoints(...)`, maps the `Notifications`
+`StarterKit.WebApi` wires all nine modules via `app.MapEndpoints(...)`, maps the `Notifications`
 SignalR hub at `/signalr-hub`, and serves the `Identity.Web` login Razor Pages under `/Account/*`.
 The full route/permission inventory per module lives in each module doc's § Public Contract.
 
@@ -187,10 +208,11 @@ are tracked here:
 | `Persistence/MigrationSupport/MigrationsExtensions.AddMigrationsServices` registers mediator handlers via `Assembly.GetExecutingAssembly()` (the `Persistence` assembly) | Medium | Won't pick up handlers in module assemblies — revisit once a module with domain-event handlers relies on migration-time dispatch. |
 | `ApiControllerBase`/`VersionedApiController` (`src/Infrastructure/Endpoints/`) duplicate an identical `_mediator` lazy property | Low | Likely unavoidable — they derive from two different vendor base classes. |
 | `Identity.Web` and `StarterKit.WebApi` hand-compose the Identity platform + mediator independently and have drifted | Low–Medium | See [known-debt.md](../known-debt.md) (structural) — candidate fix is a shared `AddIdentityHost` composition helper. |
+| A crash between `Inventory`'s own commit and `Orders`' `SaveChangesAsync` for the same `PlaceOrder` call leaves stock decremented against a still-`Draft` order | Low | Self-healing — a retry is safe via Inventory's idempotency key. See [known-debt.md](../known-debt.md). |
 
 ## Notes
 
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-16_
+_Last synced: 2026-09-20_

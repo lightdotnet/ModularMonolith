@@ -26,9 +26,14 @@ Conventions).
 resolves current pricing via `Catalog.Contracts.ICatalogPricingService.GetPriceInfoAsync` and snapshots
 name/price/VAT rate/SKU onto the new `OrderLine`, and `CreateOrderCommandHandler` checks
 `Location.Contracts.ILocationDirectoryService.ExistsAsync` before creating the order — Orders is the
-first (and, so far, only) consumer of either cross-module seam. Placing an order publishes
-`Orders.Contracts.Events.OrderPlacedIntegrationEvent`, a best-effort in-process notification a future
-module (e.g. Inventory) can subscribe to.
+first consumer of either cross-module seam. `Order` also has no idea how to move physical stock:
+`PlaceOrderCommandHandler` calls `Inventory.Contracts.Services.IInventoryService.DecrementForOrderAsync`
+synchronously, in-process, before its own `SaveChangesAsync` — an oversell throws a `ConflictException`
+so nothing is persisted — and `CancelOrderCommandHandler` calls `IInventoryService.RestoreForOrderAsync`
+best-effort once a previously-placed order's cancel commits (see Notable Conventions and
+[Inventory.md](Inventory.md)). Placing an order also publishes
+`Orders.Contracts.Events.OrderPlacedIntegrationEvent`, a best-effort in-process notification for any
+future consumer other than Inventory, which deliberately uses the synchronous seam instead.
 
 ## Internal Layering
 
@@ -58,8 +63,8 @@ level; every route id is `long`):
 | `api/v{version}/order/{id}/discount` | DELETE | `orders.orders.manage` | Route `id` | `Result`; `Order.RemoveDiscount` — no-op if there is none (draft-only) |
 | `api/v{version}/order/{id}/fee` | POST | `orders.orders.manage` | `AddOrderFeeRequest { Name, Amount, FeeTypeId }` | `Result<long>` (new fee id); the `FeeTypeId` must resolve to an `Active` `Fee`-category `OrderType` (looked up via `IOrderTypeCache`), whose name is snapshotted onto the fee; then `Order.AddFee` (draft-only) |
 | `api/v{version}/order/{id}/fee/{feeId}` | DELETE | `orders.orders.manage` | Route ids | `Result`; `Order.RemoveFee` (draft-only) |
-| `api/v{version}/order/{id}/place` | PUT | `orders.orders.manage` | Route `id` | `Result`; `Order.Place` — requires at least one line, re-validates discount-vs-subtotal and non-negative total, flips `Draft` → `Placed`, queues `OrderPlacedEvent`, then best-effort publishes `OrderPlacedIntegrationEvent` after the commit |
-| `api/v{version}/order/{id}/cancel` | PUT | `orders.orders.manage` | `CancelOrderRequest { Reason }` | `Result`; `Order.Cancel` — only from `Draft`/`Placed`/`PartiallyPaid`, requires a reason, queues `OrderCancelledEvent` |
+| `api/v{version}/order/{id}/place` | PUT | `orders.orders.manage` | Route `id` | `Result`; `Order.Place` — requires at least one line, re-validates discount-vs-subtotal and non-negative total, flips `Draft` → `Placed`, queues `OrderPlacedEvent`, then synchronously decrements stock via `IInventoryService.DecrementForOrderAsync` before `SaveChangesAsync` commits (an oversell throws `ConflictException` and nothing is saved; a save failure after a successful decrement triggers a best-effort compensating `RestoreForOrderAsync`), then best-effort publishes `OrderPlacedIntegrationEvent` after the commit |
+| `api/v{version}/order/{id}/cancel` | PUT | `orders.orders.manage` | `CancelOrderRequest { Reason }` | `Result`; `Order.Cancel` — only from `Draft`/`Placed`/`PartiallyPaid`, requires a reason, queues `OrderCancelledEvent`; if the order had actually been placed (`PlacedAt != null`), best-effort restores its decremented stock via `IInventoryService.RestoreForOrderAsync` after the cancel commits (a restore failure is only logged — the cancel still succeeds) |
 | `api/v{version}/order/{id}/fulfill` | PUT | `orders.orders.manage` | Route `id` | `Result`; `Order.MarkFulfilled` — only from `Paid`, queues `OrderFulfilledEvent` |
 
 `PaymentController` (route `payment`, `[MustHavePermission(OrdersPermissions.Payments.View)]` at class
@@ -180,6 +185,7 @@ projects do not yet reference `Orders.Api` at all.
 | `Persistence` | project (`Orders.Api → Persistence`) | `BaseDbContext`, `AddConfiguredDbContext`, `AuditEntries`/`ConfigureAuditableEntity<TEntity, TId>`, `DispatchDomainEvents`, paging extensions, `DbUpdateExceptionExtensions.IsUniqueConstraintViolation` (the `OrderCode` collision catch in `CreateOrderCommandHandler`). |
 | `Catalog.Contracts` | project (`Orders.Api → Catalog.Contracts`) | `ICatalogPricingService`, consumed by `AddOrderLineCommandHandler` to resolve a product's current name/price/VAT rate/status. Orders is this seam's first real consumer (see [Catalog.md](Catalog.md)). |
 | `Location.Contracts` | project (`Orders.Api → Location.Contracts`) | `ILocationDirectoryService.ExistsAsync`, consumed by `CreateOrderCommandHandler` to validate `LocationId` before creating an order. Orders is this seam's first real consumer (see [Location.md](Location.md)). |
+| `Inventory.Contracts` | project (`Orders.Api → Inventory.Contracts`) | `IInventoryService.DecrementForOrderAsync`/`RestoreForOrderAsync`, consumed synchronously and in-process by `PlaceOrderCommandHandler`/`CancelOrderCommandHandler` — deliberately not via `OrderPlacedIntegrationEvent` (see Notable Conventions and [Inventory.md](Inventory.md)). |
 | `Orders.Contracts` | project (`Orders.Api → Orders.Contracts`) | The module's own seam. |
 | Vendor `Lightsoft.AspNetCore.Authorization` (both projects), `Lightsoft.EntityFrameworkCore`, `Lightsoft.Mediator`, `Lightsoft.Result`, `Mapster` (`Orders.Api`) | package, **all declared directly** | Same positive contrast as `Organization`/`Approval`/`LeaveManagement`/`Location`/`Catalog` — no undeclared-transitive-dependency instance. `Mapster` is declared but currently unused (see Data Access). |
 
@@ -199,10 +205,10 @@ cross-module dependency is one layer down, in `Orders.Api` (the table above).
   records and handlers.
 
 No business module references `Orders.Api`/`Orders.Contracts` — confirmed via `ProjectReference` search
-across `src/`. Orders is, so far, purely a **consumer** of other modules' seams (`Catalog`'s
-`ICatalogPricingService`, `Location`'s `ILocationDirectoryService`), not a provider of one of its own —
-unlike `Catalog`/`Location`, `OrdersModule.cs` registers no cross-module DI interface (`IOrderTypeCache`
-is module-local, `internal` in implementation).
+across `src/`. Orders is a **consumer** of other modules' seams (`Catalog`'s `ICatalogPricingService`,
+`Location`'s `ILocationDirectoryService`, `Inventory`'s `IInventoryService`) and is not itself a
+provider of a cross-module seam — unlike `Catalog`/`Location`/`Inventory`, `OrdersModule.cs` registers
+no cross-module DI interface (`IOrderTypeCache` is module-local, `internal` in implementation).
 
 ## Notable Conventions
 
@@ -304,7 +310,26 @@ is module-local, `internal` in implementation).
   `SaveChangesAsync` commits — best-effort, wrapped in its own `try`/`catch` that logs a warning rather
   than failing the placement call. Same best-effort-immediate-delivery contract as `Approval`'s
   `ApprovalFinalizedIntegrationEvent`, but published from the command handler rather than from inside
-  `OrdersDbContext`'s domain-event dispatch.
+  `OrdersDbContext`'s domain-event dispatch. **`Inventory` deliberately does not subscribe to this
+  event** — stock decrement instead goes through the synchronous `IInventoryService` DI seam described
+  below, because the strict no-oversell requirement needs `PlaceOrderCommandHandler` to reject an
+  oversell synchronously before anything is saved, a guarantee a best-effort async event cannot provide.
+  `OrderPlacedIntegrationEvent` is still published for any other future consumer; it has none today.
+- **Stock movement is a synchronous, DI-only call into `Inventory`, not the event-based integration
+  pattern `Approval`/`LeaveManagement` use.** `PlaceOrderCommandHandler` calls `Order.Place()` in memory,
+  then `IInventoryService.DecrementForOrderAsync(...)` — an oversell throws a `ConflictException` here,
+  before `Orders`' own `SaveChangesAsync` ever runs, so neither side persists a half-applied state — then
+  `SaveChangesAsync` itself, wrapped in a `try`/`catch` that calls the idempotent
+  `IInventoryService.RestoreForOrderAsync` as a compensating action (best-effort, logged on failure) if
+  the save fails after the decrement already committed, and rethrows the original failure either way.
+  `CancelOrderCommandHandler` commits the cancel first, then — only if the order had actually been
+  placed (`PlacedAt != null`, i.e. it was never still `Draft`) — calls `RestoreForOrderAsync` in a
+  `try`/`catch` that only logs a warning on failure; the cancel itself always succeeds regardless.
+  `PlaceOrderCommand` carries `(long Id, string PlacedByUserId)`, not just the order id, so the acting
+  user can be attributed on the `StockAdjustment` ledger row. A crash between Inventory's own commit and
+  `PlaceOrderCommandHandler`'s `SaveChangesAsync` is an accepted, self-healing risk (a retry is safe via
+  Inventory's idempotency key) — see [known-debt.md](../../known-debt.md) and
+  [Inventory.md § Notable Conventions](Inventory.md#notable-conventions).
 - **`OrdersPermissions` has only `View`/`Manage` per feature, not the four-way
   `View`/`Create`/`Update`/`Delete` split most other modules use** — same per-module simplification
   `Location`/`Catalog` already use.
@@ -319,4 +344,4 @@ is module-local, `internal` in implementation).
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-19_
+_Last synced: 2026-09-20_

@@ -21,6 +21,12 @@ routes, backend contract surface, and the auth flow.
   `Current`/`Acting` status, manager flag) and creating or linking an Identity login.
 - **Retail administration** (`/location`) against `Location.Api` — full CRUD for a global location
   hierarchy (tree) and location types (with configurable allowed parents and child support).
+- **Inventory** (`/inventory`) against `Inventory.Api` — two tabs sharing one view permission
+  (`inventory.stock.view`): a read-only Stock Levels tab (filterable by product/location, plus an
+  all-locations "Total on hand: X across N location(s)" summary banner shown when a product filter is
+  active, independent of the location filter) and an Adjustments tab (filterable by
+  product/location/source-order-id) with a `inventory.stock.manage`-gated "Record adjustment" action
+  that opens a dialog form.
 - **Catalog** (`/catalog`) against `Catalog.Api` — a Products tab (paginated/searchable data table
   filterable by category and status, create/edit, activate/deactivate, image management) and, gated
   by `catalog.categories.view`, a Categories tab (recursive tree with create/edit/move/delete).
@@ -90,25 +96,26 @@ routes, backend contract surface, and the auth flow.
 | Locations | `/location` | Gated. Recursive tree + Location Types tab |
 | Catalog | `/catalog` | Gated `catalog.products.view`. Products tab (search/paginate/filter by category+status, create/edit, activate/deactivate, images) + Categories tab (`catalog.categories.view`, recursive tree create/edit/move/delete) |
 | Orders | `/orders` | Gated `orders.orders.view`; create/build/place/cancel gated `orders.orders.manage`. Two-phase `OrderPanel` Dialog (create draft → build), responsive list (card-style row on mobile) filterable by location/status |
+| Inventory | `/inventory` | Gated `inventory.stock.view`. Two tabs: Stock Levels (read-only, filter by product/location, all-locations total-on-hand summary when a product is selected) and Adjustments (filter by product/location/source-order-id); "Record adjustment" action gated `inventory.stock.manage` |
 | Approvals | `/approvals` | Gated `approval.requests.view`; view-all panel + "Create test request" gated `approval.requests.view_all` |
 | Leave requests | `/leave-requests`, `/leave-requests/[id]` | **No permission gate** — any session. `leave.requests.manage` unlocks an "All requests" tab + delete-any |
 
 Every `page.tsx` is a one-line re-export from a feature/module barrel. `constants/nav-items.ts`
 assembles `NAV_ITEMS` from each feature's own `NavItem`: `[home, Administration group, Organization
 group, /approvals, /leave-requests, Retail group, Settings]`, where the Retail group holds Location,
-Catalog, and Orders. `/administration`, `/organization`, `/retail`, `/settings` have
+Catalog, Orders, and Inventory. `/administration`, `/organization`, `/retail`, `/settings` have
 no `page.tsx` and 404 if followed; being ungated they still show in the sidebar and ⌘K palette.
 
 ## Backend Integration
 
-Real, but partial. `lib/server/api-clients.ts` registers eight backend clients — `Identity`,
-`Notifications`, `Organization`, `Location`, `Approval`, `LeaveManagement`, `Catalog`, `Orders` — each
-resolving its own `*_API_BASE_URL` env var (the base URL owns its full path prefix; `http.ts` prepends
-nothing). `lib/server/backend-api.ts`'s `createBackendApiClient(client)` factory produces eight ready
-instances (`identityApi` … `locationApi` … `leaveManagementApi` … `catalogApi` … `ordersApi`); auth is
-attached by a request-handler pipeline (`bearerTokenHandler` reads the ambient session), not a passed
-token. The eight backends are logically separate modules currently co-hosted in one process
-(`StarterKit.WebApi`).
+Real, but partial. `lib/server/api-clients.ts` registers nine backend clients — `Identity`,
+`Notifications`, `Organization`, `Location`, `Approval`, `LeaveManagement`, `Catalog`, `Orders`,
+`Inventory` — each resolving its own `*_API_BASE_URL` env var (the base URL owns its full path prefix;
+`http.ts` prepends nothing). `lib/server/backend-api.ts`'s `createBackendApiClient(client)` factory
+produces nine ready instances (`identityApi` … `locationApi` … `leaveManagementApi` … `catalogApi` …
+`ordersApi` … `inventoryApi`); auth is attached by a request-handler pipeline (`bearerTokenHandler`
+reads the ambient session), not a passed token. The nine backends are logically separate modules
+currently co-hosted in one process (`StarterKit.WebApi`).
 Error handling, the envelope contract, and the permanent-vs-transient refresh-failure distinction are
 covered in [architecture.md § Key Design Patterns](./architecture.md#key-design-patterns).
 
@@ -149,6 +156,13 @@ Endpoints this client consumes, by module:
   `order/{id}/place` (PUT), `order/{id}/cancel` (PUT). `addOrderLine` is the one place a bigint id
   (`productId`) is coerced to a JSON number rather than sent as a string, since `Orders.Contracts`
   has no `[JsonNumberHandling]` relaxation for it.
+- **inventory** — `stock_level` (GET — paged search by product/location), `stock_level/total/{productId}`
+  (GET — all-locations total quantity + location count for one product), `stock_adjustment` (GET —
+  paged search by product/location/source-order-id; POST — records a manual adjustment; the server
+  always stamps `Reason: ManualAdjustment`, so the request body carries no `reason` field). Search/GET
+  gated `inventory.stock.view`, the POST additionally gated `inventory.stock.manage`.
+  `recordStockMovement`'s POST coerces `productId` to a JSON number, the same bigint-id exception as
+  Orders' `addOrderLine` (`Inventory.Contracts` has no `[JsonNumberHandling]` relaxation for it either).
 - **approvals** — `modules/approvals/api/approvals.api.ts` (admin, `approval.requests.view_all`):
   `approval` (GET search / POST test request). `user-approvals.api.ts` (self-service, server-scoped
   by `UserApprovalController`): `approval/user` (GET / POST), `approval/user/{id}`,
@@ -225,4 +239,4 @@ for inspection. `token-cipher.ts` uses Node's `crypto` and `proxy.ts` has no exp
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-16_
+_Last synced: 2026-09-20_

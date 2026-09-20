@@ -11,8 +11,9 @@ Each `LocationType` row declares its own `AllowedParentTypeId` (nullable self-FK
 root location) and `CanHaveChildren`; unlike every other identifier in this solution, `LocationType.Id`
 is a caller-supplied business code (e.g. `"STORE"`), not framework-generated. The module also exposes
 `ILocationDirectoryService`, a read-only cross-module seam (same role as Organization's
-`IOrgDirectoryService`) intended for a future Catalog/Orders/Inventory-style module to resolve
-location data without reaching into this module's aggregate or EF internals — it has no consumer yet.
+`IOrgDirectoryService`) for another module to resolve location data without reaching into this module's
+aggregate or EF internals — it now has two consumers, `Orders` (order-creation `LocationId` validation)
+and `Inventory` (stock-adjustment `LocationId` validation), see Notable Conventions.
 
 ## Internal Layering
 
@@ -53,7 +54,8 @@ class level):
 Every action across both controllers dispatches a mediator command/query under
 `Application/{Locations,LocationTypes}/{Commands,Queries}` — handlers own their `LocationDbContext`
 logic directly, same shape as `Organization`/`LeaveManagement`. `ILocationDirectoryService` (see
-Notable Conventions) is a DI-only seam with no HTTP surface of its own, and currently has no consumer.
+Notable Conventions) is a DI-only seam with no HTTP surface of its own, consumed by `Orders` and
+`Inventory`.
 
 `LocationPermissions.{Locations,LocationTypes}` each expose only `View`/`Manage` — **not** the
 `View`/`Create`/`Update`/`Delete` four-way split every other module's permission catalog uses. A
@@ -124,10 +126,15 @@ children, `TERMINAL` (must be parented under `STORE`, always a leaf), `BIN` (mus
 - `Location.Tests` — `Location.Api.csproj` grants `InternalsVisibleTo` to reach the `internal`
   command/query records and handlers, plus a second grant to `DynamicProxyGenAssembly2` (see Notable
   Conventions).
+- **`Orders.Api`** — references `Location.Contracts`, consumed by `CreateOrderCommandHandler` via
+  `ILocationDirectoryService.ExistsAsync` to validate `LocationId` before creating an order (see
+  [Orders.md](Orders.md)).
+- **`Inventory.Api`** — references `Location.Contracts`, consumed by `InventoryService
+  .DecrementForOrderAsync` and `RecordStockMovementCommandHandler` via `ILocationDirectoryService
+  .ExistsAsync` to validate `LocationId` before any stock movement (see [Inventory.md](Inventory.md)).
 
-Nothing currently references `Location.Contracts` to consume `ILocationDirectoryService` — it is
-built ahead of any real consumer, mirroring the role `IOrgDirectoryService` plays for
-`Organization`/`LeaveManagement`.
+`ILocationDirectoryService` now has two real cross-module consumers, `Orders` (first) and `Inventory`
+(second) — the same role `IOrgDirectoryService` plays for `Organization`/`LeaveManagement`.
 
 ## Notable Conventions
 
@@ -180,9 +187,10 @@ built ahead of any real consumer, mirroring the role `IOrgDirectoryService` play
   documented pattern.
 - **`ILocationDirectoryService`/`LocationDirectoryService` is the module's cross-module DI seam**,
   same role as Organization's `IOrgDirectoryService` — `GetAsync`/`ExistsAsync`/`GetChildrenAsync`/
-  `GetLookupAsync`, all read-only and `AsNoTracking`. Unlike `IOrgDirectoryService`, it currently has
-  **zero consumers**; it exists ahead of a future module that needs to resolve location data (its own
-  XML doc names Catalog/Orders/Inventory as candidates, none of which exist yet).
+  `GetLookupAsync`, all read-only and `AsNoTracking`. It now has two real consumers: `Orders`
+  (`CreateOrderCommandHandler`, validating `LocationId` on order creation) and `Inventory`
+  (`InventoryService.DecrementForOrderAsync` and `RecordStockMovementCommandHandler`, validating
+  `LocationId` on every stock movement) — see Depended On By.
 - **Migration is MSSQL-only and not yet squashed** — see Data Access. Treat `Location` as
   mid-development, not yet at the "template baseline" state `Organization`/`Approval`/
   `LeaveManagement` are in.
@@ -195,4 +203,4 @@ built ahead of any real consumer, mirroring the role `IOrgDirectoryService` play
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-11_
+_Last synced: 2026-09-20_

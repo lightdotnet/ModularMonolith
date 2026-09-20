@@ -21,9 +21,9 @@ src/
                          index.ts; no api/ of its own (calls other modules' barrels/actions).
   modules/<domain>/<name>/
                          identity/{auth,user-profile,users,roles}, notifications (flat, no nesting),
-                         organization/{companies,departments,employees}, approvals, leave-requests.
-                         Each owns: api/ (one consolidated <name>.api.ts + one file per *-action.ts
-                         Server Action), components/, optional types/ (single-consumer, or a
+                         organization/{companies,departments,employees}, inventory, approvals,
+                         leave-requests. Each owns: api/ (one consolidated <name>.api.ts + one file per
+                         *-action.ts Server Action), components/, optional types/ (single-consumer, or a
                          barrel-re-exported feature DTO), optional constants/ ({permissions,nav-item}.ts),
                          and an index.ts barrel — the only sanctioned cross-module import surface.
   components/
@@ -131,10 +131,11 @@ No cycles found among internal imports.
 
 - **Auth-token injection via a request-handler pipeline.** `http.ts` has no `accessToken` option — it
   takes `handlers` run before `fetch`. `lib/server/backend-api.ts`'s `createBackendApiClient(client)`
-  factory pre-wires `bearerTokenHandler` (reads the ambient session) and a fixed backend client; eight
+  factory pre-wires `bearerTokenHandler` (reads the ambient session) and a fixed backend client; nine
   instances (`identityApi`/`notificationsApi`/`organizationApi`/`locationApi`/`approvalApi`/
-  `leaveManagementApi`/`catalogApi`/`ordersApi`) cover the eight backend modules. Pre-session call sites
-  pass `explicitBearerTokenHandler(token)` instead. `http.ts` never imports sessions.
+  `leaveManagementApi`/`catalogApi`/`ordersApi`/`inventoryApi`) cover the nine backend modules.
+  Pre-session call sites pass `explicitBearerTokenHandler(token)` instead. `http.ts` never imports
+  sessions.
 
 - **Session freshness moved off blocking middleware into a client-driven gate.** `proxy.ts` now only
   enforces the 7-day cap and the `/login` redirect. `components/layout/session-gate.tsx` (mounted in
@@ -183,6 +184,24 @@ No cycles found among internal imports.
   need a Server Action from `identity/users`, and `components/shared/*` may not depend on a
   feature/module. `leave-requests`'s approver picker is a different shape (a plain `NativeSelect` over
   a small pre-fetched candidate list), not a fourth instance.
+
+- **Two feature-owned duplicates of an async product-search combobox.** `orders` and `inventory` each
+  carry their own `ProductSelect` — debounced (300ms), no min-char gate, backed by
+  `searchProductsAction` against `Catalog`'s `product` search (`status: Active` only) — rather than
+  sharing one, extending the same "feature-owned small picker over a shared primitive" reasoning as
+  the user-search comboboxes above. `inventory`'s copy documents itself as a copy of `orders`' copy
+  (which documents itself as a copy of the `organization/employees` `UserSelect` pattern), not an
+  independently-designed component.
+
+- **Trigger-embedded clear (X) affordance, not an external button, on every optional picker.** The
+  shared `Combobox` primitive and every async feature-owned picker that accepts an `onClear` prop
+  (`ProductSelect` in `orders`/`inventory`, `UserSelect` in `notifications`) render their clear control
+  *inside* the trigger — an absolutely-positioned `X` button overlaid on the trigger's `relative`
+  wrapper, replacing the chevron icon (hidden via `invisible`, not removed, so trigger width doesn't
+  shift) — rather than composing a separate clear button beside the trigger. `onClear` is optional and
+  omitted on required-selection fields: `organization/employees`'s `UserSelect` and `approvals`'s
+  `ApproverSelect` deliberately have no clear affordance. This is the established convention for any
+  new clearable picker going forward.
 
 - **Controlled form state alongside `useActionState`; force-remount via a bumped `key`.** Mutation
   dialogs keep their own `useState<FormValues>` in parallel — React resets *uncontrolled* fields once
@@ -256,9 +275,11 @@ No cycles found among internal imports.
 
 - **List-mutating Server Actions self-invalidate via `revalidatePath`.** Each create/update/delete
   action for Users, Roles, Notifications, Companies, Approvals, and Leave requests calls
-  `revalidatePath` for its list route right before returning success. Deliberately not applied to
-  client-managed reads (notification mark-read) or on-demand detail/picklist fetches; the Approvals
-  tables and `LeaveRequestsDataTable` use a client-side `router.refresh()` / per-tab refetch instead.
+  `revalidatePath` for its list route right before returning success. `inventory`'s
+  `recordStockMovementAction` follows the same pattern (`revalidatePath("/inventory")`). Deliberately
+  not applied to client-managed reads (notification mark-read) or on-demand detail/picklist fetches;
+  the Approvals tables and `LeaveRequestsDataTable` use a client-side `router.refresh()` / per-tab
+  refetch instead.
 
 - **Multiple login entry points converge on one `establishSession()`.** Password login
   (`login-action.ts`) and the Microsoft PKCE relay (`app/login/microsoft/callback/route.ts`) both call
@@ -333,4 +354,4 @@ none exists. `pnpm-workspace.yaml` only configures build-script approval, not a 
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-16_
+_Last synced: 2026-09-20_
