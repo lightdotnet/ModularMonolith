@@ -1,4 +1,4 @@
-﻿namespace StarterKit.Identity.Api.Data;
+namespace StarterKit.Identity.Api.Data;
 
 public abstract class Tables
 {

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using StarterKit.Shared;
 using StarterKit.Shared.Authorization;
 using System.Security.Claims;

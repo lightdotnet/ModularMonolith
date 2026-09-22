@@ -10,7 +10,7 @@ namespace StarterKit.LeaveManagement.Api.Application.LeaveRequests;
 /// </summary>
 internal static class LeaveRequestStatusMap
 {
-    internal const string RequestType = "LeaveRequest";
+    internal const string RequestType = ApprovalRequestTypes.LeaveRequest;
 
     internal static LeaveRequestStatus MapStatus(ApprovalStatus status) =>
         status switch

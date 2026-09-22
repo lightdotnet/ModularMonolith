@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<RootNamespace>StarterKit.Catalog.Api</RootNamespace>
+	<AssemblyName>StarterKit.Catalog.Api</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Catalog.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<PackageReference Include="Lightsoft.AspNetCore.Authorization" />
+	<PackageReference Include="Lightsoft.EntityFrameworkCore" />
+	<PackageReference Include="Lightsoft.Mediator" />
+	<PackageReference Include="Lightsoft.Result" />
+	<PackageReference Include="Mapster" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Catalog.Contracts\Catalog.Contracts.csproj" />
+    <ProjectReference Include="..\Currency.Contracts\Currency.Contracts.csproj" />
+    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\Persistence\Persistence.csproj" />
+  </ItemGroup>
+
+</Project>

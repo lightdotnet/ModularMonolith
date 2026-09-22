@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR;
 using StarterKit.Shared.Constants;
 
 namespace StarterKit.Notifications.Api.SignalR;

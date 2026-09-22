@@ -1,4 +1,4 @@
-﻿using StarterKit.Shared;
+using StarterKit.Shared;
 
 namespace StarterKit.Notifications.Contracts.SystemNotifications;
 

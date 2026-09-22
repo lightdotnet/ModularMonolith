@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
 	<OutputType>Exe</OutputType>
@@ -29,13 +29,20 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Approval.Api\Approval.Api.csproj" />
+    <ProjectReference Include="..\..\Catalog.Api\Catalog.Api.csproj" />
     <ProjectReference Include="..\..\Identity.Api\Identity.Api.csproj" />
     <ProjectReference Include="..\..\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Inventory.Api\Inventory.Api.csproj" />
     <ProjectReference Include="..\..\LeaveManagement.Api\LeaveManagement.Api.csproj" />
+    <ProjectReference Include="..\..\Location.Api\Location.Api.csproj" />
     <ProjectReference Include="..\..\Notifications.Api\Notifications.Api.csproj" />
+    <ProjectReference Include="..\..\Orders.Api\Orders.Api.csproj" />
     <ProjectReference Include="..\..\Organization.Api\Organization.Api.csproj" />
     <ProjectReference Include="..\..\Persistence\Persistence.csproj" />
+    <ProjectReference Include="..\..\Currency.Api\Currency.Api.csproj" />
+    <ProjectReference Include="..\..\Purchasing.Api\Purchasing.Api.csproj" />
     <ProjectReference Include="..\..\Shared\Shared.csproj" />
+    <ProjectReference Include="..\..\Transfers.Api\Transfers.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -46,9 +53,16 @@
 
   <ItemGroup>
     <Folder Include="Approval\" />
+    <Folder Include="Catalog\" />
+    <Folder Include="Currency\" />
+    <Folder Include="Inventory\" />
     <Folder Include="LeaveManagement\" />
+    <Folder Include="Location\" />
     <Folder Include="Notifications\" />
+    <Folder Include="Orders\" />
     <Folder Include="Organization\" />
+    <Folder Include="Purchasing\" />
+    <Folder Include="Transfers\" />
   </ItemGroup>
 
 </Project>

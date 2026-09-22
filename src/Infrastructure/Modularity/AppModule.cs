@@ -1,4 +1,4 @@
-﻿namespace StarterKit.Infrastructure.Modularity;
+namespace StarterKit.Infrastructure.Modularity;
 
 public abstract class AppModule : Light.AspNetCore.Modularity.AppModule
 {

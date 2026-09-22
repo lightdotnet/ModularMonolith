@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
 	<RootNamespace>StarterKit.Shared</RootNamespace>
@@ -7,6 +7,17 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Framework.Tests" />
+    <!-- Catalog.Api's Product aggregate mutates the tracked Money/VatPercentage instances in place
+         (Reprice/UpdateVatRate) via their internal Update method, mirroring how DateRange.Update is
+         called from within LeaveManagement.Api (same-assembly there). Money/VatPercentage live in
+         Shared, a different assembly, so Catalog.Api needs this grant to reach Update — same
+         InternalsVisibleTo mechanism already used repo-wide, just pointed at a module's .Api instead
+         of its .Tests project. -->
+    <InternalsVisibleTo Include="StarterKit.Catalog.Api" />
+    <!-- OrderLine.RequestedSalePrice is a nullable Money override that, once set, must be mutated
+         in place via Money.Update rather than reassigned (same tracked-owned-type hazard as
+         Product.Reprice above) — same grant, pointed at Orders.Api. -->
+    <InternalsVisibleTo Include="StarterKit.Orders.Api" />
   </ItemGroup>
 
   <ItemGroup>

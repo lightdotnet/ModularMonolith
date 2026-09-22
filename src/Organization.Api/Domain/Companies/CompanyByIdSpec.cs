@@ -1,4 +1,4 @@
-﻿namespace StarterKit.Organization.Api.Domain.Companies;
+namespace StarterKit.Organization.Api.Domain.Companies;
 
 public class CompanyByIdSpec : Specification<Company>
 {

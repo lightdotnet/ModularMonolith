@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<RootNamespace>StarterKit.Locations.Api</RootNamespace>
+	<AssemblyName>StarterKit.Locations.Api</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Location.Tests" />
+    <!-- Moq's Castle DynamicProxy needs this to mock internal types (e.g. ILocationTypeCache). -->
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<PackageReference Include="Lightsoft.AspNetCore.Authorization" />
+	<PackageReference Include="Lightsoft.Caching" />
+	<PackageReference Include="Lightsoft.EntityFrameworkCore" />
+	<PackageReference Include="Lightsoft.Mediator" />
+	<PackageReference Include="Lightsoft.Result" />
+	<PackageReference Include="Mapster" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\Location.Contracts\Location.Contracts.csproj" />
+    <ProjectReference Include="..\Persistence\Persistence.csproj" />
+  </ItemGroup>
+
+</Project>

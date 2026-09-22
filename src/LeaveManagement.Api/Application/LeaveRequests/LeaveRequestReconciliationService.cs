@@ -75,16 +75,17 @@ internal sealed class LeaveRequestReconciliationService(
         if (rows.Count == 0)
             return 0;
 
-        var views = await approvalService.GetStatusesByRequestAsync(
-            LeaveRequestStatusMap.RequestType,
-            rows.Select(x => x.Id).ToList(),
+        // Look up by the stored approval request id, not the newest request for (type, leave id): a
+        // request forged for the same leave request can then never shadow the genuine workflow.
+        var views = await approvalService.GetStatusesAsync(
+            rows.Select(x => x.ApprovalRequestId!).ToList(),
             cancellationToken);
 
         var changed = 0;
 
         foreach (var row in rows)
         {
-            if (!views.TryGetValue(row.Id, out var view))
+            if (!views.TryGetValue(row.ApprovalRequestId!, out var view))
                 continue;
 
             // TryApplyOutcome (and, through it, ApplyApprovalOutcome) is the sole authority on

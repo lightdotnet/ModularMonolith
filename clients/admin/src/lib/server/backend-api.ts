@@ -42,3 +42,11 @@ export const notificationsApi = createBackendApiClient(ApiClients.Notifications)
 export const organizationApi = createBackendApiClient(ApiClients.Organization);
 export const approvalApi = createBackendApiClient(ApiClients.Approval);
 export const leaveManagementApi = createBackendApiClient(ApiClients.LeaveManagement);
+export const locationApi = createBackendApiClient(ApiClients.Location);
+export const catalogApi = createBackendApiClient(ApiClients.Catalog);
+export const ordersApi = createBackendApiClient(ApiClients.Orders);
+export const inventoryApi = createBackendApiClient(ApiClients.Inventory);
+export const transfersApi = createBackendApiClient(ApiClients.Transfers);
+export const purchasingApi = createBackendApiClient(ApiClients.Purchasing);
+export const currencyApi = createBackendApiClient(ApiClients.Currency);
+

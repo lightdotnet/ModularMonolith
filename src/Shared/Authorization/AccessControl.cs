@@ -1,4 +1,4 @@
-﻿using StarterKit.Shared.Extensions;
+using StarterKit.Shared.Extensions;
 using System.Security.Claims;
 
 namespace StarterKit.Shared.Authorization;

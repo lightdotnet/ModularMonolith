@@ -1,4 +1,4 @@
-import { Building2, Settings, ShieldCheck, ShieldCog } from "lucide-react";
+import { Building2, Settings, ShieldCheck, ShieldCog, Store } from "lucide-react";
 // Imported directly (not via each feature's barrel): the barrels also re-export
 // server-only code (Server Components, session-backed API calls), and this file
 // is reachable from the client-side Sidebar — pulling in the full barrel would
@@ -10,6 +10,18 @@ import { NOTIFICATIONS_NAV_ITEM } from "@/modules/notifications/constants/nav-it
 import { COMPANIES_NAV_ITEM } from "@/modules/organization/companies/constants/nav-item";
 import { DEPARTMENTS_NAV_ITEM } from "@/modules/organization/departments/constants/nav-item";
 import { EMPLOYEES_NAV_ITEM } from "@/modules/organization/employees/constants/nav-item";
+import { LOCATION_NAV_ITEM } from "@/modules/location/constants/nav-item";
+import { CATALOG_NAV_ITEM } from "@/modules/catalog/constants/nav-item";
+import { ORDERS_NAV_ITEM } from "@/modules/orders/constants/nav-item";
+import { INVENTORY_NAV_ITEM } from "@/modules/inventory/constants/nav-item";
+import { INVENTORY_VALUATION_NAV_ITEM } from "@/modules/inventory/constants/valuation-nav-item";
+import { TRANSFERS_NAV_ITEM } from "@/modules/transfers/constants/nav-item";
+import { SUPPLIERS_NAV_ITEM } from "@/modules/purchasing/suppliers/constants/nav-item";
+import { PURCHASE_ORDERS_NAV_ITEM } from "@/modules/purchasing/purchase-orders/constants/nav-item";
+import { GOODS_RECEIPTS_NAV_ITEM } from "@/modules/purchasing/goods-receipts/constants/nav-item";
+import { PURCHASE_RETURNS_NAV_ITEM } from "@/modules/purchasing/purchase-returns/constants/nav-item";
+import { CURRENCIES_NAV_ITEM } from "@/modules/currency/currencies/constants/nav-item";
+import { EXCHANGE_RATES_NAV_ITEM } from "@/modules/currency/exchange-rates/constants/nav-item";
 import { APPROVALS_NAV_ITEM } from "@/modules/approvals/constants/nav-item";
 import { LEAVE_REQUESTS_NAV_ITEM } from "@/modules/leave-requests/constants/nav-item";
 import type { NavItem } from "@/types/nav";
@@ -38,6 +50,25 @@ export const NAV_ITEMS: NavItem[] = [
   },
   APPROVALS_NAV_ITEM,
   LEAVE_REQUESTS_NAV_ITEM,
+  {
+    label: "Retail",
+    href: "/retail",
+    icon: Store,
+    children: [
+      LOCATION_NAV_ITEM,
+      CATALOG_NAV_ITEM,
+      ORDERS_NAV_ITEM,
+      INVENTORY_NAV_ITEM,
+      INVENTORY_VALUATION_NAV_ITEM,
+      TRANSFERS_NAV_ITEM,
+      SUPPLIERS_NAV_ITEM,
+      PURCHASE_ORDERS_NAV_ITEM,
+      GOODS_RECEIPTS_NAV_ITEM,
+      PURCHASE_RETURNS_NAV_ITEM,
+      CURRENCIES_NAV_ITEM,
+      EXCHANGE_RATES_NAV_ITEM,
+    ],
+  },
   {
     label: "Settings",
     href: "/settings",

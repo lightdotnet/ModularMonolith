@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<RootNamespace>StarterKit.Transfers.Api</RootNamespace>
+	<AssemblyName>StarterKit.Transfers.Api</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Transfers.Tests" />
+    <!-- Moq's Castle DynamicProxy needs this to mock internal types. -->
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<PackageReference Include="Lightsoft.AspNetCore.Authorization" />
+	<PackageReference Include="Lightsoft.EntityFrameworkCore" />
+	<PackageReference Include="Lightsoft.Mediator" />
+	<PackageReference Include="Lightsoft.Result" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Catalog.Contracts\Catalog.Contracts.csproj" />
+    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\Inventory.Contracts\Inventory.Contracts.csproj" />
+    <ProjectReference Include="..\Location.Contracts\Location.Contracts.csproj" />
+    <ProjectReference Include="..\Persistence\Persistence.csproj" />
+    <ProjectReference Include="..\Transfers.Contracts\Transfers.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

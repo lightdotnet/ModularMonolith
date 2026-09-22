@@ -1,4 +1,4 @@
-﻿namespace StarterKit.Identity.Api.Extensions;
+namespace StarterKit.Identity.Api.Extensions;
 
 public static class IdentityResultExtensions
 {

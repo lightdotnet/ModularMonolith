@@ -1,4 +1,4 @@
-﻿namespace MSSQL
+namespace MSSQL
 {
     internal class DefaultSchema
     {

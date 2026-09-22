@@ -10,22 +10,50 @@
     <Project Path="src/Approval.Api/Approval.Api.csproj" />
     <Project Path="src/Approval.Contracts/Approval.Contracts.csproj" />
   </Folder>
+  <Folder Name="/src/catalog-module/">
+    <Project Path="src/Catalog.Api/Catalog.Api.csproj" />
+    <Project Path="src/Catalog.Contracts/Catalog.Contracts.csproj" />
+  </Folder>
   <Folder Name="/src/identity-module/">
     <Project Path="src/Identity.Api/Identity.Api.csproj" />
     <Project Path="src/Identity.Contracts/Identity.Contracts.csproj" />
     <Project Path="src/Identity.Web/Identity.Web.csproj" />
   </Folder>
+  <Folder Name="/src/inventory-module/">
+    <Project Path="src/Inventory.Api/Inventory.Api.csproj" />
+    <Project Path="src/Inventory.Contracts/Inventory.Contracts.csproj" />
+  </Folder>
   <Folder Name="/src/leave-management-module/">
     <Project Path="src/LeaveManagement.Api/LeaveManagement.Api.csproj" />
     <Project Path="src/LeaveManagement.Contracts/LeaveManagement.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/location-module/">
+    <Project Path="src/Location.Api/Location.Api.csproj" />
+    <Project Path="src/Location.Contracts/Location.Contracts.csproj" />
   </Folder>
   <Folder Name="/src/notification-module/">
     <Project Path="src/Notifications.Api/Notifications.Api.csproj" />
     <Project Path="src/Notifications.Contracts/Notifications.Contracts.csproj" />
   </Folder>
+  <Folder Name="/src/orders-module/">
+    <Project Path="src/Orders.Api/Orders.Api.csproj" />
+    <Project Path="src/Orders.Contracts/Orders.Contracts.csproj" />
+  </Folder>
   <Folder Name="/src/organization-module/">
     <Project Path="src/Organization.Api/Organization.Api.csproj" />
     <Project Path="src/Organization.Contracts/Organization.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/transfers-module/">
+    <Project Path="src/Transfers.Api/Transfers.Api.csproj" />
+    <Project Path="src/Transfers.Contracts/Transfers.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/purchasing-module/">
+    <Project Path="src/Purchasing.Api/Purchasing.Api.csproj" />
+    <Project Path="src/Purchasing.Contracts/Purchasing.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/currency-module/">
+    <Project Path="src/Currency.Api/Currency.Api.csproj" />
+    <Project Path="src/Currency.Contracts/Currency.Contracts.csproj" />
   </Folder>
   <Folder Name="/src/_framework/">
     <Project Path="src/Infrastructure/Infrastructure.csproj" />
@@ -39,9 +67,16 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Approval.Tests/Approval.Tests.csproj" />
+    <Project Path="tests/Catalog.Tests/Catalog.Tests.csproj" />
+    <Project Path="tests/Currency.Tests/Currency.Tests.csproj" />
     <Project Path="tests/Framework.Tests/Framework.Tests.csproj" />
     <Project Path="tests/Identity.Tests/Identity.Tests.csproj" />
+    <Project Path="tests/Inventory.Tests/Inventory.Tests.csproj" />
     <Project Path="tests/LeaveManagement.Tests/LeaveManagement.Tests.csproj" />
+    <Project Path="tests/Location.Tests/Location.Tests.csproj" />
+    <Project Path="tests/Orders.Tests/Orders.Tests.csproj" />
     <Project Path="tests/Organization.Tests/Organization.Tests.csproj" />
+    <Project Path="tests/Purchasing.Tests/Purchasing.Tests.csproj" />
+    <Project Path="tests/Transfers.Tests/Transfers.Tests.csproj" />
   </Folder>
 </Solution>

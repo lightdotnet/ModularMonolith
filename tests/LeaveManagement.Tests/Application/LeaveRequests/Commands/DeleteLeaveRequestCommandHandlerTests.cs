@@ -205,7 +205,7 @@ public class DeleteLeaveRequestCommandHandlerTests
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         var approvalServiceMock = new Mock<IApprovalService>();
         approvalServiceMock
-            .Setup(s => s.GetStatusByRequestAsync("LeaveRequest", entity.Id, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetStatusAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(StatusView(entity.Id, ApprovalStatus.Approved));
         var handler = MakeHandler(host, approvalServiceMock);
 

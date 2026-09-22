@@ -8,13 +8,13 @@ import { cn } from "@/lib/shared/utils";
 import { useSidebar } from "@/hooks/use-sidebar";
 import type { NavItem } from "@/types/nav";
 
-function isActivePath(pathname: string, href: string): boolean {
-  if (href === "/") return pathname === "/";
+function isActivePath(pathname: string, href: string, exact?: boolean): boolean {
+  if (href === "/" || exact) return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 function containsActive(item: NavItem, pathname: string): boolean {
-  if (isActivePath(pathname, item.href)) return true;
+  if (isActivePath(pathname, item.href, item.exact)) return true;
   return (
     item.children?.some((child) => containsActive(child, pathname)) ?? false
   );
@@ -23,7 +23,7 @@ function containsActive(item: NavItem, pathname: string): boolean {
 export function SidebarNavItem({ item }: { item: NavItem }) {
   const pathname = usePathname();
   const { isExpanded, toggleExpanded } = useSidebar();
-  const active = isActivePath(pathname, item.href);
+  const active = isActivePath(pathname, item.href, item.exact);
   const hasChildren = !!item.children?.length;
   const branchActive = containsActive(item, pathname);
   // No explicit user override yet -> default to auto-expanding the branch

@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Light.Mediator;
 using ValidationException = Light.Exceptions.ValidationException;
 

@@ -1,4 +1,4 @@
-﻿namespace StarterKit.Notifications.Contracts.Services;
+namespace StarterKit.Notifications.Contracts.Services;
 
 public interface IMailService
 {

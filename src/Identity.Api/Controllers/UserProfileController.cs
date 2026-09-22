@@ -1,4 +1,4 @@
-﻿using Light.Exceptions;
+using Light.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using StarterKit.Identity.Api.Jwt;
 using StarterKit.Identity.Contracts.Services;

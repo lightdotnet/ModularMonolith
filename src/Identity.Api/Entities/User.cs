@@ -1,4 +1,4 @@
-﻿using Light.Domain;
+using Light.Domain;
 using Light.Domain.Entities.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using StarterKit.Identity.Contracts;
@@ -6,7 +6,8 @@ using StarterKit.Shared;
 
 namespace StarterKit.Identity.Api.Entities;
 
-public class User : IdentityUser, IEntity<string>, IAuditable, ISoftDelete
+public class User
+    : IdentityUser, IEntity<string>, IHasAuditTime, IHasAuditUser, ISoftDelete
 {
     public User() => Id = LightId.NewId();
 

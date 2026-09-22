@@ -35,3 +35,15 @@ public sealed class TestNote : ValueObject
 }
 
 public sealed record TestDomainEvent : DomainEvent;
+
+/// <summary>
+/// Standalone entity implementing only <see cref="IHasCreationTime"/> (no <see cref="IHasAuditUser"/> or
+/// <see cref="IHasModificationTime"/>), to exercise the partial-audit-capability path in
+/// <see cref="StarterKit.Database.TrackingExtensions"/> that the split shared-kernel interfaces enable.
+/// </summary>
+public sealed class TestCreationOnlyEntity : IHasCreationTime
+{
+    public int Id { get; set; }
+
+    public DateTimeOffset Created { get; set; }
+}

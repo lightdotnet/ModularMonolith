@@ -35,5 +35,5 @@ public class Employee : AuditableEntity
 
     public string? AvatarUrl { get; set; }
 
-    public IList<EmployeeOrgUnitMembership> Memberships { get; set; } = [];
+    public virtual IList<EmployeeOrgUnitMembership> Memberships { get; set; } = [];
 }

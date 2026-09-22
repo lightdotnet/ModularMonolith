@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using StarterKit.Identity.Api.Entities;
 using StarterKit.Persistence.MigrationSupport;
 

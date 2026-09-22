@@ -137,6 +137,45 @@ internal class ApprovalService(
         }
     }
 
+    public Task<ApprovalStatusView?> GetStatusAsync(
+        string approvalRequestId,
+        CancellationToken cancellationToken = default)
+    {
+        return context.ApprovalRequests
+            .AsNoTracking()
+            .Where(x => x.Id == approvalRequestId)
+            .Select(x => new ApprovalStatusView(
+                x.Id,
+                x.RequestType,
+                x.RequestId,
+                x.Status,
+                x.CurrentLevel))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<string, ApprovalStatusView>> GetStatusesAsync(
+        IReadOnlyCollection<string> approvalRequestIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (approvalRequestIds is null || approvalRequestIds.Count == 0)
+            return new Dictionary<string, ApprovalStatusView>();
+
+        var ids = approvalRequestIds.Distinct().ToList();
+
+        var rows = await context.ApprovalRequests
+            .AsNoTracking()
+            .Where(x => ids.Contains(x.Id))
+            .Select(x => new ApprovalStatusView(
+                x.Id,
+                x.RequestType,
+                x.RequestId,
+                x.Status,
+                x.CurrentLevel))
+            .ToListAsync(cancellationToken);
+
+        return rows.ToDictionary(x => x.ApprovalRequestId);
+    }
+
     public Task<ApprovalStatusView?> GetStatusByRequestAsync(
         string requestType,
         string requestId,

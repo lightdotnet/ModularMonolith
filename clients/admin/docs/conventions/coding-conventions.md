@@ -39,6 +39,9 @@ write code that matches" companion, not a second architecture doc.
   - mutation (`(prevState, formData) => Promise<{ error?; success? }>`), consumed via `useActionState`;
   - on-demand read (`(args) => Promise<{ data; error? }>`), called directly by a Client Component
     that can't reach the server-only `api/` layer;
+  - imperative mutation with typed arguments (`(id, …) => Promise<{ error?; success?; definitive? }>`),
+    called from a client dialog — the receive actions use the `definitive` flag to tell a deterministic
+    refusal from an ambiguous failure (see architecture.md);
   - `logoutAction` is the outlier — returns `void`, deletes the cookie and `redirect()`s itself.
 
   Every mutation action calls its `<name>.api.ts` function through `lib/server/backend-api.ts`
@@ -68,8 +71,10 @@ the rule for a contributor:
   `lib/server/backend-api.ts` instance + `lib/server/call-guard.ts`. Not one file per endpoint.
   `*-action.ts` Server Actions stay one file per action.
 - **Backend client selection.** Pick the `lib/server/backend-api.ts` instance for the backend the
-  endpoint belongs to — `identityApi` / `notificationsApi` / `organizationApi` / `approvalApi` /
-  `leaveManagementApi` (five, one per backend module, all pre-wired with bearer-token auth). Don't
+  endpoint belongs to — `identityApi` / `notificationsApi` / `organizationApi` / `locationApi` /
+  `approvalApi` / `leaveManagementApi` / `catalogApi` / `ordersApi` / `inventoryApi` / `transfersApi` /
+  `purchasingApi` / `currencyApi` (twelve, one per backend module, all pre-wired with bearer-token
+  auth). Don't
   import `lib/server/http.ts` directly unless you're a documented pre-session-cookie exception
   (`token.api.ts`, `user-profile.api.ts`'s `getCurrentUser`). Add a backend by adding one
   `createBackendApiClient(...)` call, not a bespoke file.
@@ -115,7 +120,7 @@ script. A known gap (real auth/session/CRUD logic is untested), not a convention
 `clients/admin` is the only client app, so there is no sibling to deviate from. The root `CLAUDE.md`'s
 stated client defaults (Next.js App Router, TypeScript, React) all hold. Conventions established here
 first — the `src/`-rooted feature/module + barrel layout, the consolidated `<name>.api.ts`,
-`requirePermission`/`AccessDenied`, the five-named-backend-client model, the `lib/server` /
+`requirePermission`/`AccessDenied`, the named-backend-client-per-module model, the `lib/server` /
 `lib/shared` split — are a candidate baseline for a future second app, not yet a cross-repo norm.
 
 ## Notes
@@ -123,4 +128,4 @@ first — the `src/`-rooted feature/module + barrel layout, the consolidated `<n
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-07_
+_Last synced: 2026-09-21_

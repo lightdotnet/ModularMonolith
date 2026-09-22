@@ -36,9 +36,9 @@ public class LeaveRequestReconciliationServiceTests
     {
         var mock = new Mock<IApprovalService>();
         mock
-            .Setup(s => s.GetStatusesByRequestAsync(
-                "LeaveRequest", It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
-            .Returns((string _, IReadOnlyCollection<string> ids, CancellationToken _) =>
+            .Setup(s => s.GetStatusesAsync(
+                It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+            .Returns((IReadOnlyCollection<string> ids, CancellationToken _) =>
             {
                 onCall(ids);
                 return Task.FromResult(views);
@@ -61,9 +61,9 @@ public class LeaveRequestReconciliationServiceTests
         IReadOnlyCollection<string> requestedIds = [];
         var views = new Dictionary<string, ApprovalStatusView>
         {
-            [a.Id] = View("appr-a", a.Id, ApprovalStatus.Approved),
-            [b.Id] = View("appr-b", b.Id, ApprovalStatus.Pending),
-            [c.Id] = View("appr-c", c.Id, ApprovalStatus.Rejected),
+            ["appr-a"] = View("appr-a", a.Id, ApprovalStatus.Approved),
+            ["appr-b"] = View("appr-b", b.Id, ApprovalStatus.Pending),
+            ["appr-c"] = View("appr-c", c.Id, ApprovalStatus.Rejected),
         };
         var approvalService = ApprovalServiceReturning(ids => requestedIds = ids, views);
 
@@ -74,10 +74,10 @@ public class LeaveRequestReconciliationServiceTests
         // Assert
         Assert.Equal(2, changed);
         approvalService.Verify(
-            s => s.GetStatusesByRequestAsync(
-                "LeaveRequest", It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()),
+            s => s.GetStatusesAsync(
+                It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()),
             Times.Once);
-        Assert.Equal(new[] { a.Id, b.Id, c.Id }, requestedIds);
+        Assert.Equal(new[] { "appr-a", "appr-b", "appr-c" }, requestedIds);
 
         var rows = await host.Context.LeaveRequests
             .AsNoTracking()
@@ -100,9 +100,9 @@ public class LeaveRequestReconciliationServiceTests
         IReadOnlyCollection<string> requestedIds = [];
         var views = new Dictionary<string, ApprovalStatusView>
         {
-            [oldest.Id] = View("appr-1", oldest.Id, ApprovalStatus.Approved),
-            [middle.Id] = View("appr-2", middle.Id, ApprovalStatus.Approved),
-            [newest.Id] = View("appr-3", newest.Id, ApprovalStatus.Approved),
+            ["appr-1"] = View("appr-1", oldest.Id, ApprovalStatus.Approved),
+            ["appr-2"] = View("appr-2", middle.Id, ApprovalStatus.Approved),
+            ["appr-3"] = View("appr-3", newest.Id, ApprovalStatus.Approved),
         };
         var approvalService = ApprovalServiceReturning(ids => requestedIds = ids, views);
 
@@ -112,7 +112,7 @@ public class LeaveRequestReconciliationServiceTests
 
         // Assert
         Assert.Equal(2, changed);
-        Assert.Equal(new[] { oldest.Id, middle.Id }, requestedIds);
+        Assert.Equal(new[] { "appr-1", "appr-2" }, requestedIds);
 
         var rows = await host.Context.LeaveRequests
             .AsNoTracking()
@@ -135,7 +135,7 @@ public class LeaveRequestReconciliationServiceTests
 
         var views = new Dictionary<string, ApprovalStatusView>
         {
-            [entity.Id] = View("superseded-approval", entity.Id, ApprovalStatus.Approved),
+            ["current-approval"] = View("superseded-approval", entity.Id, ApprovalStatus.Approved),
         };
         var approvalService = ApprovalServiceReturning(_ => { }, views);
 
@@ -166,8 +166,8 @@ public class LeaveRequestReconciliationServiceTests
         // Assert
         Assert.Equal(0, changed);
         approvalService.Verify(
-            s => s.GetStatusesByRequestAsync(
-                It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()),
+            s => s.GetStatusesAsync(
+                It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 }

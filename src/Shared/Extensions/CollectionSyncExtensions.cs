@@ -1,4 +1,4 @@
-﻿namespace StarterKit.Shared.Extensions;
+namespace StarterKit.Shared.Extensions;
 
 public class CollectionSyncExtensions
 {

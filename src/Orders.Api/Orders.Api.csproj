@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<RootNamespace>StarterKit.Orders.Api</RootNamespace>
+	<AssemblyName>StarterKit.Orders.Api</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Orders.Tests" />
+    <!-- Moq's Castle DynamicProxy needs this to mock internal types (e.g. IOrderTypeCache). -->
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<PackageReference Include="Lightsoft.AspNetCore.Authorization" />
+	<PackageReference Include="Lightsoft.Caching" />
+	<PackageReference Include="Lightsoft.EntityFrameworkCore" />
+	<PackageReference Include="Lightsoft.Mediator" />
+	<PackageReference Include="Lightsoft.Result" />
+	<PackageReference Include="Mapster" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Catalog.Contracts\Catalog.Contracts.csproj" />
+    <ProjectReference Include="..\Currency.Contracts\Currency.Contracts.csproj" />
+    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\Inventory.Contracts\Inventory.Contracts.csproj" />
+    <ProjectReference Include="..\Location.Contracts\Location.Contracts.csproj" />
+    <ProjectReference Include="..\Orders.Contracts\Orders.Contracts.csproj" />
+    <ProjectReference Include="..\Persistence\Persistence.csproj" />
+  </ItemGroup>
+
+</Project>

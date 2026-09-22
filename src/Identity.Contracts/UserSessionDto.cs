@@ -1,4 +1,4 @@
-﻿namespace StarterKit.Identity.Contracts;
+namespace StarterKit.Identity.Contracts;
 
 public class UserSessionDto
 {

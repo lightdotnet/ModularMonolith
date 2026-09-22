@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StarterKit.Identity.Api.Jwt;
 using StarterKit.Infrastructure.Modularity;

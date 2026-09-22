@@ -1,4 +1,4 @@
-﻿namespace StarterKit.Notifications.Api.SignalR;
+namespace StarterKit.Notifications.Api.SignalR;
 
 public interface IHubService
 {

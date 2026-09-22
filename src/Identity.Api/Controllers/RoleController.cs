@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StarterKit.Identity.Api.Application.Roles.Commands;
 using StarterKit.Identity.Contracts;

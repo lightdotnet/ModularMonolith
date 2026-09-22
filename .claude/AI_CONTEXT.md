@@ -66,6 +66,15 @@ See `CLAUDE.md` §2.9. This is the standard lifecycle for any request that adds 
 - Templates in `docs/templates/` are structural skeletons — copy their structure into `src/docs/`/`clients/<app-name>/docs/` outputs, don't edit the templates themselves during normal doc generation.
 - Test-suite execution follows the same "only on explicit request" discipline as docs — see Code-Change Workflow Gate above.
 
+## Automatic Context Recap (Hooks)
+
+Unlike everything else in `.claude/` (pull-based — invoked on request, see `CLAUDE.md` §2.4), two hooks registered in [`settings.json`](settings.json) run automatically, at the two points a session's context is most likely to drift:
+
+- **`PostCompact`** — after every conversation compaction (auto or manual), runs [`hooks/context-recap.js`](hooks/context-recap.js), which injects the actual `git status --short -b` output plus a condensed reminder of the operating rules most likely to get lost in a summary (the code-change workflow gate, scoped reading, delegation defaults).
+- **`SessionStart`** (matcher `resume`) — the same recap when a previous session is resumed, since repo state may have changed since it was last active.
+
+These don't replace the rest of this file — a compaction summary can silently drop specifics (which uncommitted files exist, which rule was just being followed) that the rest of this file assumes are still in context. A cold `startup` doesn't need this: root `CLAUDE.md` loads fresh in that case, same as any other session start.
+
 ## Full-Stack Safety Rules
 
 - Before changing an API route/DTO shape, check every client app under `clients/*` for actual usages (fetch calls, typed client, route handlers) — don't assume only one client is affected, and don't assume any client is unaffected without checking.

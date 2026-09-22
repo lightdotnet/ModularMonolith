@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<RootNamespace>StarterKit.Transfers.Contracts</RootNamespace>
+	<AssemblyName>StarterKit.Transfers.Contracts</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<PackageReference Include="Lightsoft.AspNetCore.Authorization" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\Shared.csproj" />
+  </ItemGroup>
+
+</Project>

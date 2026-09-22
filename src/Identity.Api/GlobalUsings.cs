@@ -1,4 +1,4 @@
-﻿global using Light.AspNetCore.Authorization;
+global using Light.AspNetCore.Authorization;
 global using Light.Contracts;
 global using Light.Extensions;
 global using Light.Mediator;

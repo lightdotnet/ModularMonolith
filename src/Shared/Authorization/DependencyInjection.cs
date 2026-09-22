@@ -1,4 +1,4 @@
-﻿using Light.Extensions.DependencyInjection;
+using Light.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using StarterKit.Shared.Authorization.Internal;
 

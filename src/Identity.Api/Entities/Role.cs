@@ -1,10 +1,11 @@
-﻿using Light.Domain;
+using Light.Domain;
 using Light.Domain.Entities.Interfaces;
 using Microsoft.AspNetCore.Identity;
 
 namespace StarterKit.Identity.Api.Entities;
 
-public class Role : IdentityRole, IEntity<string>, IAuditable
+public class Role
+    : IdentityRole, IEntity<string>, IHasAuditTime, IHasAuditUser
 {
     public Role() => Id = LightId.NewId();
 

@@ -1,1 +1,1 @@
-﻿global using Light.Extensions.DependencyInjection;
+global using Light.Extensions.DependencyInjection;

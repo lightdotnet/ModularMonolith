@@ -19,6 +19,62 @@ routes, backend contract surface, and the auth flow.
   managers" dialog, plus a company-scoped Employee Levels panel; employee CRUD with a tabbed edit
   dialog (Details / Departments & Teams / Login) covering membership assignment (level, primary,
   `Current`/`Acting` status, manager flag) and creating or linking an Identity login.
+- **Retail administration** (`/location`) against `Location.Api` — full CRUD for a global location
+  hierarchy (tree) and location types (with configurable allowed parents and child support).
+- **Inventory** (`/inventory`, `/inventory/valuation`) against `Inventory.Api` — two tabs sharing one
+  view permission (`inventory.stock.view`): a read-only Stock Levels tab (filterable by
+  product/location, plus an all-locations "Total on hand: X across N location(s)" summary banner shown
+  when a product filter is active, independent of the location filter) and an Adjustments tab
+  (filterable by product/location/source-order-id) with a `inventory.stock.manage`-gated "Record
+  adjustment" action (dialog form with an optional unit-cost field, available to anyone who can manage
+  stock). Cost data (average cost, total value, unit cost, value change) is shown only to viewers
+  holding `inventory.stock.view_cost`; that permission also gates the separate Valuation page and, with
+  `inventory.stock.revalue`, a "revalue cost" row action. Movement reasons (badge) include
+  `PurchaseReturnOut` and `CostRevaluation`.
+- **Transfers** (`/transfers`, `/transfers/[id]`) against `Transfers.Api` — stock transfers between
+  locations, built two-phase: a create dialog makes the draft header and navigates to the detail page,
+  where lines are added/edited. The detail page carries dispatch, receive, close, and cancel actions
+  (each on its own permission) and per-line in-transit quantities; receiving records a partial receipt
+  of what is still in transit. Cost columns render only with `inventory.stock.view_cost`.
+- **Purchasing** (`/purchasing/{suppliers,orders,receipts,returns}`) against `Purchasing.Api`:
+  - *Suppliers* — list/create/edit and activate/deactivate.
+  - *Purchase orders* (`/purchasing/orders`, `/[id]`) — same create-draft-then-open-detail shape as
+    Transfers; submit/resubmit for approval requires picking an approver from a
+    `purchase_order/approvers` lookup, and the detail page links to the resulting request at
+    `/approvals/requests/{id}`; withdraw/close/cancel; receiving requires a delivery-note reference.
+  - *Goods receipts* (`/purchasing/receipts`, `/[id]`) — read-only list/detail of receipts recorded
+    from a purchase order.
+  - *Purchase returns* (`/purchasing/returns`, `/new`, `/[id]`) — a draft created from a posted goods
+    receipt (`/new?receiptId=`) showing per-line returnable quantities; the detail page posts,
+    cancels, and credits it. The cost-removed figure renders only with `inventory.stock.view_cost`.
+- **Currency** (`/currency/{currencies,exchange-rates}`) against `Currency.Api`:
+  - *Currencies* — a searchable, status-filterable list with create/edit (name, symbol, decimal
+    places; the code is fixed once created) and activate/deactivate. The base currency carries a
+    "Base" badge, cannot be deactivated, and its decimal places are locked.
+  - *Exchange rates* — a paged rate history (filterable by currency and a date range, newest first),
+    a "Latest rates" panel (the rate in effect per active foreign currency), and a record-rate dialog.
+    History is append-only — no edit/delete; a correction is a newer rate. A rate is shown with up to
+    8 decimal places (its own formatter, not the amount format) and the rate field rejects a comma
+    decimal separator. The date filters are labelled UTC because the page is a Server Component and
+    cannot know the viewer's time zone.
+- **Catalog** (`/catalog`) against `Catalog.Api` — a Products tab (paginated/searchable data table
+  filterable by category and status, create/edit, activate/deactivate, image management) and, gated
+  by `catalog.categories.view`, a Categories tab (recursive tree with create/edit/move/delete). The
+  product form's currency is a select fed by the *active* currencies (from the currency module),
+  defaulting to the base currency; without `currency.currencies.view` (or if the lookup fails) it
+  falls back to a text input pre-filled with the product's own currency. Prices render as
+  `#0,000.00 CCY`.
+- **Orders** (`/orders`) against `Orders.Api` — a draft-then-build workflow through one two-phase
+  `OrderPanel` Dialog: Phase A creates the draft header (location; there is no currency field —
+  amounts display in the order's own currency), Phase B (the same Dialog, remounted) builds it — an
+  on-demand product search-and-add (no min-char gate, unlike this app's other async pickers), per-line
+  quantity/sale-price editing, order-level discount and fee management, place/cancel. A line whose
+  catalog price was converted from another currency shows a secondary "Catalog price X CCY × rate =
+  unit price" line; a missing-exchange-rate error on add-line carries a hint pointing to the Exchange
+  rates page. Payments take the order's currency read-only. Money renders as `#,##0.00 CCY` (two
+  decimals, ISO code trailing). The order list (`OrdersDataTable`) is responsive: the full column set
+  on desktop collapses into one stacked card-style block per row (status/location/total/date) below
+  the `sm` breakpoint, filterable by location and status.
 - **Approvals** (`/approvals`) against `Approval.Api` — a generic multi-level approval workflow: the
   caller's pending decisions and own requests, plus (for `approval.requests.view_all`) an admin
   view-all and a "Create test request" harness that builds an arbitrary-length approver chain.
@@ -75,23 +131,41 @@ routes, backend contract surface, and the auth flow.
 | Companies | `/organization/companies` | Gated. CRUD; edit works off row data (no on-open detail fetch) |
 | Departments & Teams | `/organization/departments` | Gated. `?companyId=` picker + recursive tree + "Employee Levels" tab |
 | Employees | `/organization/employees` | Gated. Search/paginate; tabbed edit dialog (Details / Departments & Teams / Login) |
+| Locations | `/location` | Gated. Recursive tree + Location Types tab |
+| Catalog | `/catalog` | Gated `catalog.products.view`. Products tab (search/paginate/filter by category+status, create/edit, activate/deactivate, images) + Categories tab (`catalog.categories.view`, recursive tree create/edit/move/delete) |
+| Orders | `/orders` | Gated `orders.orders.view`; create/build/place/cancel gated `orders.orders.manage`. Two-phase `OrderPanel` Dialog (create draft → build), responsive list (card-style row on mobile) filterable by location/status |
+| Inventory | `/inventory` | Gated `inventory.stock.view`. Two tabs: Stock Levels and Adjustments; cost columns need `inventory.stock.view_cost`; "Record adjustment" gated `inventory.stock.manage`; revalue action gated `inventory.stock.revalue` |
+| Inventory valuation | `/inventory/valuation` | Gated `inventory.stock.view_cost`. Paged, product/location-filterable stock valuation with grand totals |
+| Transfers | `/transfers`, `/transfers/[id]` | Gated `transfers.transfers.view`; create/dispatch/receive/close gated by the matching `transfers.transfers.*` permission |
+| Suppliers | `/purchasing/suppliers` | Gated `purchasing.suppliers.view`; mutations `purchasing.suppliers.manage` |
+| Purchase orders | `/purchasing/orders`, `/purchasing/orders/[id]` | Gated `purchasing.orders.view`; create `.create`, submit/withdraw `.submit`, close `.close` |
+| Goods receipts | `/purchasing/receipts`, `/purchasing/receipts/[id]` | Gated `purchasing.receipts.view` |
+| Purchase returns | `/purchasing/returns`, `/purchasing/returns/new`, `/purchasing/returns/[id]` | Gated `purchasing.returns.view`; `/new` requires `purchasing.returns.create` and a `?receiptId=`; credit gated `purchasing.returns.credit` |
+| Currencies | `/currency/currencies` | Gated `currency.currencies.view`; create/edit/activate-deactivate gated `currency.currencies.manage` |
+| Exchange rates | `/currency/exchange-rates` | Gated `currency.rates.view`; "Record rate" gated `currency.rates.manage` |
 | Approvals | `/approvals` | Gated `approval.requests.view`; view-all panel + "Create test request" gated `approval.requests.view_all` |
 | Leave requests | `/leave-requests`, `/leave-requests/[id]` | **No permission gate** — any session. `leave.requests.manage` unlocks an "All requests" tab + delete-any |
 
 Every `page.tsx` is a one-line re-export from a feature/module barrel. `constants/nav-items.ts`
 assembles `NAV_ITEMS` from each feature's own `NavItem`: `[home, Administration group, Organization
-group, /approvals, /leave-requests, Settings]`. `/administration`, `/organization`, `/settings` have
-no `page.tsx` and 404 if followed; being ungated they still show in the sidebar and ⌘K palette.
+group, /approvals, /leave-requests, Retail group, Settings]`, where the Retail group holds Location,
+Catalog, Orders, Inventory, Inventory Valuation, Transfers, the four Purchasing items (Suppliers,
+Purchase orders, Goods receipts, Purchase returns), and the two Currency items (Currencies, Exchange
+rates). `/administration`, `/organization`, `/retail`,
+`/settings` have no `page.tsx` and 404 if followed; being ungated they still show in the sidebar and
+⌘K palette.
 
 ## Backend Integration
 
-Real, but partial. `lib/server/api-clients.ts` registers five backend clients — `Identity`,
-`Notifications`, `Organization`, `Approval`, `LeaveManagement` — each resolving its own
-`*_API_BASE_URL` env var (the base URL owns its full path prefix; `http.ts` prepends nothing).
-`lib/server/backend-api.ts`'s `createBackendApiClient(client)` factory produces five ready instances
-(`identityApi` … `leaveManagementApi`); auth is attached by a request-handler pipeline
-(`bearerTokenHandler` reads the ambient session), not a passed token. The five backends are logically
-separate modules currently co-hosted in one process (`StarterKit.WebApi`).
+Real, but partial. `lib/server/api-clients.ts` registers twelve backend clients — `Identity`,
+`Notifications`, `Organization`, `Location`, `Approval`, `LeaveManagement`, `Catalog`, `Orders`,
+`Inventory`, `Transfers`, `Purchasing`, `Currency` — each resolving its own `*_API_BASE_URL` env var
+(the base URL owns its full path prefix; `http.ts` prepends nothing). `lib/server/backend-api.ts`'s
+`createBackendApiClient(client)` factory produces twelve ready instances (`identityApi` … `locationApi`
+… `leaveManagementApi` … `catalogApi` … `ordersApi` … `inventoryApi` … `transfersApi` …
+`purchasingApi`, `currencyApi`); auth is attached by a request-handler pipeline (`bearerTokenHandler`
+reads the ambient session), not a passed token. The twelve backends are logically separate modules
+currently co-hosted in one process (`StarterKit.WebApi`).
 Error handling, the envelope contract, and the permanent-vs-transient refresh-failure distinction are
 covered in [architecture.md § Key Design Patterns](./architecture.md#key-design-patterns).
 
@@ -119,6 +193,55 @@ Endpoints this client consumes, by module:
   `employee/{id}/org_unit` (POST) + `/{orgUnitId}` (PUT/DELETE), `employee/{id}/login`
   (POST/PUT/DELETE). `searchEmployees` also resolves employee names for the Leave requests "All
   requests" tab.
+- **locations** — `location/tree`, `location/{id}` (GET/PUT/DELETE), `location/{id}/move`,
+  `location` (POST); `location_type` (GET/POST/PUT/DELETE).
+- **catalog** — `category/tree`, `category/{id}` (GET/PUT/DELETE), `category/{id}/children`,
+  `category/{id}/move` (PUT), `category` (POST); `product` (GET, paginated search), `product/{id}`
+  (GET); `product/{id?}` (PUT — upserts: creates when `id` is omitted, updates when present, images
+  included both ways), `product/{id}/{activate,deactivate}` (PUT), `product/{id}/image`
+  (POST/DELETE).
+- **orders** — `order` (GET search / POST create), `order/{id}` (GET), `order/{id}/line` (POST),
+  `order/{id}/line/{lineId}/{quantity,sale_price}` (PUT), `order/{id}/line/{lineId}` (DELETE),
+  `order/{id}/discount` (PUT/DELETE), `order/{id}/fee` (POST), `order/{id}/fee/{feeId}` (DELETE),
+  `order/{id}/place` (PUT), `order/{id}/cancel` (PUT). `addOrderLine` is the one place a bigint id
+  (`productId`) is coerced to a JSON number rather than sent as a string, since `Orders.Contracts`
+  has no `[JsonNumberHandling]` relaxation for it. Line DTOs may carry the conversion snapshot
+  (`catalogUnitPrice`, `catalogCurrency`, `appliedRate`, `rateEffectiveFrom`) when the catalog price was
+  in another currency.
+- **inventory** — `stock_level` (GET — paged search by product/location), `stock_level/total/{productId}`
+  (GET — all-locations total quantity + location count for one product), `stock_level/valuation`
+  (GET — valuation lines + grand totals; requires `inventory.stock.view_cost`), `stock_adjustment`
+  (GET — paged search by product/location/source-order-id; POST — records a manual adjustment; the
+  server always stamps `Reason: ManualAdjustment`, so the request body carries no `reason` field),
+  `stock_adjustment/revaluation` (POST — cost revaluation; `inventory.stock.revalue`). Search/GET gated
+  `inventory.stock.view`, the adjustment POST additionally `inventory.stock.manage`. Cost fields on the
+  DTOs are null unless the caller has `inventory.stock.view_cost`. The POSTs coerce `productId` to a
+  JSON number, the same bigint-id exception as Orders' `addOrderLine` (`Inventory.Contracts` has no
+  `[JsonNumberHandling]` relaxation for it either).
+- **transfers** — `stock_transfer` (GET paged search / POST create draft), `stock_transfer/{id}`
+  (GET / PUT header update), `stock_transfer/{id}/line` (add) + `/line/{lineId}` (update/remove),
+  `stock_transfer/{id}/{dispatch,close,cancel}` (PUT),
+  `stock_transfer/{id}/receipt` (POST — carries a client request id; see architecture.md). Cost
+  fields are null unless the caller has `inventory.stock.view_cost`.
+- **suppliers** — `supplier` (GET paged search / POST), `supplier/{id}` (GET / update),
+  `supplier/{id}/{activate,deactivate}`. A separate helper loads the first 200 suppliers for select
+  options.
+- **purchase-orders** — `purchase_order` (GET paged search / POST create draft), `purchase_order/{id}`
+  (GET / update), `purchase_order/approvers` (GET — approver candidates),
+  `purchase_order/{id}/line` (add) + `/line/{lineId}` (update/remove),
+  `purchase_order/{id}/{submit,withdraw,close,cancel}`, `purchase_order/{id}/receipt` (POST — the
+  delivery-note reference is the idempotency key).
+- **goods-receipts** — `goods_receipt` (GET paged search), `goods_receipt/{id}` (GET).
+- **purchase-returns** — `purchase_return` (GET paged search / POST create draft),
+  `purchase_return/{id}` (GET / update), `purchase_return/{id}/{post,cancel,credit}`. A helper derives
+  claimed quantities per receipt line from existing returns so the create form can show returnable
+  quantities.
+- **currencies** — `currency` (GET paged search by name/code and active flag / POST create),
+  `currency/{code}` (GET / PUT update), `currency/{code}/{activate,deactivate}` (PUT). A separate helper
+  (`getCurrencyOptions`) loads up to 100 currencies (optionally active only) for pickers and filters.
+- **exchange-rates** — `exchange_rate` (GET paged history filtered by currency code and a from/to
+  instant range / POST record a rate), `exchange_rate/latest` (GET — the rate in effect per active
+  foreign currency, optionally as of a given instant). No update or delete endpoint is consumed.
 - **approvals** — `modules/approvals/api/approvals.api.ts` (admin, `approval.requests.view_all`):
   `approval` (GET search / POST test request). `user-approvals.api.ts` (self-service, server-scoped
   by `UserApprovalController`): `approval/user` (GET / POST), `approval/user/{id}`,
@@ -131,7 +254,10 @@ Every function returns a normalized `Result`/`ApiResponse` envelope via `call-gu
 use `lib/server/require-permission.tsx`; `/leave-requests` deliberately does not (see architecture.md
 § Module/Route Boundaries). Permission-string constants live per-feature/module in
 `constants/permissions.ts`, matching each backend module's own format (e.g.
-`organization.companies.view`, `approval.requests.view_all`, `leave.requests.manage`).
+`organization.companies.view`, `approval.requests.view_all`, `leave.requests.manage`,
+`currency.rates.manage`). Cost visibility
+across Inventory, Transfers, and Purchasing keys off the single Inventory permission
+`inventory.stock.view_cost` (`INVENTORY_STOCK_PERMISSIONS.ViewCost`).
 
 ## Auth Flow
 
@@ -195,4 +321,4 @@ for inspection. `token-cipher.ts` uses Node's `crypto` and `proxy.ts` has no exp
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-11_
+_Last synced: 2026-09-21_

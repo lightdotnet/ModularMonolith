@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\ModuleTests.props" />
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Orders.Api\Orders.Api.csproj" />
+    <ProjectReference Include="..\..\src\Orders.Contracts\Orders.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Shared\Shared.csproj" />
+  </ItemGroup>
+
+</Project>

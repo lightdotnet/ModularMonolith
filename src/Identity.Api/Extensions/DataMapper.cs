@@ -1,4 +1,4 @@
-﻿using StarterKit.Identity.Api.Entities;
+using StarterKit.Identity.Api.Entities;
 using StarterKit.Identity.Contracts;
 using System.Linq.Expressions;
 

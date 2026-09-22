@@ -1,4 +1,4 @@
-﻿using Light.ActiveDirectory.Interfaces;
+using Light.ActiveDirectory.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using StarterKit.Identity.Api.Application.Users.Commands;
 using StarterKit.Identity.Api.Application.Users.Queries;

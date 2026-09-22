@@ -1,4 +1,4 @@
-﻿using Mapster;
+using Mapster;
 using StarterKit.Shared;
 
 namespace StarterKit.Infrastructure.Mappings;
