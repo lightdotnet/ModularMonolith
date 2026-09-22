@@ -12,8 +12,8 @@ root location) and `CanHaveChildren`; unlike every other identifier in this solu
 is a caller-supplied business code (e.g. `"STORE"`), not framework-generated. The module also exposes
 `ILocationDirectoryService`, a read-only cross-module seam (same role as Organization's
 `IOrgDirectoryService`) for another module to resolve location data without reaching into this module's
-aggregate or EF internals — it now has two consumers, `Orders` (order-creation `LocationId` validation)
-and `Inventory` (stock-adjustment `LocationId` validation), see Notable Conventions.
+aggregate or EF internals — its consumers are `Orders`, `Inventory`, `Transfers`, and `Purchasing`, see
+Depended On By.
 
 ## Internal Layering
 
@@ -54,8 +54,8 @@ class level):
 Every action across both controllers dispatches a mediator command/query under
 `Application/{Locations,LocationTypes}/{Commands,Queries}` — handlers own their `LocationDbContext`
 logic directly, same shape as `Organization`/`LeaveManagement`. `ILocationDirectoryService` (see
-Notable Conventions) is a DI-only seam with no HTTP surface of its own, consumed by `Orders` and
-`Inventory`.
+Notable Conventions) is a DI-only seam with no HTTP surface of its own (see Depended On By for its
+consumers).
 
 `LocationPermissions.{Locations,LocationTypes}` each expose only `View`/`Manage` — **not** the
 `View`/`Create`/`Update`/`Delete` four-way split every other module's permission catalog uses. A
@@ -92,17 +92,13 @@ Query handlers read `AsNoTracking`. `GetLocationByIdQueryHandler`/`GetLocationTy
 `GroupBy(x => x.ParentLocationId ?? string.Empty)` — no recursive CTE, same approach as Organization's
 `org_unit` tree endpoint.
 
-Migrations exist for **MSSQL only so far**: `src/Migrations/MSSQL/Location/` holds two incremental
-migrations (`CreateLocationSchema`, then `AddLocationTypeEntity`) — **not yet squashed to a single
-baseline**, unlike `Organization`/`Approval`/`LeaveManagement`'s squashed baselines, because this
-module is still mid-development (per the dev-migration-squash convention, squashing happens once a
-module is judged complete). The `PostgreSQL`/`Sqlite` migration projects do not yet reference
-`Location.Api` at all. `src/Migrations/MSSQL/Program.cs` calls
-`LocationContextInitialiser.InitialiseAsync()` then `TrySeedAsync()`, seeding the four location types
-that reproduce the pre-refactor hardcoded rules exactly: `STORE`/`WAREHOUSE` as roots that can have
+`LocationContextInitialiser.InitialiseAsync()` applies migrations; `TrySeedAsync()` idempotently seeds
+the four location types at runtime — the seed rows come from the initialiser, not from migrations —
+reproducing the rules the module started with exactly: `STORE`/`WAREHOUSE` as roots that can have
 children, `TERMINAL` (must be parented under `STORE`, always a leaf), `BIN` (must be parented under
-`WAREHOUSE`, always a leaf). Seeding is idempotent, checked by `Id` before inserting
-(`GetOrCreateLocationTypeAsync`).
+`WAREHOUSE`, always a leaf). Seeding is checked by `Id` before inserting (`GetOrCreateLocationTypeAsync`).
+Each provider's migrator `Program.cs` calls both. Migrations: see
+[../../conventions/migrations.md](../../conventions/migrations.md).
 
 ## Dependencies
 
@@ -121,20 +117,19 @@ children, `TERMINAL` (must be parented under `STORE`, always a leaf), `BIN` (mus
 
 - `StarterKit.WebApi` — composition-root host (wired into `ConfigureExtensions.cs`'s `assemblies`
   array).
-- `src/Migrations/MSSQL` — references `Location.Api` directly for `LocationDbContext`/
-  `LocationContextInitialiser`. `PostgreSQL`/`Sqlite` do not (see Data Access).
+- `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` — each references `Location.Api` directly for
+  `LocationDbContext`/`LocationContextInitialiser`.
 - `Location.Tests` — `Location.Api.csproj` grants `InternalsVisibleTo` to reach the `internal`
   command/query records and handlers, plus a second grant to `DynamicProxyGenAssembly2` (see Notable
   Conventions).
-- **`Orders.Api`** — references `Location.Contracts`, consumed by `CreateOrderCommandHandler` via
-  `ILocationDirectoryService.ExistsAsync` to validate `LocationId` before creating an order (see
-  [Orders.md](Orders.md)).
-- **`Inventory.Api`** — references `Location.Contracts`, consumed by `InventoryService
-  .DecrementForOrderAsync` and `RecordStockMovementCommandHandler` via `ILocationDirectoryService
-  .ExistsAsync` to validate `LocationId` before any stock movement (see [Inventory.md](Inventory.md)).
-
-`ILocationDirectoryService` now has two real cross-module consumers, `Orders` (first) and `Inventory`
-(second) — the same role `IOrgDirectoryService` plays for `Organization`/`LeaveManagement`.
+- **`Orders.Api`** — `CreateOrderCommandHandler` calls `ILocationDirectoryService.ExistsAsync` to validate
+  `LocationId` before creating an order (see [Orders.md](Orders.md)).
+- **`Inventory.Api`** — `InventoryService` and the manual-movement/revaluation handlers call
+  `ExistsAsync` to validate `LocationId` before any stock movement (see [Inventory.md](Inventory.md)).
+- **`Transfers.Api`** — `TransferLocationResolver` calls `GetAsync` to resolve the source/destination
+  locations (see [Transfers.md](Transfers.md)).
+- **`Purchasing.Api`** — `ReceivingLocationResolver` resolves the receiving location (see
+  [Purchasing.md](Purchasing.md)).
 
 ## Notable Conventions
 
@@ -166,7 +161,7 @@ children, `TERMINAL` (must be parented under `STORE`, always a leaf), `BIN` (mus
   cache** over `LocationType` (`Light.Extensions.Caching.ICacheService`, cache key
   `"location:location-types:all"`), invalidated purely by being overwritten on every
   `LocationType` Create/Update/Delete (`ReloadAsync`, called post-commit in each handler) — no
-  time-based expiration. **Deliberately not built on the new opt-in `ICacheRepository<T>` from
+  time-based expiration. **Deliberately not built on the opt-in `ICacheRepository<T>` from
   `Persistence/Repositories`** (see [../architecture.md § Shared Kernel](../architecture.md#shared-kernel--common-building-blocks)) — reviewed and kept as-is because it
   already avoids that repository's unenforced write-path-bypass hazard by construction (explicit
   `ReloadAsync` calls, never touches `SaveChanges` on the cached entity directly).
@@ -178,22 +173,16 @@ children, `TERMINAL` (must be parented under `STORE`, always a leaf), `BIN` (mus
   `StarterKit.Locations.Contracts` (project/folder names stay singular `Location.Api`/
   `Location.Contracts`) — a type literally named `Location` collides with a namespace segment named
   `Location` (`CS0118`) anywhere under a `StarterKit.Location.*` tree, and the plural namespace avoids
-  it. `LocationType` has no such collision.
+  it. `LocationType` has no such collision. `Currency.Api`/`Currency.Contracts` use the same plural
+  namespace convention.
 - **First place in the repo needing `InternalsVisibleTo("DynamicProxyGenAssembly2")`.**
   `Location.Api.csproj` declares it (alongside the usual `InternalsVisibleTo("Location.Tests")`) —
-  required for Moq's Castle DynamicProxy to mock the `internal interface ILocationTypeCache`; no other
-  module's tests mock an internal interface with Moq yet. See
+  required for Moq's Castle DynamicProxy to mock the `internal interface ILocationTypeCache`. See
   [../../conventions/coding-conventions.md](../../conventions/coding-conventions.md) for the
   documented pattern.
 - **`ILocationDirectoryService`/`LocationDirectoryService` is the module's cross-module DI seam**,
   same role as Organization's `IOrgDirectoryService` — `GetAsync`/`ExistsAsync`/`GetChildrenAsync`/
-  `GetLookupAsync`, all read-only and `AsNoTracking`. It now has two real consumers: `Orders`
-  (`CreateOrderCommandHandler`, validating `LocationId` on order creation) and `Inventory`
-  (`InventoryService.DecrementForOrderAsync` and `RecordStockMovementCommandHandler`, validating
-  `LocationId` on every stock movement) — see Depended On By.
-- **Migration is MSSQL-only and not yet squashed** — see Data Access. Treat `Location` as
-  mid-development, not yet at the "template baseline" state `Organization`/`Approval`/
-  `LeaveManagement` are in.
+  `GetLookupAsync`, all read-only and `AsNoTracking`. Its consumers are listed under Depended On By.
 - `Specification<T>` (vendor `Light.Specification`) is used only for the by-id lookups
   (`LocationByIdSpec`, `LocationTypeByIdSpec`), reused across several handlers each — same policy as
   Organization's.
@@ -203,4 +192,4 @@ children, `TERMINAL` (must be parented under `STORE`, always a leaf), `BIN` (mus
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-20_
+_Last synced: 2026-09-21_

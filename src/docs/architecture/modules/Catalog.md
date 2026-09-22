@@ -18,10 +18,11 @@ Conventions for the reuse mechanics. Pricing uses two genuinely shared-kernel va
 `Money`/`VatPercentage` (`src/Shared/ValueObjects/`) — `Product` was their first consumer;
 `Orders.Api`'s `Order`/`OrderLine`/`OrderFee`/`Payment` now also consume `Money`, and `OrderLine`
 consumes `VatPercentage` too (see [Orders.md](Orders.md), and
-[../architecture.md § Shared Kernel](../architecture.md#shared-kernel--common-building-blocks)). The
+[../architecture.md § Shared Kernel](../architecture.md#shared-kernel--common-building-blocks)). A
+product's price currency may be any **active** currency known to the `Currency` module. The
 module also exposes `ICatalogPricingService`, a read-only cross-module seam (same role as Location's
-`ILocationDirectoryService`) that `Orders.Api` consumes to resolve a product's current name/price/VAT
-rate/status when adding an order line, without reaching into this module's aggregate or EF internals.
+`ILocationDirectoryService`) that `Orders.Api`, `Transfers.Api`, and `Purchasing.Api` consume to resolve a
+product's current name/price/VAT rate/status without reaching into this module's aggregate or EF internals.
 
 ## Internal Layering
 
@@ -56,7 +57,7 @@ class level; every route id is `long`). `Category` keeps separate Create/Update 
 |---|---|---|---|---|
 | `api/v{version}/product` | GET | `catalog.products.view` | `ProductSearchRequest` (`SearchQuery` base — `SearchValue` + paging — plus `CategoryId`/`Status` filters) | `PagedResult<ProductDto>`, filtered by category/status/`Name.Contains(SearchValue)`, ordered by `Created` desc |
 | `api/v{version}/product/{id}` | GET | `catalog.products.view` | Route `id` | `Result<ProductDto>` — hand-mapped from the materialised entity, not an EF `Select` projection (see Notable Conventions) |
-| `api/v{version}/product/{id?}` | PUT | `catalog.products.manage` | `UpsertProductRequest` | `Result<long>` (the product's id, new or existing); validates the category exists and pre-checks SKU uniqueness with `IgnoreQueryFilters()` (equality filter on the `HasConversion`-mapped `Sku`, see Notable Conventions); `id` omitted constructs `Sku`/`Money`/`VatPercentage` and calls `Product.Create` (`Sku` required on this path), `id` present loads the entity (`.Include(x => x.Images)`) and calls `Rename`+`UpdateDescription`+`Reprice`+`UpdateVatRate`+`Recategorize`+`UpdateSku` together (`Sku` optional — empty clears it); both paths replace `Images` wholesale (`RemoveImages()` then re-`AddImage` every entry in the request, not a diff) |
+| `api/v{version}/product/{id?}` | PUT | `catalog.products.manage` | `UpsertProductRequest` | `Result<long>` (the product's id, new or existing); validates the category exists, checks the price currency is an active currency (see Notable Conventions), and pre-checks SKU uniqueness with `IgnoreQueryFilters()` (equality filter on the `HasConversion`-mapped `Sku`, see Notable Conventions); `id` omitted constructs `Sku`/`Money`/`VatPercentage` and calls `Product.Create` (`Sku` required on this path), `id` present loads the entity (`.Include(x => x.Images)`) and calls `Rename`+`UpdateDescription`+`Reprice`+`UpdateVatRate`+`Recategorize`+`UpdateSku` together (`Sku` optional — empty clears it); both paths replace `Images` wholesale (`RemoveImages()` then re-`AddImage` every entry in the request, not a diff) |
 | `api/v{version}/product/{id}/activate` | PUT | `catalog.products.manage` | Route `id` | `Result`; `Product.Activate` |
 | `api/v{version}/product/{id}/deactivate` | PUT | `catalog.products.manage` | Route `id` | `Result`; `Product.Deactivate` |
 | `api/v{version}/product/{id}/image` | POST | `catalog.products.manage` | `AddProductImageRequest { Url, SortOrder? }` | `Result`; `Product.AddImage` |
@@ -66,8 +67,8 @@ class level; every route id is `long`). `Category` keeps separate Create/Update 
 Every action across both controllers dispatches a mediator command/query under
 `Application/{Categories,Products}/{Commands,Queries}` — handlers own their `CatalogDbContext` logic
 directly, same shape as `Organization`/`LeaveManagement`/`Location`. `ICatalogPricingService` (see
-Notable Conventions) is a DI-only seam with no HTTP surface of its own; `Orders.Api` is its consumer
-(see Depended On By).
+Notable Conventions) is a DI-only seam with no HTTP surface of its own; see Depended On By for its
+consumers.
 
 `CatalogPermissions.{Categories,Products}` each expose only `View`/`Manage` — not the
 `View`/`Create`/`Update`/`Delete` four-way split most other modules use, mirroring Location's
@@ -86,7 +87,8 @@ Three tables:
   Self-referencing `Parent`/`Children` FK (`ParentCategoryId`) is `DeleteBehavior.Restrict`. `Name` max
   length 200, `ParentCategoryId` max length 450. `Id` stays the repo's usual app-generated string GUID
   (`AuditableEntity`), unaffected by `Product.Id`'s retype (see below).
-- **`Products`** — filtered unique index on `Sku` (`WHERE [Sku] IS NOT NULL`, deliberately not scoped
+- **`Products`** — filtered unique index on `Sku` (where `Sku` is not null, written with
+  `HasProviderFilter` so the filter text is right per provider; deliberately not scoped
   by `Deleted` — see Notable Conventions); index on `CategoryId`. FK to `Category` (`CategoryId`) is
   `Restrict`. `Name` max length 200, `Description` max length 2000, `CategoryId` max length 450. `Id`
   is a database-generated `bigint IDENTITY(1,1)` (`AuditableEntity<long>`) — `ConfigureAuditableEntity<Product, long>()`
@@ -125,45 +127,45 @@ class doc). The default query (used by all three) transparently excludes soft-de
 `Product` query filter; `UpsertProductCommandHandler`'s SKU-uniqueness pre-check (both the create and
 update path) calls `IgnoreQueryFilters()` deliberately (see Notable Conventions).
 
-Migrations exist for **MSSQL only so far**: `src/Migrations/MSSQL/Catalog/` holds a single migration
-(`CreateCatalogSchema`) — not yet a squashed baseline (per the dev-migration-squash convention,
-squashing happens once a module is judged complete), and it is also the only migration to date, so
-there is nothing to squash yet; it was regenerated from scratch (not an incremental `AlterColumn`
-migration) to reflect the current model in one clean baseline, since no environment had been deployed
-against the prior schema. The `PostgreSQL`/`Sqlite` migration projects do not yet reference
-`Catalog.Api` at all. `src/Migrations/MSSQL/Program.cs` calls only
-`CatalogContextInitialiser.InitialiseAsync()` — no seed data (`CatalogContextInitialiser` has no
-`TrySeedAsync`, unlike Location's).
+`CatalogContextInitialiser.InitialiseAsync()` applies migrations; `TrySeedAsync()` idempotently seeds a
+small set of sample categories and products at runtime (looked up by name/parent and by SKU before
+insert), each product priced in `CurrencyConstants.Default`. The seed rows come from the initialiser, not from
+migrations. Each provider's migrator `Program.cs` calls both.
+
+Migrations: see [../../conventions/migrations.md](../../conventions/migrations.md).
 
 ## Dependencies
 
 | Depends on | Type | Why |
 |---|---|---|
-| `Shared` | project (`Catalog.Contracts → Shared`) | `BaseDto`/`BaseDto<long>` for `CategoryDto`/`CategoryTreeNodeDto`/`ProductDto`/`ProductPriceInfoDto`; the `Money`/`VatPercentage` value objects and `CurrencyConstants.Default` consumed by the `Product` aggregate. |
+| `Shared` | project (`Catalog.Contracts → Shared`) | `BaseDto`/`BaseDto<long>` for `CategoryDto`/`CategoryTreeNodeDto`/`ProductDto`/`ProductPriceInfoDto`; the `Money`/`VatPercentage` value objects consumed by the `Product` aggregate; `CurrencyConstants.Default` (the seeder's price currency). |
 | `Infrastructure` | project (`Catalog.Api → Infrastructure`) | `VersionedApiController`, `AppModule` base class. |
-| `Persistence` | project (`Catalog.Api → Persistence`) | `BaseDbContext`, `AddConfiguredDbContext`, `AuditEntries`/`ConfigureAuditableEntity`/`ConfigureAuditableEntity<TEntity, TId>`. |
+| `Persistence` | project (`Catalog.Api → Persistence`) | `BaseDbContext`, `AddConfiguredDbContext`, `AuditEntries`/`ConfigureAuditableEntity`/`ConfigureAuditableEntity<TEntity, TId>`, `HasProviderFilter`. |
+| `Currency.Contracts` | project (`Catalog.Api → Currency.Contracts`) | `ICurrencyService.GetAsync`, consumed by `UpsertProductCommandHandler` to check that the price currency exists and is active (see [Currency.md](Currency.md)). |
 | `Catalog.Contracts` | project (`Catalog.Api → Catalog.Contracts`) | The module's own seam. |
 | Vendor `Lightsoft.AspNetCore.Authorization` (both projects), `Lightsoft.EntityFrameworkCore`, `Lightsoft.Mediator`, `Lightsoft.Result`, `Mapster` (`Catalog.Api`) | package, **all declared directly** | Same positive contrast as `Organization`/`Approval`/`LeaveManagement`/`Location` — no undeclared-transitive-dependency instance. |
 
-`Catalog` has **no outgoing dependency on any other business module** — like `Location`, it reaches no
-other module's `Contracts` seam.
+`Catalog`'s only outgoing dependency on another business module is `Currency.Contracts`.
 
 ## Depended On By
 
 - `StarterKit.WebApi` — composition-root host (wired into `ConfigureExtensions.cs`'s `assemblies`
   array).
-- `src/Migrations/MSSQL` — references `Catalog.Api` directly for `CatalogDbContext`/
-  `CatalogContextInitialiser`. `PostgreSQL`/`Sqlite` do not (see Data Access).
+- `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` — each references `Catalog.Api` directly for `CatalogDbContext`/
+  `CatalogContextInitialiser`.
 - `Catalog.Tests` — `Catalog.Api.csproj` grants `InternalsVisibleTo` to reach the `internal`
   command/query records and handlers.
 - `Orders.Api`/`Orders.Contracts` — both project-reference `Catalog.Contracts`. `Orders.Api`'s
-  `AddOrderLineCommandHandler` is `ICatalogPricingService`'s first real consumer: it calls
-  `GetPriceInfoAsync(productId)` to resolve a product's current name/price/VAT rate/status and
-  snapshots them onto the new `OrderLine`, rejecting the add if the product is missing or not `Active`
-  (see [Orders.md](Orders.md)). `Orders.Contracts.csproj` also carries a `ProjectReference` to
-  `Catalog.Contracts`, but no type in `Orders.Contracts` itself currently uses it — every
-  cross-module-looking field in its own DTOs (e.g. `LocationId`) is a plain `string`, not a shared
+  `AddOrderLineCommandHandler` calls `GetPriceInfoAsync(productId)` to resolve a product's current
+  name/price/currency/VAT rate/status and snapshots them onto the new `OrderLine`, rejecting the add if the
+  product is missing or not `Active` (see [Orders.md](Orders.md)). `Orders.Contracts.csproj` also carries a
+  `ProjectReference` to `Catalog.Contracts`, but no type in `Orders.Contracts` itself currently uses it —
+  every cross-module-looking field in its own DTOs (e.g. `LocationId`) is a plain `string`, not a shared
   type; only `Orders.Api` actually consumes the seam.
+- **`Transfers.Api`** — `AddStockTransferLineCommandHandler` calls `GetPriceInfoAsync` for the product
+  name/SKU snapshot (see [Transfers.md](Transfers.md)).
+- **`Purchasing.Api`** — `AddPurchaseOrderLineCommandHandler` calls `GetPriceInfoAsync` for the product
+  name/SKU snapshot; the catalog sell price is irrelevant to a purchase cost (see [Purchasing.md](Purchasing.md)).
 
 ## Notable Conventions
 
@@ -208,6 +210,11 @@ other module's `Contracts` seam.
   `InternalsVisibleTo("StarterKit.Catalog.Api")` and `InternalsVisibleTo("StarterKit.Orders.Api")` to
   reach `Update`, alongside its existing `InternalsVisibleTo("Framework.Tests")`. See
   [../architecture.md § Shared Kernel](../architecture.md#shared-kernel--common-building-blocks).
+- **A product's price currency must be an active currency, checked in the handler.**
+  `UpsertProductCommandHandler` asks `ICurrencyService.GetAsync` and returns a not-found result when the code
+  is unknown or inactive. On an update, an **unchanged** currency is not re-checked, so a product whose
+  currency was deactivated later can still be edited; only a currency change has to land on an active one.
+  `Money` itself only checks the code's ISO-4217 shape.
 - **`Product` uses a single `UpsertProductCommand` instead of separate Create/Update commands** —
   `Id is null` creates, `Id is { }` updates, sharing one `UpsertProductRequest` field set for both
   paths (including `Images`, so images are settable at creation time too, not only after). `Category`
@@ -223,7 +230,7 @@ other module's `Contracts` seam.
   `UpsertProductCommandHandler`'s update path; the request-level `Sku` is optional, but
   `UpsertProductCommandValidator` requires it `NotEmpty` when `Id is null` (creating), since only the
   command — not `UpsertProductRequestValidator` — knows whether this is a create or an update. Reuse is
-  deliberately **not** automatic on soft-delete: the filtered unique index (`WHERE [Sku] IS NOT NULL`,
+  deliberately **not** automatic on soft-delete: the filtered unique index (where `Sku` is not null,
   see Data Access) is *not* scoped by `Deleted`, so a soft-deleted product's SKU keeps blocking reuse
   until an explicit `UpdateSku(null)` (via the same upsert endpoint) clears it — only then can a new
   product claim that SKU value. `UpsertProductCommandHandler`'s SKU-uniqueness pre-check (both paths)
@@ -247,8 +254,8 @@ other module's `Contracts` seam.
   project-wide convention `Location` established (see
   [../../conventions/coding-conventions.md](../../conventions/coding-conventions.md)).
   `CreateCategoryCommandHandler`'s parent-existence/name-uniqueness checks and
-  `UpsertProductCommandHandler`'s category-existence/SKU-uniqueness checks are handler-level guards,
-  not domain invariants.
+  `UpsertProductCommandHandler`'s category-existence/SKU-uniqueness/currency checks are handler-level
+  guards, not domain invariants.
 - **FluentValidation, two layers** — the same convention `Location` introduced (see
   [../../conventions/coding-conventions.md](../../conventions/coding-conventions.md)): each `Contracts`
   request DTO carries an `AbstractValidator<TRequest>` in the same file (field-shape rules only); each
@@ -262,13 +269,10 @@ other module's `Contracts` seam.
   split most other modules use** — mirrors `Location`'s per-module simplification.
 - **`ICatalogPricingService`/`CatalogPricingService` is the module's cross-module DI seam**, same role
   as Location's `ILocationDirectoryService` — `GetPriceInfoAsync`/`GetPriceInfoBatchAsync`, both
-  read-only and `AsNoTracking`, keyed by `long productId`/`IEnumerable<long> productIds`. Its real
-  consumer is `Orders.Api`'s `AddOrderLineCommandHandler` (see Depended On By); since the service reads
-  through `CatalogDbContext`'s default query, a soft-deleted product is transparently excluded from
-  pricing lookups the same way it's excluded from `GetProductById`/`ListProducts`.
-- **Migration is MSSQL-only, a single unsquashed migration** — see Data Access. Treat `Catalog` as
-  mid-development, not yet at the "template baseline" state `Organization`/`Approval`/
-  `LeaveManagement` are in.
+  read-only and `AsNoTracking`, keyed by `long productId`/`IEnumerable<long> productIds`. Its consumers
+  are listed under Depended On By; since the service reads through `CatalogDbContext`'s default query, a
+  soft-deleted product is transparently excluded from pricing lookups the same way it's excluded from
+  `GetProductById`/`ListProducts`.
 - `Specification<T>` (vendor `Light.Specification`) is used only for the by-id lookups
   (`CategoryByIdSpec`, `ProductByIdSpec`), reused across several handlers each — same policy as
   Organization's/Location's.
@@ -278,4 +282,4 @@ other module's `Contracts` seam.
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-15_
+_Last synced: 2026-09-21_

@@ -16,16 +16,22 @@ src/
                          isRecoverableDeploymentError (deploy-stale-tab self-recovery); (dashboard)/
                          loading.tsx is a centered spinner cascading to nested routes; api/health/
                          route.ts is a static 204 liveness probe. /administration, /organization,
-                         /settings are nav-only placeholders with no page.tsx.
+                         /retail, /settings are nav-only placeholders with no page.tsx.
   features/home/         the one feature not moved under modules/ — components/, constants/nav-item.ts,
                          index.ts; no api/ of its own (calls other modules' barrels/actions).
   modules/<domain>/<name>/
                          identity/{auth,user-profile,users,roles}, notifications (flat, no nesting),
-                         organization/{companies,departments,employees}, inventory, approvals,
-                         leave-requests. Each owns: api/ (one consolidated <name>.api.ts + one file per
-                         *-action.ts Server Action), components/, optional types/ (single-consumer, or a
-                         barrel-re-exported feature DTO), optional constants/ ({permissions,nav-item}.ts),
-                         and an index.ts barrel — the only sanctioned cross-module import surface.
+                         organization/{companies,departments,employees}, location, catalog, orders,
+                         inventory, transfers, purchasing/{suppliers,purchase-orders,goods-receipts,
+                         purchase-returns,common}, currency/{currencies,exchange-rates,common},
+                         approvals, leave-requests. Each owns: api/ (one
+                         consolidated <name>.api.ts + one file per *-action.ts Server Action),
+                         components/, optional types/ (single-consumer, or a barrel-re-exported feature
+                         DTO), optional constants/ ({permissions,nav-item}.ts), and an index.ts barrel —
+                         the only sanctioned cross-module import surface. purchasing/common holds the
+                         Purchasing-wide shared pieces (permissions, enums, validation, status badges,
+                         lookup hints) and currency/common the Currency-wide permissions, limits, and
+                         URL-param parsers, rather than a feature of their own.
   components/
     ui/                  shadcn-CLI primitives + a few hand-written/hand-modified additions
                          (native-select, popover, command, combobox, button-group). Leaf layer.
@@ -64,10 +70,12 @@ feature-agnostic building blocks at the same layer; `components/ui/*` is the lea
 
 **Nav tree assembly**: each nav-bearing feature/module owns one `NavItem` in its `constants/nav-item.ts`
 (label, href, icon, and — where gated — the permission). `constants/nav-items.ts` only *assembles*
-these into `NAV_ITEMS`, declaring itself just the two group nodes (`/administration`, `/organization` —
-each spans multiple modules) and the `/settings` leaf (no owning feature). Final order:
-`[home, Administration group, Organization group, /approvals, /leave-requests, /settings]` — the last
-two are top-level leaves, not nested in either group. `Sidebar` and the topbar `SearchBox` both filter
+these into `NAV_ITEMS`, declaring itself just the three group nodes (`/administration`, `/organization`,
+`/retail` — each spans multiple modules) and the `/settings` leaf (no owning feature). Final order:
+`[home, Administration group, Organization group, /approvals, /leave-requests, Retail group,
+/settings]` — `/approvals` and `/leave-requests` are top-level leaves, not nested in a group.
+`NavItem.exact` marks an item active only on an exact path match, for a parent whose sibling lives
+under its path (Inventory vs. `/inventory/valuation`). `Sidebar` and the topbar `SearchBox` both filter
 this same tree client-side via `lib/shared/menu.ts`'s `buildVisibleMenu(NAV_ITEMS, can)`.
 
 ## Dependency Direction
@@ -131,11 +139,11 @@ No cycles found among internal imports.
 
 - **Auth-token injection via a request-handler pipeline.** `http.ts` has no `accessToken` option — it
   takes `handlers` run before `fetch`. `lib/server/backend-api.ts`'s `createBackendApiClient(client)`
-  factory pre-wires `bearerTokenHandler` (reads the ambient session) and a fixed backend client; nine
+  factory pre-wires `bearerTokenHandler` (reads the ambient session) and a fixed backend client; twelve
   instances (`identityApi`/`notificationsApi`/`organizationApi`/`locationApi`/`approvalApi`/
-  `leaveManagementApi`/`catalogApi`/`ordersApi`/`inventoryApi`) cover the nine backend modules.
-  Pre-session call sites pass `explicitBearerTokenHandler(token)` instead. `http.ts` never imports
-  sessions.
+  `leaveManagementApi`/`catalogApi`/`ordersApi`/`inventoryApi`/`transfersApi`/`purchasingApi`/
+  `currencyApi`) cover the twelve backend modules. Pre-session call sites pass
+  `explicitBearerTokenHandler(token)` instead. `http.ts` never imports sessions.
 
 - **Session freshness moved off blocking middleware into a client-driven gate.** `proxy.ts` now only
   enforces the 7-day cap and the `/login` redirect. `components/layout/session-gate.tsx` (mounted in
@@ -171,6 +179,13 @@ No cycles found among internal imports.
   `resolveSession()` directly (no view permission exists); `LEAVE_REQUESTS_PERMISSIONS.Manage` is
   checked ad hoc to branch UI, not to gate the route.
 
+- **Secondary permissions branch the UI; the backend nulls what a viewer may not see.** Beyond the
+  route gate, pages call `hasPermission(session, …)` (`lib/server/authorization.ts`) to show or hide
+  actions and columns. Cost data is the recurring case: `inventory.stock.view_cost`
+  (`INVENTORY_STOCK_PERMISSIONS.ViewCost`) is shared across Inventory, Transfers, and Purchasing —
+  cost DTO fields arrive null without it, and the UI does not render the cost columns/fields at all
+  (rather than showing blanks). The Valuation page uses it as its route gate.
+
 - **Fetch full detail on dialog open — list DTOs are incomplete.** `UserService`/`RoleService` list
   projections never populate `Roles`/`Claims`; only `GetByIdAsync` does. Edit dialogs re-fetch full
   detail on open (via a `get-*-detail-action.ts`) rather than trusting the row they were opened with,
@@ -183,15 +198,24 @@ No cycles found among internal imports.
   debounced (300ms), min-3-char `searchUsersAction`-backed picker rather than sharing one — all three
   need a Server Action from `identity/users`, and `components/shared/*` may not depend on a
   feature/module. `leave-requests`'s approver picker is a different shape (a plain `NativeSelect` over
-  a small pre-fetched candidate list), not a fourth instance.
+  a small pre-fetched candidate list), not a fourth instance; the Purchasing submit-for-approval
+  dialog is the same `NativeSelect` shape over `purchase_order/approvers`, fetched on open.
 
-- **Two feature-owned duplicates of an async product-search combobox.** `orders` and `inventory` each
-  carry their own `ProductSelect` — debounced (300ms), no min-char gate, backed by
-  `searchProductsAction` against `Catalog`'s `product` search (`status: Active` only) — rather than
-  sharing one, extending the same "feature-owned small picker over a shared primitive" reasoning as
-  the user-search comboboxes above. `inventory`'s copy documents itself as a copy of `orders`' copy
-  (which documents itself as a copy of the `organization/employees` `UserSelect` pattern), not an
-  independently-designed component.
+- **Feature-owned duplicates of an async product-search combobox.** `orders`, `inventory`,
+  `transfers`, and `purchasing/purchase-orders` each carry their own `ProductSelect` — debounced
+  (300ms), no min-char gate, backed by `searchProductsAction` against `Catalog`'s `product` search
+  (`status: Active` only) — rather than sharing one, extending the same "feature-owned small picker
+  over a shared primitive" reasoning as the user-search comboboxes above. `inventory`'s copy documents
+  itself as a copy of `orders`' copy (which documents itself as a copy of the `organization/employees`
+  `UserSelect` pattern), not an independently-designed component. The location pickers in
+  `inventory`, `transfers`, and `purchasing/purchase-orders` are likewise per-feature copies.
+
+- **Bounded server-side lookups feeding a select, with a graceful fallback.** A select whose options
+  come from another module's list (suppliers for the Purchasing pages, currencies for the Catalog
+  product form and the exchange-rate page) is loaded by a small helper that requests one capped page
+  (200 suppliers, 100 currencies) and reports `truncated` and `failed`. A truncated list shows a visible
+  hint; a failed lookup (typically the viewer lacks the owning module's view permission) does not fail
+  the page — the picker degrades to a hint or to a free-text code input (the currency pickers).
 
 - **Trigger-embedded clear (X) affordance, not an external button, on every optional picker.** The
   shared `Combobox` primitive and every async feature-owned picker that accepts an `onClear` prop
@@ -216,6 +240,23 @@ No cycles found among internal imports.
   controlled-form-state-alongside-`useActionState` pattern other dialogs use. Chose `Dialog` over `Sheet`
   after an early `Sheet` version clipped the builder's content at panel width; see the `Sheet` bullet
   below for when a `Sheet` is still the right call.
+
+- **Two-phase create-then-navigate for document-style aggregates.** `transfers` and
+  `purchasing/purchase-orders` split creation differently from `orders`: a small create dialog posts
+  only the draft header, then `router.push`es to the `[id]` detail route, where a lines editor and the
+  status-driven action buttons (dispatch/receive/close/cancel, submit/withdraw/receive/close/cancel)
+  live. Detail pages are async Server Components that branch actions on status plus per-action
+  permissions.
+
+- **Definitive vs. ambiguous failure for idempotent receive actions.** Receiving stock (a transfer
+  receipt, a purchase-order goods receipt) must be safely retryable. Server-side, `withStatusCode`
+  (`transfers/api/transfers.api.ts`; `purchasing/common/server/with-status-code.ts`) maps a 400/401/
+  403/404/409 back to the backend's own result code instead of `guardCall`'s generic `"error"`, while
+  network errors, timeouts, and 5xx are rethrown. The receive Server Action then returns
+  `definitive: true` for a deterministic refusal (bad_request/conflict/not_found/forbidden) and
+  `false` for an ambiguous failure. The dialog reuses the same idempotency key on an ambiguous failure
+  — a per-open client request id for transfers, the required delivery-note reference for purchase
+  orders (the backend dedupes on it) — and discards it after a definitive one.
 
 - **`Sheet` (right-side panel) as a mutation-form container, not just a read-only viewer.**
   `approval-history-sheet.tsx` was the first `Sheet` consumer (read-only approval detail);
@@ -275,8 +316,9 @@ No cycles found among internal imports.
 
 - **List-mutating Server Actions self-invalidate via `revalidatePath`.** Each create/update/delete
   action for Users, Roles, Notifications, Companies, Approvals, and Leave requests calls
-  `revalidatePath` for its list route right before returning success. `inventory`'s
-  `recordStockMovementAction` follows the same pattern (`revalidatePath("/inventory")`). Deliberately
+  `revalidatePath` for its list route right before returning success. The Inventory, Transfers, and
+  Purchasing actions follow the same pattern (e.g. `recordStockMovementAction` revalidates
+  `/inventory`; receive actions revalidate both the list and the `[id]` route). Deliberately
   not applied to client-managed reads (notification mark-read) or on-demand detail/picklist fetches;
   the Approvals tables and `LeaveRequestsDataTable` use a client-side `router.refresh()` / per-tab
   refetch instead.
@@ -292,12 +334,12 @@ Two route areas: `(dashboard)` (wraps every authenticated page with `resolveSess
 + `AppShell`) and the ungrouped `/login` (root layout only, no shell). One non-page route,
 `app/api/health/route.ts`, is excluded from the `proxy.ts` matcher.
 
-Every leaf under the "Administration"/"Organization" groups and `/approvals` is gated on that feature's
-own `View`/`Read` permission via `requirePermission()`. `/leave-requests` (and `/leave-requests/[id]`)
+Every leaf under the "Administration"/"Organization"/"Retail" groups and `/approvals` is gated on that
+feature's own `View`/`Read` permission via `requirePermission()`. `/leave-requests` (and `/leave-requests/[id]`)
 is deliberately ungated — only a valid session; `leave.requests.manage` is checked ad hoc inside the
 page to unlock the "All requests" tab and delete-any, never as a route gate. `/administration`,
-`/organization`, `/settings` have no `page.tsx` and 404 if followed; being ungated, they still appear
-in the sidebar and ⌘K palette.
+`/organization`, `/retail`, `/settings` have no `page.tsx` and 404 if followed; being ungated, they
+still appear in the sidebar and ⌘K palette.
 
 Feature/module isolation is enforced by convention (barrel-only cross-module imports) with a reasoned
 exception set — see [dependency-graph.md](./dependency-graph.md#circular-references). A genuine
@@ -337,21 +379,26 @@ none exists. `pnpm-workspace.yaml` only configures build-script approval, not a 
 | `proxy.ts` uses Node's `crypto` with no explicit runtime pin | Low–Medium (verify) | `token-cipher.ts` (transitive via `cookie-codec.ts`) uses `createCipheriv`/`createDecipheriv`, unsupported on the classic Edge runtime. `proxy.ts` has no `export const runtime = "nodejs"`; behaviour is consistent with the `proxy.ts` convention defaulting to Node, but that's inferred, not pinned. |
 | SignalR connects browser→backend directly, bypassing Next entirely | Medium (unverified) | Assumes backend CORS is configured for the admin origin — not verified anywhere in this client's code. If misconfigured, the handshake fails and retries silently every 30s. |
 | `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` must be constant across deploys | Low (mitigated) | Unset ⇒ a fresh key per `next build` ⇒ every deploy rotates all Server Action IDs and open tabs hit "Failed to find Server Action". Deploy scripts hoist it from the preserved `standalone/.env`; `deployment-recovery.ts` recovers when churn happens; still must be generated once per server and never changed. |
-| Nav items reference routes with no `page.tsx` (`/settings`, `/administration`, `/organization`) | Low | Group/placeholder nodes 404 if followed; ungated, so they surface in the sidebar and ⌘K palette. `/leave-requests` is ungated *by design*, not omission, and has a real page. |
+| Nav items reference routes with no `page.tsx` (`/settings`, `/administration`, `/organization`, `/retail`) | Low | Group/placeholder nodes 404 if followed; ungated, so they surface in the sidebar and ⌘K palette. `/leave-requests` is ungated *by design*, not omission, and has a real page. |
 | Detail-route breadcrumb shows a generic label for the id segment | Low (cosmetic) | `breadcrumbs.tsx` is path-based against `NAV_ITEMS`; `isOpaqueId()` renders `"Details"` for a UUID/hex/numeric segment. No channel for a detail page to inject a real crumb label. |
 | Localized timestamps use the hydration-safe `LocalDateTime` only in `approvals`/`notifications`/`leave-requests` | Low | Other client-rendered `toLocaleString()` sites (`session-lifecycle.tsx`, `object-viewer/utils.ts`) still use the bare form. |
 | Backend list endpoints never populate `Roles`/`Claims` on the DTO | Low (worked around) | Only `GetByIdAsync` populates them. Both edit dialogs re-fetch on open; any future list-reading feature would silently get empty arrays if it forgot to. |
 | No `not-found.tsx` anywhere under `app/` | Low (cosmetic) | An unmatched route renders Next's default 404 in the root layout only, unmounting the whole `(dashboard)` subtree (and any open SignalR connection). |
 | `prettier` + `prettier-plugin-tailwindcss` installed, no config file / `format` script | Low | Unknown whether formatting is enforced anywhere. |
-| No automated test suite | Low (by design at this stage) | No test runner in `package.json`. Notable given the `SessionGate`/`ensureFreshSessionAction` state machine, the `deployment-recovery.ts` loop, and every CRUD/decision flow are untested. |
+| No automated test suite | Low (by design at this stage) | No test runner in `package.json`. Notable given the `SessionGate`/`ensureFreshSessionAction` state machine, the `deployment-recovery.ts` loop, the definitive-vs-ambiguous receive flow, and every CRUD/decision flow are untested. |
 | `components/ui/{button,tabs,dialog}.tsx` hand-modified beyond shadcn CLI output | Low | Re-running the CLI would silently drop the customizations (`button` `loading` prop + `cursor-pointer`, `tabs` `cursor-pointer`, `dialog` `max-h`/`overflow-y-auto` + portal-container). |
 | `DataTable`'s `onExport` prop, `components/shared/object-viewer/*`, `CommandPaletteProvider` — all unused | Low / Trivial | Dead capability until a consumer needs it. |
 | `eslint.config.mjs`'s `react-hooks/refs` override glob lists a non-existent `src/components/select/**` | Trivial | No-op glob; remove next time the file is touched. |
 | `LeaveRequestsPage`'s "All requests" tab resolves employee names via one unscoped, capped fetch | Low | `searchEmployees({ pageSize: 200 })` with no filter; an org over 200 employees, or a manager lacking `organization.employees.view`, falls back to the raw id (marked best-effort in code). |
+| Purchasing supplier selects load only the first 200 suppliers | Low | `getSupplierOptions` (`SUPPLIER_OPTIONS_LIMIT` = 200) backs the supplier filters/pickers on the purchase-order, goods-receipt, and purchase-return pages; a larger supplier base is truncated (a page-level hint says so). Active-only picking is requested from the backend, so the create dialog is not affected by inactive suppliers. |
+| Purchasing lookups degrade to hints when the viewer lacks module access | Low (by design) | Without `purchasing.suppliers.view` (or if the supplier/location fetch fails) the supplier/location pickers render empty and a `LookupHints` notice explains why, rather than the page failing. |
+| Currency selects load only the first 100 currencies | Low | `getCurrencyOptions` (`CURRENCY_OPTIONS_LIMIT` = 100, the backend's page-size cap) backs the Catalog product form's currency select and the exchange-rate page's pickers/filter; a larger set is truncated with a visible hint, and the base currency may then be missing from the list. |
+| Currency lookups degrade when the viewer lacks `currency.currencies.view` | Low (by design) | The Catalog product form's currency select, and the exchange-rate page's record-rate and filter pickers, fall back to a free-text three-letter code input (the product form pre-fills the product's own currency) rather than failing the page. |
+| Exchange-rate date filters are UTC days, not the viewer's local days | Low | The page is a Server Component and cannot know the viewer's time zone, so `from`/`to` are expanded to UTC day bounds and the fields are labelled "(UTC)". |
 
 ## Notes
 
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-20_
+_Last synced: 2026-09-21_

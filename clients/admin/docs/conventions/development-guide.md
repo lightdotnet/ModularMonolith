@@ -10,7 +10,7 @@ How to set up, run, and make common changes to `clients/admin`. Architectural ba
   `@types/node` is `^26.5.1`.
 - **pnpm**: required (`pnpm-lock.yaml` is the only lockfile). Version not pinned (no `packageManager`).
 - **A reachable backend**: login, profile, notifications, and every feature page make real HTTP calls.
-  All eight `*_API_BASE_URL` vars must point at a running instance (currently one co-hosted backend).
+  All twelve `*_API_BASE_URL` vars must point at a running instance (currently one co-hosted backend).
   SignalR notifications additionally need the backend reachable **directly from the browser**
   (`SIGNALR_HUB_URL` resolvable + backend CORS allowing the admin origin).
 
@@ -37,7 +37,7 @@ server-only (never `NEXT_PUBLIC_`):
 
 | Var | Purpose |
 |---|---|
-| `IDENTITY_API_BASE_URL`, `NOTIFICATIONS_API_BASE_URL`, `ORGANIZATION_API_BASE_URL`, `LOCATION_API_BASE_URL`, `APPROVAL_API_BASE_URL`, `LEAVE_MANAGEMENT_API_BASE_URL`, `CATALOG_API_BASE_URL`, `ORDERS_API_BASE_URL` | Base URL per backend module. Must include the full path prefix (e.g. `api/v1/`) and a trailing slash — `lib/server/http.ts` prepends nothing. Configured independently even though they currently share one host. |
+| `IDENTITY_API_BASE_URL`, `NOTIFICATIONS_API_BASE_URL`, `ORGANIZATION_API_BASE_URL`, `LOCATION_API_BASE_URL`, `APPROVAL_API_BASE_URL`, `LEAVE_MANAGEMENT_API_BASE_URL`, `CATALOG_API_BASE_URL`, `ORDERS_API_BASE_URL`, `INVENTORY_API_BASE_URL`, `TRANSFERS_API_BASE_URL`, `PURCHASING_API_BASE_URL`, `CURRENCY_API_BASE_URL` | Base URL per backend module. Must include the full path prefix (e.g. `api/v1/`) and a trailing slash — `lib/server/http.ts` prepends nothing. Configured independently even though they currently share one host. |
 | `TOKEN_ENCRYPTION_KEY` | 32-byte base64 key (`openssl rand -base64 32`). AES-256-GCM key for the `admin_session` cookie. `lib/server/config.ts` throws if unset; read on every request. |
 | `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | Base64 AES key Next.js uses at **build time** to salt Server Action IDs. Not read by app code. If unset, a fresh key per build ⇒ every deploy breaks open tabs with "Failed to find Server Action". Optional locally; must be set and **constant forever** on deployed servers. |
 | `SIGNALR_HUB_URL` | Absolute URL to the backend SignalR hub. Read server-side and handed to the browser at connect time by a Server Action (not inlined), so it's a runtime setting — change it by editing the server `.env` and restarting, no rebuild. |
@@ -69,13 +69,16 @@ None — no test runner installed, no `*.test.*`/`*.spec.*` files.
 | Deploy | Run `clients/deploy-nssm.ps1` (or `deploy-pm2.ps1`) from a prepared Windows host; ensure `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` is in the deployed `standalone/.env` first |
 | Add a backend endpoint call | Add a function to the feature/module's `<name>.api.ts` (create it if missing), wrapping `requestJson`/`requestVoid` from the right `lib/server/backend-api.ts` instance via a `call-guard.ts` helper; export it from `index.ts` |
 | Add a feature/module | Create `src/modules/<domain>/<name>/` with `api/`, optional `components/`/`types/`/`constants/`, and an `index.ts` barrel; add a re-export `page.tsx` under `src/app/`. Don't add new `src/features/*` |
+| Add a new backend client | Add an entry to `lib/server/api-clients.ts`, its `*_API_BASE_URL` name to `lib/server/config.ts`, a `createBackendApiClient(...)` instance in `lib/server/backend-api.ts`, and the var to `.env.example` |
 | Gate a page on a permission | `requirePermission(permission)` at the top, then `if (denied) return denied;` before the data fetch — see `users-page.tsx` |
+| Hide a field/action by a secondary permission | `hasPermission(session, PERMISSION)` from `lib/server/authorization.ts` in the (server) page, passed down as a boolean prop — see `inventory-page.tsx` (`canViewCost`) |
 | Add a list/table page | Reuse `components/shared/data-table` (`DataTable<TData>`). Reference wirings: `users` (server-driven URL-param search), `roles` (client-side filter, no backend search), `notifications` (`customSearch` multi-field filter), the `approvals` tabs / `leave-requests` (pre-fetched array, minimal pagination) |
+| Feed a select from another module's list | Call that module's barrel lookup helper from the (server) page and pass `options` + `truncated`/`failed` down — see `catalog-page.tsx` → `getCurrencyOptions` (`modules/currency/currencies/api/currencies.api.ts`); provide a fallback for a failed lookup |
 | Show a toast | `notifySuccess`/`notifyError` from `@/components/toast` — never import `sonner` directly |
 | Imperative action + toast/pending | `useGuardedAction()` (`hooks/use-guarded-action.ts`) — see `delete-user-dialog.tsx` |
 | Form dialog on a mutation action | `useActionState` + `useActionSuccessToast(state, msg, onSuccess?)` (`hooks/use-action-success-toast.ts`) — see any create/edit dialog |
 | Add a shadcn primitive | `npx shadcn@latest add <component>` from `clients/admin/` (`components.json`: style `radix-nova`, base `neutral`, icons `lucide`). `button.tsx` has manual edits — diff after any regen |
-| Add a nav item | Add/update the feature's `constants/nav-item.ts`, re-export from its `index.ts`, then reference it in `src/constants/nav-items.ts` **by direct file path** (not the barrel — it carries server-only code the client-side `Sidebar` must not pull in). Adding a nav entry does not create the route |
+| Add a nav item | Add/update the feature's `constants/nav-item.ts`, re-export from its `index.ts`, then reference it in `src/constants/nav-items.ts` **by direct file path** (not the barrel — it carries server-only code the client-side `Sidebar` must not pull in). Set `exact: true` on a parent item whose sibling route lives under its path. Adding a nav entry does not create the route |
 
 ## Where to Look for X
 
@@ -92,6 +95,8 @@ and the auth flow in [§ Auth Flow](../architecture/overview.md#auth-flow). Beyo
 | Server-only API plumbing | `lib/server/{http,backend-api,api-clients,call-guard,config}.ts`, `lib/server/http-handlers/bearer-token-handler.ts`. `http.ts` emits `[api]` request traces to the console **in development only** (never bodies/query/headers — those carry tokens) |
 | Permission checks | `lib/shared/authorization.ts` (logic), `lib/server/authorization.ts` (wrapper), `lib/server/require-permission.tsx` (page gate), `components/shared/access-denied.tsx` |
 | Real-time notifications | `modules/notifications/hooks/use-notifications.ts`, `context/notifications-provider.tsx`, `components/{notification-bell,notification-inbox}.tsx`, `api/{get-signalr-token-action,signalr.api}.ts` |
+| Idempotent receive (definitive vs. ambiguous) | `modules/transfers/api/{receive-transfer-action,transfers.api}.ts`, `modules/purchasing/common/server/with-status-code.ts`, `modules/purchasing/purchase-orders/api/receive-purchase-order-action.ts` |
+| Currencies and exchange rates | `modules/currency/{currencies,exchange-rates}/` (pages, `*.api.ts`, actions); shared permissions/limits/param parsers in `modules/currency/common/`; rate validation in `exchange-rates/utils/rate-form.ts`, rate display in `exchange-rates/utils/format-rate.ts` |
 | Reusable list/table block | `components/shared/data-table/` |
 | Command palette (⌘K) | `components/command/*`, wired via `components/shared/search-box.tsx` |
 | Nav structure | each feature/module's `constants/nav-item.ts` + `src/constants/nav-items.ts` (assembly), `lib/shared/menu.ts` |
@@ -103,4 +108,4 @@ and the auth flow in [§ Auth Flow](../architecture/overview.md#auth-flow). Beyo
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-16_
+_Last synced: 2026-09-21_

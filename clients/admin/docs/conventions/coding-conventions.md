@@ -39,6 +39,9 @@ write code that matches" companion, not a second architecture doc.
   - mutation (`(prevState, formData) => Promise<{ error?; success? }>`), consumed via `useActionState`;
   - on-demand read (`(args) => Promise<{ data; error? }>`), called directly by a Client Component
     that can't reach the server-only `api/` layer;
+  - imperative mutation with typed arguments (`(id, …) => Promise<{ error?; success?; definitive? }>`),
+    called from a client dialog — the receive actions use the `definitive` flag to tell a deterministic
+    refusal from an ambiguous failure (see architecture.md);
   - `logoutAction` is the outlier — returns `void`, deletes the cookie and `redirect()`s itself.
 
   Every mutation action calls its `<name>.api.ts` function through `lib/server/backend-api.ts`
@@ -69,8 +72,9 @@ the rule for a contributor:
   `*-action.ts` Server Actions stay one file per action.
 - **Backend client selection.** Pick the `lib/server/backend-api.ts` instance for the backend the
   endpoint belongs to — `identityApi` / `notificationsApi` / `organizationApi` / `locationApi` /
-  `approvalApi` / `leaveManagementApi` / `catalogApi` / `ordersApi` (eight, one per backend module,
-  all pre-wired with bearer-token auth). Don't
+  `approvalApi` / `leaveManagementApi` / `catalogApi` / `ordersApi` / `inventoryApi` / `transfersApi` /
+  `purchasingApi` / `currencyApi` (twelve, one per backend module, all pre-wired with bearer-token
+  auth). Don't
   import `lib/server/http.ts` directly unless you're a documented pre-session-cookie exception
   (`token.api.ts`, `user-profile.api.ts`'s `getCurrentUser`). Add a backend by adding one
   `createBackendApiClient(...)` call, not a bespoke file.
@@ -124,4 +128,4 @@ first — the `src/`-rooted feature/module + barrel layout, the consolidated `<n
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-16_
+_Last synced: 2026-09-21_
