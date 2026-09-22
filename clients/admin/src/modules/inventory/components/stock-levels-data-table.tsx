@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Boxes } from "lucide-react";
+import { Boxes, Scale } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import {
   DataTable,
@@ -10,6 +11,7 @@ import {
   type DataTableErrorState,
 } from "@/components/shared/data-table";
 import { ProductSelect } from "@/modules/inventory/components/product-select";
+import { RevalueCostDialog } from "@/modules/inventory/components/revalue-cost-dialog";
 import type { ProductStockTotalDto, StockLevelDto } from "@/modules/inventory/types/stock";
 import type { LocationTreeNodeDto } from "@/modules/location/types/location";
 
@@ -25,10 +27,20 @@ interface StockLevelsDataTableProps {
   error?: DataTableErrorState;
   /** All-locations total for the selected product — independent of the location filter below. Only present when a product filter is active. */
   productTotal?: ProductStockTotalDto;
+  /** Reveals the average cost / total value columns (values arrive null without the permission). */
+  canViewCost?: boolean;
+  /** Reveals the per-row "Revalue cost" action. */
+  canRevalue?: boolean;
 }
 
 function formatQuantity(quantity: number): string {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(quantity);
+}
+
+/** Money display is #0,000.00 — null/undefined renders blank. */
+function formatAmount(amount?: number | null): string {
+  if (amount === null || amount === undefined) return "";
+  return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
 }
 
 /**
@@ -48,11 +60,16 @@ export function StockLevelsDataTable({
   totalRecords,
   error,
   productTotal,
+  canViewCost,
+  canRevalue,
 }: StockLevelsDataTableProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+
+  const [revalueTarget, setRevalueTarget] = useState<StockLevelDto | null>(null);
+  const [revalueKey, setRevalueKey] = useState(0);
 
   const [pendingProductId, setPendingProductId] = useState(productId);
   const [lastProductId, setLastProductId] = useState(productId);
@@ -97,6 +114,16 @@ export function StockLevelsDataTable({
           <div className="flex flex-col gap-1 sm:hidden">
             <span className="text-xs text-muted-foreground">{locationName(level.locationId)}</span>
             <span className="text-sm">{formatQuantity(level.quantityOnHand)}</span>
+            {canViewCost && (
+              <>
+                <span className="text-xs text-muted-foreground">
+                  Avg cost: {formatAmount(level.averageCostBase)}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Total value: {formatAmount(level.totalValueBase)}
+                </span>
+              </>
+            )}
           </div>
         </div>
       ),
@@ -113,6 +140,50 @@ export function StockLevelsDataTable({
       className: "hidden sm:table-cell",
       cell: (level) => formatQuantity(level.quantityOnHand),
     },
+    ...(canViewCost
+      ? [
+          {
+            id: "averageCost",
+            header: "Average cost",
+            className: "hidden sm:table-cell",
+            cell: (level: StockLevelDto) => formatAmount(level.averageCostBase),
+          },
+          {
+            id: "totalValue",
+            header: "Total value",
+            className: "hidden sm:table-cell",
+            cell: (level: StockLevelDto) => formatAmount(level.totalValueBase),
+          },
+        ]
+      : []),
+    ...(canRevalue
+      ? [
+          {
+            id: "actions",
+            header: "",
+            hideable: false,
+            cell: (level: StockLevelDto) =>
+              level.quantityOnHand > 0 ? (
+                <div className="flex justify-end">
+                  <Button
+                    aria-label={`Revalue cost for product ${level.productId}${
+                      locationName(level.locationId) ? ` at ${locationName(level.locationId)}` : ""
+                    }`}
+                    title="Revalue cost"
+                    size="icon"
+                    variant="outline"
+                    onClick={() => {
+                      setRevalueKey((key) => key + 1);
+                      setRevalueTarget(level);
+                    }}
+                  >
+                    <Scale />
+                  </Button>
+                </div>
+              ) : null,
+          },
+        ]
+      : []),
   ];
 
   const customSearch = (
@@ -137,6 +208,7 @@ export function StockLevelsDataTable({
   );
 
   return (
+    <>
     <div className="flex flex-col gap-3">
       {productTotal && (
         <div className="flex items-center gap-2 rounded-2xl border border-border bg-muted/30 p-4">
@@ -174,5 +246,18 @@ export function StockLevelsDataTable({
         }}
       />
     </div>
+    {canRevalue && revalueTarget && (
+      <RevalueCostDialog
+        key={`revalue-${revalueKey}`}
+        open
+        onOpenChange={(open) => {
+          if (!open) setRevalueTarget(null);
+        }}
+        productId={revalueTarget.productId}
+        locationId={revalueTarget.locationId}
+        onRevalued={() => router.refresh()}
+      />
+    )}
+    </>
   );
 }

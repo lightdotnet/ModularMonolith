@@ -74,6 +74,22 @@ export function RecordAdjustmentForm({ locations, onRecorded, onCancel }: Record
       </div>
 
       <div className="flex flex-col gap-1.5">
+        <Label htmlFor="adj-unit-cost">Unit cost</Label>
+        <Input
+          id="adj-unit-cost"
+          name="unitCost"
+          type="number"
+          inputMode="decimal"
+          step="0.0001"
+          min="0"
+        />
+        <p className="text-xs text-muted-foreground">
+          Applies to inbound movements. Leave empty to use the current average cost; required when no stock is on
+          hand.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
         <Label htmlFor="adj-note">Note</Label>
         <Textarea id="adj-note" name="note" maxLength={500} />
       </div>

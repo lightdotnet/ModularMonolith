@@ -30,6 +30,8 @@ interface StockAdjustmentsDataTableProps {
   totalRecords: number;
   error?: DataTableErrorState;
   canManage?: boolean;
+  /** Reveals the unit cost / value change columns (values arrive null without the permission). */
+  canViewCost?: boolean;
 }
 
 function formatQuantityDelta(quantityDelta: number): string {
@@ -37,7 +39,19 @@ function formatQuantityDelta(quantityDelta: number): string {
     Math.abs(quantityDelta),
   );
   // Sign is semantically load-bearing here (adds vs. removes stock), so it's always shown explicitly.
-  return quantityDelta >= 0 ? `+${formatted}` : `-${formatted}`;
+  // CostRevaluation rows are quantity-neutral (delta 0) — shown as a plain "0", not "+0".
+  if (quantityDelta === 0) return formatted;
+  return quantityDelta > 0 ? `+${formatted}` : `-${formatted}`;
+}
+
+/** Money display is #0,000.00 — null/undefined renders blank; the sign of a value change is shown explicitly. */
+function formatAmount(amount?: number | null, signed = false): string {
+  if (amount === null || amount === undefined) return "";
+  const formatted = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+    signed ? Math.abs(amount) : amount,
+  );
+  if (!signed) return formatted;
+  return amount >= 0 ? `+${formatted}` : `-${formatted}`;
 }
 
 /** Uses `adj*`-prefixed query params so its pagination/filters don't collide with `StockLevelsDataTable`'s `level*` params on the same Inventory page URL. */
@@ -53,6 +67,7 @@ export function StockAdjustmentsDataTable({
   totalRecords,
   error,
   canManage,
+  canViewCost,
 }: StockAdjustmentsDataTableProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -129,6 +144,16 @@ export function StockAdjustmentsDataTable({
             <span className="text-xs text-muted-foreground">{locationName(adjustment.locationId)}</span>
             <span className="text-sm">{formatQuantityDelta(adjustment.quantityDelta)}</span>
             <StockMovementReasonBadge reason={adjustment.reason} />
+            {canViewCost && (
+              <>
+                <span className="text-xs text-muted-foreground">
+                  Unit cost: {formatAmount(adjustment.unitCostBase)}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Value change: {formatAmount(adjustment.valueDeltaBase, true)}
+                </span>
+              </>
+            )}
             <LocalDateTime value={adjustment.occurredAt} className="text-xs text-muted-foreground" />
           </div>
         </div>
@@ -146,6 +171,22 @@ export function StockAdjustmentsDataTable({
       className: "hidden sm:table-cell",
       cell: (adjustment) => formatQuantityDelta(adjustment.quantityDelta),
     },
+    ...(canViewCost
+      ? [
+          {
+            id: "unitCost",
+            header: "Unit cost",
+            className: "hidden sm:table-cell",
+            cell: (adjustment: StockAdjustmentDto) => formatAmount(adjustment.unitCostBase),
+          },
+          {
+            id: "valueDelta",
+            header: "Value change",
+            className: "hidden sm:table-cell",
+            cell: (adjustment: StockAdjustmentDto) => formatAmount(adjustment.valueDeltaBase, true),
+          },
+        ]
+      : []),
     {
       id: "reason",
       header: "Reason",

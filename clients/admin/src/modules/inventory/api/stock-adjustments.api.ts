@@ -5,6 +5,7 @@ import { guardCall, guardResponseCall } from "@/lib/server/call-guard";
 import type { ApiResponse, PagedResult } from "@/types/api";
 import type {
   RecordStockMovementRequest,
+  RevalueStockRequest,
   StockAdjustmentDto,
   StockAdjustmentSearchParams,
 } from "../types/stock";
@@ -34,6 +35,16 @@ export function recordStockMovement(request: RecordStockMovementRequest) {
       // anywhere in the Lightsoft stack — sending it as a JSON string like every other opaque id
       // in this app would fail deserialization. Same documented exception as Orders' addOrderLine
       // (see modules/orders/api/orders.api.ts).
+      body: { ...request, productId: Number(request.productId) },
+    }),
+  );
+}
+
+export function revalueStock(request: RevalueStockRequest) {
+  return guardResponseCall(() =>
+    requestJson<ApiResponse>("stock_adjustment/revaluation", {
+      method: "POST",
+      // Same bigint `productId` exception as recordStockMovement above.
       body: { ...request, productId: Number(request.productId) },
     }),
   );

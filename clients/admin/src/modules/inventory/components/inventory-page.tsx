@@ -29,6 +29,8 @@ export async function InventoryPage({ searchParams }: InventoryPageProps) {
   if (denied) return denied;
 
   const canManage = hasPermission(session, INVENTORY_STOCK_PERMISSIONS.Manage);
+  const canViewCost = hasPermission(session, INVENTORY_STOCK_PERMISSIONS.ViewCost);
+  const canRevalue = hasPermission(session, INVENTORY_STOCK_PERMISSIONS.Revalue);
 
   const {
     levelProductId,
@@ -110,6 +112,8 @@ export async function InventoryPage({ searchParams }: InventoryPageProps) {
                 totalRecords={levelsPaged?.totalRecords ?? 0}
                 error={levelsError}
                 productTotal={productTotal}
+                canViewCost={canViewCost}
+                canRevalue={canRevalue}
               />
             </CardContent>
           </Card>
@@ -130,6 +134,7 @@ export async function InventoryPage({ searchParams }: InventoryPageProps) {
                 totalRecords={adjustmentsPaged?.totalRecords ?? 0}
                 error={adjustmentsError}
                 canManage={canManage}
+                canViewCost={canViewCost}
               />
             </CardContent>
           </Card>

@@ -8,6 +8,9 @@ const VARIANT_BY_REASON: Record<StockMovementReason, "default" | "outline" | "se
   [StockMovementReason.PurchaseReceipt]: "outline",
   [StockMovementReason.TransferIn]: "outline",
   [StockMovementReason.TransferOut]: "outline",
+  [StockMovementReason.PurchaseReturnOut]: "outline",
+  // Quantity-neutral cost change, visually distinct from stock movements.
+  [StockMovementReason.CostRevaluation]: "default",
 };
 
 interface StockMovementReasonBadgeProps {
