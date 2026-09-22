@@ -15,9 +15,26 @@ import { getProductByIdAction } from "@/modules/catalog/api/get-product-by-id-ac
 import { upsertProductAction, type UpsertProductFormState } from "@/modules/catalog/api/upsert-product-action";
 import { ProductImageThumbnail } from "@/modules/catalog/components/product-image-thumbnail";
 import type { CategoryTreeNodeDto } from "@/modules/catalog/types/category";
-import type { ProductDto, ProductImageDto } from "@/modules/catalog/types/product";
+import { DEFAULT_CURRENCY, type ProductDto, type ProductImageDto } from "@/modules/catalog/types/product";
 
 const initialState: UpsertProductFormState = {};
+
+export interface ProductCurrencyOption {
+  code: string;
+  name: string;
+  decimalPlaces: number;
+  isBase: boolean;
+}
+
+/** The active-currency lookup for the product form. */
+export interface ProductCurrencyLookup {
+  /** Active currencies, base first. */
+  options: ProductCurrencyOption[];
+  /** The lookup failed (for example the viewer lacks currency.currencies.view). */
+  failed: boolean;
+  /** More currencies exist than were loaded. */
+  truncated: boolean;
+}
 
 interface ProductPanelProps {
   open: boolean;
@@ -25,10 +42,20 @@ interface ProductPanelProps {
   mode: "create" | "edit";
   product: ProductDto | null;
   categories: CategoryTreeNodeDto[];
+  /** Active currencies for the currency select; unavailable/empty falls back to a free-text code input. */
+  currencies: ProductCurrencyLookup;
   onSaved: () => void;
 }
 
-export function ProductPanel({ open, onOpenChange, mode, product, categories, onSaved }: ProductPanelProps) {
+export function ProductPanel({
+  open,
+  onOpenChange,
+  mode,
+  product,
+  categories,
+  currencies,
+  onSaved,
+}: ProductPanelProps) {
   const [state, formAction, pending] = useActionState(upsertProductAction, initialState);
 
   useActionSuccessToast(state, mode === "create" ? "Product created." : "Product updated.", () => {
@@ -40,6 +67,7 @@ export function ProductPanel({ open, onOpenChange, mode, product, categories, on
   const [loadError, setLoadError] = useState("");
   const [loadedProduct, setLoadedProduct] = useState<ProductDto | null>(null);
   const [images, setImages] = useState<ProductImageDto[]>([]);
+  const [currencyCode, setCurrencyCode] = useState<string | null>(null);
   const [newImageUrl, setNewImageUrl] = useState("");
   const [newImageSortOrder, setNewImageSortOrder] = useState("");
 
@@ -98,6 +126,40 @@ export function ProductPanel({ open, onOpenChange, mode, product, categories, on
   // so the form still has something to seed defaults from.
   const sourceProduct = mode === "edit" ? (loadedProduct ?? product) : null;
   const showLoading = mode === "edit" && loading;
+
+  const currencyList = currencies.options;
+  const hasCurrencyList = !currencies.failed && currencyList.length > 0;
+  // A new product defaults to the base currency (the list is base-first), else the first option; the free-text
+  // fallback keeps DEFAULT_CURRENCY.
+  const defaultCurrency = hasCurrencyList
+    ? (currencyList.find((currency) => currency.isBase) ?? currencyList[0]).code
+    : DEFAULT_CURRENCY;
+  const currentCurrency = sourceProduct?.currency ?? defaultCurrency;
+  const selectedCurrency = currencyCode ?? currentCurrency;
+  const currencyOptions = currencyList.map((currency) => ({
+    value: currency.code,
+    label: `${currency.code} - ${currency.name}`,
+  }));
+  // An existing product priced in a currency that is not in the active list keeps it selectable so it is not
+  // silently changed (saving is then refused by the backend with its own message). Never for a new product.
+  if (
+    hasCurrencyList &&
+    mode === "edit" &&
+    !currencyList.some((currency) => currency.code === currentCurrency)
+  ) {
+    currencyOptions.push({
+      value: currentCurrency,
+      label: currencies.truncated ? currentCurrency : `${currentCurrency} (not active)`,
+    });
+  }
+  // The price step follows the selected currency's decimal places; 0.01 when unknown.
+  const selectedDecimals = currencyList.find((currency) => currency.code === selectedCurrency)?.decimalPlaces;
+  const priceStep =
+    selectedDecimals === undefined
+      ? "0.01"
+      : selectedDecimals === 0
+        ? "1"
+        : `0.${"0".repeat(selectedDecimals - 1)}1`;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -162,6 +224,41 @@ export function ProductPanel({ open, onOpenChange, mode, product, categories, on
                   />
                 </div>
               </div>
+              <div className="flex flex-col gap-1.5">
+                {hasCurrencyList ? (
+                  <NativeSelect
+                    id="prod-currency"
+                    label="Currency"
+                    name="currency"
+                    required
+                    value={selectedCurrency}
+                    onChange={setCurrencyCode}
+                    options={currencyOptions}
+                    helperText={
+                      currencies.truncated
+                        ? "Only the first currencies are listed. Use the Currencies page to find others."
+                        : "The currency the price is set in. Orders convert it to the order currency using the exchange rate in effect."
+                    }
+                  />
+                ) : (
+                  <>
+                    <Label htmlFor="prod-currency">Currency</Label>
+                    <Input
+                      id="prod-currency"
+                      name="currency"
+                      maxLength={3}
+                      defaultValue={currentCurrency}
+                      autoCapitalize="characters"
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {currencies.failed
+                        ? "The currency list is unavailable (it needs Currency access, currency.currencies.view), so enter the three-letter code of an active currency."
+                        : "No active currencies were found, so enter the three-letter code of an active currency."}
+                    </p>
+                  </>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="prod-price">Price</Label>
@@ -170,7 +267,7 @@ export function ProductPanel({ open, onOpenChange, mode, product, categories, on
                     name="price"
                     type="number"
                     min="0"
-                    step="0.01"
+                    step={priceStep}
                     defaultValue={sourceProduct?.price}
                     required
                   />

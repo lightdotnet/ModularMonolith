@@ -53,5 +53,8 @@ export interface ProductSearchParams {
   pageSize?: number;
 }
 
-/** Mirrors Shared/Constants/CurrencyConstants.cs's `Default` — Contracts can't be referenced from the client, and there is no multi-currency support yet. */
+/**
+ * Mirrors Shared/Constants/CurrencyConstants.cs's `Default` (the seeded base currency) — Contracts can't be
+ * referenced from the client. Used as the pre-filled product currency when the active-currency list is unavailable.
+ */
 export const DEFAULT_CURRENCY = "VND";

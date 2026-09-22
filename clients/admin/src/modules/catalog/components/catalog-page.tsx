@@ -9,6 +9,7 @@ import { ProductsDataTable } from "@/modules/catalog/components/products-data-ta
 import { CATEGORIES_PERMISSIONS, PRODUCTS_PERMISSIONS } from "@/modules/catalog/constants/permissions";
 import { flattenCategoryTree } from "@/modules/catalog/types/category";
 import { ProductStatus } from "@/modules/catalog/types/product";
+import { getCurrencyOptions } from "@/modules/currency/currencies";
 
 const PAGE_SIZE = 10;
 
@@ -27,7 +28,7 @@ export async function CatalogPage({ searchParams }: CatalogPageProps) {
   const { q, page, categoryId, status } = await searchParams;
   const pageNumber = Math.max(Number(page) || 1, 1);
 
-  const [treeResult, productsResult] = await Promise.all([
+  const [treeResult, productsResult, currencyOptions] = await Promise.all([
     getCategoryTree(),
     searchProducts({
       categoryId: categoryId || undefined,
@@ -36,7 +37,21 @@ export async function CatalogPage({ searchParams }: CatalogPageProps) {
       pageNumber,
       pageSize: PAGE_SIZE,
     }),
+    // Only the product form needs the active currencies; a viewer without currency.currencies.view gets a
+    // failed (empty) result and the form falls back to a free-text currency code.
+    canManageProducts ? getCurrencyOptions(true) : Promise.resolve(null),
   ]);
+
+  const currencies = {
+    options: (currencyOptions?.options ?? []).map((currency) => ({
+      code: currency.code,
+      name: currency.name,
+      decimalPlaces: currency.decimalPlaces,
+      isBase: currency.isBase,
+    })),
+    failed: currencyOptions?.failed ?? false,
+    truncated: currencyOptions?.truncated ?? false,
+  };
 
   const categories = treeResult.data ? flattenCategoryTree(treeResult.data) : [];
 
@@ -67,6 +82,7 @@ export async function CatalogPage({ searchParams }: CatalogPageProps) {
             <CardContent>
               <ProductsDataTable
                 categories={categories}
+                currencies={currencies}
                 categoryId={categoryId ?? ""}
                 status={status ?? ""}
                 records={paged?.records ?? []}

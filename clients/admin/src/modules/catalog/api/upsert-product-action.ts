@@ -29,9 +29,15 @@ export async function upsertProductAction(
   const sku = String(formData.get("sku") ?? "").trim();
   const price = Number(formData.get("price") ?? 0);
   const vatRate = Number(formData.get("vatRate") ?? 0);
+  const currency = (String(formData.get("currency") ?? "").trim() || DEFAULT_CURRENCY).toUpperCase();
 
   if (!categoryId || !name || (!id && !sku)) {
     return { error: "Category, name and SKU are required." };
+  }
+
+  // Whether the currency exists and is active is the backend's call; only the shape is checked here.
+  if (!/^[A-Z]{3}$/.test(currency)) {
+    return { error: "Currency must be a three-letter code." };
   }
 
   let images: ProductImageDto[] = [];
@@ -48,7 +54,7 @@ export async function upsertProductAction(
     description: String(formData.get("description") ?? "") || undefined,
     sku: sku || undefined,
     price,
-    currency: DEFAULT_CURRENCY,
+    currency,
     vatRate,
     images,
   };

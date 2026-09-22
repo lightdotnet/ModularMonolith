@@ -23,12 +23,14 @@ import { useGuardedAction } from "@/hooks/use-guarded-action";
 import { activateProductAction } from "@/modules/catalog/api/activate-product-action";
 import { deactivateProductAction } from "@/modules/catalog/api/deactivate-product-action";
 import { ProductImageThumbnail } from "@/modules/catalog/components/product-image-thumbnail";
-import { ProductPanel } from "@/modules/catalog/components/product-panel";
+import { ProductPanel, type ProductCurrencyLookup } from "@/modules/catalog/components/product-panel";
 import type { CategoryTreeNodeDto } from "@/modules/catalog/types/category";
 import { ProductStatus, type ProductDto } from "@/modules/catalog/types/product";
 
 interface ProductsDataTableProps {
   categories: CategoryTreeNodeDto[];
+  /** Active currencies for the product form's currency select (empty when unavailable). */
+  currencies: ProductCurrencyLookup;
   categoryId: string;
   status: string;
   records: ProductDto[];
@@ -43,16 +45,19 @@ interface ProductsDataTableProps {
 
 const STATUS_OPTIONS = Object.values(ProductStatus).map((value) => ({ value, label: value }));
 
+const PRICE_FORMAT = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/** #0,000.00 followed by the ISO currency code, so prices in different currencies are never ambiguous. */
 function formatPrice(price: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(price);
-  } catch {
-    return `${price} ${currency}`;
-  }
+  return `${PRICE_FORMAT.format(price)} ${currency}`;
 }
 
 export function ProductsDataTable({
   categories,
+  currencies,
   categoryId,
   status,
   records,
@@ -266,6 +271,7 @@ export function ProductsDataTable({
         mode={panelMode}
         product={selectedProduct}
         categories={categories}
+        currencies={currencies}
         onSaved={() => router.refresh()}
       />
     </>
