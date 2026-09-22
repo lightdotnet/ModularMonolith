@@ -3,12 +3,11 @@
 import { Button } from "@/components/ui/button";
 import { OrderStatus, type OrderDto } from "@/modules/orders/types/order";
 
+const AMOUNT_FORMAT = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** #,##0.00 followed by the ISO currency code. */
 function formatAmount(amount: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
-  } catch {
-    return `${amount} ${currency}`;
-  }
+  return `${AMOUNT_FORMAT.format(amount)} ${currency}`;
 }
 
 interface OrderSummaryFooterProps {

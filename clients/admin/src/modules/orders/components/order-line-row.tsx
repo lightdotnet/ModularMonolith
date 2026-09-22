@@ -16,16 +16,23 @@ function formatNumber(value: number): string {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value);
 }
 
+/** Exchange rates keep up to 8 fraction digits (trailing zeros trimmed), unlike amounts. */
+function formatRate(value: number): string {
+  return new Intl.NumberFormat("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 8 }).format(value);
+}
+
 interface OrderLineRowProps {
   orderId: string;
   line: OrderLineDto;
+  /** The order currency (the base currency), shown next to the unit price. */
+  currency: string;
   readOnly: boolean;
   refresh: () => void;
   /** `null` once resolved with no image, `undefined` while `OrderLineList` hasn't looked it up yet. */
   imageUrl?: string | null;
 }
 
-export function OrderLineRow({ orderId, line, readOnly, refresh, imageUrl }: OrderLineRowProps) {
+export function OrderLineRow({ orderId, line, currency, readOnly, refresh, imageUrl }: OrderLineRowProps) {
   const [, runQuantity] = useGuardedAction();
   const [, runSalePrice] = useGuardedAction();
   const [removing, runRemove] = useGuardedAction();
@@ -59,6 +66,10 @@ export function OrderLineRow({ orderId, line, readOnly, refresh, imageUrl }: Ord
     runRemove(() => removeOrderLineAction(orderId, line.id), `"${line.productName}" removed.`, refresh);
   }
 
+  // Present only when the catalog price was in another currency and was converted at add time.
+  const converted =
+    line.catalogUnitPrice != null && !!line.catalogCurrency && line.appliedRate != null;
+
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
       <div className="flex gap-3">
@@ -70,8 +81,14 @@ export function OrderLineRow({ orderId, line, readOnly, refresh, imageUrl }: Ord
             <span className="truncate font-medium">{line.productName}</span>
             <span className="text-xs text-muted-foreground">{line.sku}</span>
             <span className="text-sm text-muted-foreground">
-              {formatNumber(line.unitPrice)} ({line.vatRate}% VAT)
+              {formatNumber(line.unitPrice)} {currency} ({line.vatRate}% VAT)
             </span>
+            {converted && (
+              <span className="text-xs text-muted-foreground">
+                Catalog price {formatNumber(line.catalogUnitPrice as number)} {line.catalogCurrency} ×{" "}
+                {formatRate(line.appliedRate as number)} = {formatNumber(line.unitPrice)} {currency}
+              </span>
+            )}
           </div>
 
           {/* Right: qty, then sale price + discount — right-aligned, stacked. */}

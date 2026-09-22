@@ -38,12 +38,11 @@ interface OrdersDataTableProps {
 
 const STATUS_OPTIONS = Object.values(OrderStatus).map((value) => ({ value, label: value }));
 
+const AMOUNT_FORMAT = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** #,##0.00 followed by the ISO currency code. */
 function formatAmount(amount: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
-  } catch {
-    return `${amount} ${currency}`;
-  }
+  return `${AMOUNT_FORMAT.format(amount)} ${currency}`;
 }
 
 export function OrdersDataTable({

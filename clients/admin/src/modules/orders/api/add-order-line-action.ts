@@ -21,7 +21,13 @@ export async function addOrderLineAction(
   const result = await addOrderLine(orderId, request);
 
   if (!result.isSuccess) {
-    return { error: result.message || "Failed to add product." };
+    const message = result.message || "Failed to add product.";
+    // A foreign-priced product needs an effective exchange rate at add time; say where to record one.
+    return {
+      error: /no exchange rate/i.test(message)
+        ? `${message} Record a rate on the Exchange rates page, then add the product again.`
+        : message,
+    };
   }
 
   return { success: true };

@@ -64,7 +64,9 @@ export function OrderFeeList({ order, readOnly, refresh, feeTypes }: OrderFeeLis
             <div key={fee.id} className="flex items-center gap-2 rounded-md border border-border px-2.5 py-1.5">
               <span className="flex-1 truncate text-sm">{fee.name}</span>
               <span className="text-xs text-muted-foreground">{fee.feeTypeName}</span>
-              <span className="text-sm">{formatNumber(fee.amount)}</span>
+              <span className="text-sm">
+                {formatNumber(fee.amount)} {order.currency}
+              </span>
               {!readOnly && (
                 <Button
                   aria-label="Remove fee"

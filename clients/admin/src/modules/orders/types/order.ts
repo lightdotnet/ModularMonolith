@@ -30,6 +30,15 @@ export interface OrderLineDto {
   requestedSalePrice?: number | null;
   discountAmountPerUnit: number;
   discountPercentage: number;
+  /**
+   * Only populated when the catalog price was in a different currency than the order and was converted
+   * at add time: the original catalog price/currency, the rate applied (1 catalog unit = rate order-currency
+   * units) and when that rate took effect.
+   */
+  catalogUnitPrice?: number | null;
+  catalogCurrency?: string | null;
+  appliedRate?: number | null;
+  rateEffectiveFrom?: string | null;
 }
 
 /** Mirrors Orders.Contracts/Orders/OrderFeeDto.cs — `feeTypeName` is a snapshot of the fee type's name taken when the fee was added, not a live lookup. */
@@ -135,8 +144,8 @@ export interface CancelOrderRequest {
 }
 
 /**
- * Mirrors Orders.Contracts/Payments/RecordPaymentRequest.cs — `currency` must exactly equal
- * `CurrencyConstants.Default` (the server hard-rejects any other value), so the client only ever
+ * Mirrors Orders.Contracts/Payments/RecordPaymentRequest.cs — `currency` must equal the order's
+ * currency (the base currency; the server hard-rejects any other value), so the client only ever
  * sends `order.currency` here rather than exposing a currency picker.
  */
 export interface RecordPaymentRequest {

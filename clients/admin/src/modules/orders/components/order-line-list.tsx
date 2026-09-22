@@ -57,6 +57,7 @@ export function OrderLineList({ order, readOnly, refresh }: OrderLineListProps) 
           key={line.id}
           orderId={order.id}
           line={line}
+          currency={order.currency}
           readOnly={readOnly}
           refresh={refresh}
           imageUrl={imagesByProductId[line.productId]}

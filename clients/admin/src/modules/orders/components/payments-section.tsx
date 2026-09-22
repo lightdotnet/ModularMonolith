@@ -15,12 +15,11 @@ import { VoidPaymentDialog } from "@/modules/orders/components/void-payment-dial
 import { OrderStatus, type OrderDto, type PaymentDto } from "@/modules/orders/types/order";
 import { OrderTypeStatus, type OrderTypeDto } from "@/modules/orders/types/order-type";
 
+const AMOUNT_FORMAT = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** #,##0.00 followed by the ISO currency code. */
 function formatAmount(amount: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
-  } catch {
-    return `${amount} ${currency}`;
-  }
+  return `${AMOUNT_FORMAT.format(amount)} ${currency}`;
 }
 
 function today(): string {
