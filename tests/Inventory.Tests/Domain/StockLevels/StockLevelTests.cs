@@ -73,7 +73,7 @@ public class StockLevelTests
         var level = StockLevel.Create(1, "location-1");
         level.Apply(5);
 
-        Assert.Throws<ConflictException>(() => level.Apply(-6));
+        Assert.Throws<StarterKit.Inventory.Contracts.Exceptions.InsufficientStockException>(() => level.Apply(-6));
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public class StockLevelTests
         var level = StockLevel.Create(1, "location-1");
         level.Apply(5);
 
-        Assert.Throws<ConflictException>(() => level.Apply(-6));
+        Assert.Throws<StarterKit.Inventory.Contracts.Exceptions.InsufficientStockException>(() => level.Apply(-6));
 
         Assert.Equal(5, level.QuantityOnHand);
     }

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Moq;
 using StarterKit.Inventory.Api.Domain.StockAdjustments;
 using StarterKit.Inventory.Api.Services;
+using StarterKit.Inventory.Contracts.Common;
 using StarterKit.Inventory.Contracts.Stock;
 using StarterKit.Locations.Contracts.Services;
 using Xunit;
@@ -35,7 +36,7 @@ public class InventoryServiceTests
         int quantity)
     {
         await ledger.ApplyAsync(
-            [new StockMovement(productId, LocationId, quantity, StockAdjustmentReason.ManualAdjustment, "seed-user")],
+            [new StockMovement(productId, LocationId, quantity, StockAdjustmentReason.ManualAdjustment, "seed-user", UnitCostBase: 1m)],
             TestContext.Current.CancellationToken);
     }
 
@@ -64,7 +65,7 @@ public class InventoryServiceTests
         Assert.Equal(3, level2.QuantityOnHand);
 
         var placements = await host.Context.StockAdjustments
-            .Where(x => x.SourceOrderId == 100 && x.Reason == StockAdjustmentReason.OrderPlacement)
+            .Where(x => x.SourceType == StockSourceType.Order && x.SourceId == 100 && x.Reason == StockAdjustmentReason.OrderPlacement)
             .ToListAsync(TestContext.Current.CancellationToken);
         Assert.Equal(2, placements.Count);
         Assert.Contains(placements, x => x.ProductId == 1 && x.QuantityDelta == -3 && x.IdempotencyKey == "order-place:100:10");
@@ -83,7 +84,7 @@ public class InventoryServiceTests
         var service = new InventoryService(ledger, MakeLocationServiceMock().Object);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ConflictException>(() => service.DecrementForOrderAsync(
+        var exception = await Assert.ThrowsAsync<StarterKit.Inventory.Contracts.Exceptions.InsufficientStockException>(() => service.DecrementForOrderAsync(
             orderId: 200,
             LocationId,
             [new StockLine(1, 10, 5), new StockLine(2, 20, 5), new StockLine(3, 30, 2)],
@@ -102,7 +103,7 @@ public class InventoryServiceTests
         Assert.Equal(10, level3.QuantityOnHand);
 
         Assert.False(await host.Context.StockAdjustments.AnyAsync(
-            x => x.SourceOrderId == 200, TestContext.Current.CancellationToken));
+            x => x.SourceType == StockSourceType.Order && x.SourceId == 200, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -123,7 +124,7 @@ public class InventoryServiceTests
         var level = await host.Context.StockLevels.FirstAsync(x => x.ProductId == 1, TestContext.Current.CancellationToken);
         Assert.Equal(7, level.QuantityOnHand);
         var placements = await host.Context.StockAdjustments
-            .Where(x => x.SourceOrderId == 300 && x.Reason == StockAdjustmentReason.OrderPlacement)
+            .Where(x => x.SourceType == StockSourceType.Order && x.SourceId == 300 && x.Reason == StockAdjustmentReason.OrderPlacement)
             .ToListAsync(TestContext.Current.CancellationToken);
         Assert.Single(placements);
     }
@@ -161,13 +162,13 @@ public class InventoryServiceTests
         var level = await host.Context.StockLevels.FirstAsync(x => x.ProductId == 1, TestContext.Current.CancellationToken);
         Assert.Equal(10, level.QuantityOnHand);
         var reversal = await host.Context.StockAdjustments.SingleAsync(
-            x => x.Reason == StockAdjustmentReason.OrderCancellationRestore && x.SourceOrderId == 500,
+            x => x.Reason == StockAdjustmentReason.OrderCancellationRestore && x.SourceType == StockSourceType.Order && x.SourceId == 500,
             TestContext.Current.CancellationToken);
         Assert.Equal(3, reversal.QuantityDelta);
         Assert.Equal("user-2", reversal.PerformedByUserId);
 
         var original = await host.Context.StockAdjustments.SingleAsync(
-            x => x.Reason == StockAdjustmentReason.OrderPlacement && x.SourceOrderId == 500,
+            x => x.Reason == StockAdjustmentReason.OrderPlacement && x.SourceType == StockSourceType.Order && x.SourceId == 500,
             TestContext.Current.CancellationToken);
         Assert.Equal(original.Id, reversal.ReversesAdjustmentId);
         Assert.Null(original.IdempotencyKey);
@@ -178,7 +179,7 @@ public class InventoryServiceTests
         var levelAfterReplay = await host.Context.StockLevels.FirstAsync(x => x.ProductId == 1, TestContext.Current.CancellationToken);
         Assert.Equal(10, levelAfterReplay.QuantityOnHand);
         var reversalCount = await host.Context.StockAdjustments.CountAsync(
-            x => x.Reason == StockAdjustmentReason.OrderCancellationRestore && x.SourceOrderId == 500,
+            x => x.Reason == StockAdjustmentReason.OrderCancellationRestore && x.SourceType == StockSourceType.Order && x.SourceId == 500,
             TestContext.Current.CancellationToken);
         Assert.Equal(1, reversalCount);
     }
@@ -202,8 +203,67 @@ public class InventoryServiceTests
         var level = await host.Context.StockLevels.FirstAsync(x => x.ProductId == 1, TestContext.Current.CancellationToken);
         Assert.Equal(7, level.QuantityOnHand);
         var placements = await host.Context.StockAdjustments
-            .Where(x => x.SourceOrderId == 600 && x.Reason == StockAdjustmentReason.OrderPlacement)
+            .Where(x => x.SourceType == StockSourceType.Order && x.SourceId == 600 && x.Reason == StockAdjustmentReason.OrderPlacement)
             .ToListAsync(TestContext.Current.CancellationToken);
         Assert.Equal(2, placements.Count);
+    }
+
+    [Fact]
+    public async Task RestoreForOrderAsync_ShouldReverseOnlyPlacementsAtOrBeforePostedBefore_WhenACutoffIsGiven()
+    {
+        // Arrange — the first line is posted at T0, the second ten minutes later.
+        using var host = new InventoryTestHost();
+        var t0 = new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+        host.DateTime.UtcNow = t0;
+        var ledger = new StockLedger(host.Context, host.DateTime);
+        await SeedStockAsync(host, ledger, productId: 1, quantity: 10);
+        var service = new InventoryService(ledger, MakeLocationServiceMock().Object);
+        await service.DecrementForOrderAsync(
+            700, LocationId, [new StockLine(1, 10, 3)], "user-1", TestContext.Current.CancellationToken);
+        host.DateTime.UtcNow = t0.AddMinutes(10);
+        await service.DecrementForOrderAsync(
+            700, LocationId, [new StockLine(1, 20, 2)], "user-1", TestContext.Current.CancellationToken);
+
+        // Act
+        await service.RestoreForOrderAsync(
+            700,
+            "system:stock-reconciliation",
+            TestContext.Current.CancellationToken,
+            postedBefore: t0.AddMinutes(5));
+
+        // Assert — 10 - 3 - 2 + 3 = 8; the newer placement is untouched.
+        var level = await host.Context.StockLevels.FirstAsync(x => x.ProductId == 1, TestContext.Current.CancellationToken);
+        Assert.Equal(8, level.QuantityOnHand);
+        var reversal = await host.Context.StockAdjustments.SingleAsync(
+            x => x.Reason == StockAdjustmentReason.OrderCancellationRestore && x.SourceId == 700,
+            TestContext.Current.CancellationToken);
+        Assert.Equal("system:stock-reconciliation", reversal.PerformedByUserId);
+    }
+
+    [Fact]
+    public async Task FilterSourceIdsWithUnreversedPostingsAsync_ShouldReturnOnlyOrdersWithAnUnreversedPlacement()
+    {
+        // Arrange
+        using var host = new InventoryTestHost();
+        var t0 = new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+        host.DateTime.UtcNow = t0;
+        var ledger = new StockLedger(host.Context, host.DateTime);
+        await SeedStockAsync(host, ledger, productId: 1, quantity: 10);
+        var service = new InventoryService(ledger, MakeLocationServiceMock().Object);
+        await service.DecrementForOrderAsync(
+            800, LocationId, [new StockLine(1, 10, 1)], "user-1", TestContext.Current.CancellationToken);
+        await service.DecrementForOrderAsync(
+            801, LocationId, [new StockLine(1, 10, 1)], "user-1", TestContext.Current.CancellationToken);
+        await service.RestoreForOrderAsync(800, "user-1", TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await service.FilterSourceIdsWithUnreversedPostingsAsync(
+            StockSourceType.Order,
+            [800, 801, 802],
+            t0.AddMinutes(5),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(new long[] { 801 }, result);
     }
 }

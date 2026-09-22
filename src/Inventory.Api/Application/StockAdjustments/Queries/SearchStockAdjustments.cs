@@ -4,8 +4,11 @@ using StarterKit.Persistence.Extensions;
 
 namespace StarterKit.Inventory.Api.Application.StockAdjustments.Queries;
 
-internal sealed record SearchStockAdjustmentsQuery(SearchStockAdjustmentRequest Request)
-    : IQuery<PagedResult<StockAdjustmentDto>>;
+/// <param name="Request">Search filters and paging.</param>
+/// <param name="IncludeCost">Whether the caller may see cost fields (<c>Inventory.ViewCost</c>); they are null otherwise.</param>
+internal sealed record SearchStockAdjustmentsQuery(
+    SearchStockAdjustmentRequest Request,
+    bool IncludeCost = false) : IQuery<PagedResult<StockAdjustmentDto>>;
 
 internal class SearchStockAdjustmentsQueryHandler(InventoryDbContext context)
     : IQueryHandler<SearchStockAdjustmentsQuery, PagedResult<StockAdjustmentDto>>
@@ -27,7 +30,7 @@ internal class SearchStockAdjustmentsQueryHandler(InventoryDbContext context)
             scoped = scoped.Where(x => x.LocationId == lookup.LocationId);
 
         if (lookup.SourceOrderId.HasValue)
-            scoped = scoped.Where(x => x.SourceOrderId == lookup.SourceOrderId.Value);
+            scoped = scoped.Where(x => x.SourceType == StockSourceType.Order && x.SourceId == lookup.SourceOrderId.Value);
 
         var paged = await scoped
             .OrderByDescending(x => x.OccurredAt)
@@ -45,9 +48,11 @@ internal class SearchStockAdjustmentsQueryHandler(InventoryDbContext context)
                 Note = x.Note,
                 OccurredAt = x.OccurredAt,
                 PerformedByUserId = x.PerformedByUserId,
-                SourceOrderId = x.SourceOrderId,
-                SourceOrderLineId = x.SourceOrderLineId,
+                SourceOrderId = x.SourceType == StockSourceType.Order ? x.SourceId : null,
+                SourceOrderLineId = x.SourceType == StockSourceType.Order ? x.SourceLineId : null,
                 ReversesAdjustmentId = x.ReversesAdjustmentId,
+                UnitCostBase = request.IncludeCost ? x.UnitCostBase : null,
+                ValueDeltaBase = request.IncludeCost ? x.ValueDeltaBase : null,
             })
             .ToList();
 

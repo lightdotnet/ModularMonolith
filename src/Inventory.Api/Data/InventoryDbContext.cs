@@ -50,13 +50,18 @@ public class InventoryDbContext(
             entity.ConfigureAuditableEntity<StockLevel, long>();
 
             entity.Property(x => x.LocationId).HasMaxLength(450);
+
+            entity.Property(x => x.TotalValueBase).HasPrecision(19, 4);
         });
 
         builder.Entity<StockAdjustment>(entity =>
         {
             entity.ToTable(name: "StockAdjustments");
 
-            entity.HasIndex(x => x.SourceOrderId);
+            entity.HasIndex(x => new { x.SourceType, x.SourceId });
+
+            // Supports the "not reversed" anti-join used by reversal and reconciliation queries.
+            entity.HasIndex(x => x.ReversesAdjustmentId);
 
             entity.HasIndex(x => new { x.ProductId, x.LocationId });
 
@@ -73,6 +78,10 @@ public class InventoryDbContext(
             entity.Property(x => x.PerformedByUserId).HasMaxLength(450);
 
             entity.Property(x => x.IdempotencyKey).HasMaxLength(200);
+
+            entity.Property(x => x.UnitCostBase).HasPrecision(19, 4);
+
+            entity.Property(x => x.ValueDeltaBase).HasPrecision(19, 4);
         });
     }
 

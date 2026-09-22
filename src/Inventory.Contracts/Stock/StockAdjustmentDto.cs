@@ -23,4 +23,10 @@ public class StockAdjustmentDto : BaseDto<long>
     public long? SourceOrderLineId { get; set; }
 
     public long? ReversesAdjustmentId { get; set; }
+
+    /// <summary>Unit cost of the movement (base currency); null unless the caller has <c>Inventory.ViewCost</c>.</summary>
+    public decimal? UnitCostBase { get; set; }
+
+    /// <summary>Signed value change of the movement (base currency); null unless the caller has <c>Inventory.ViewCost</c>.</summary>
+    public decimal? ValueDeltaBase { get; set; }
 }

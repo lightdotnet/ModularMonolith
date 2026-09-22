@@ -3,7 +3,11 @@ using StarterKit.Persistence.Extensions;
 
 namespace StarterKit.Inventory.Api.Application.StockLevels.Queries;
 
-internal sealed record SearchStockLevelsQuery(SearchStockLevelRequest Request) : IQuery<PagedResult<StockLevelDto>>;
+/// <param name="Request">Search filters and paging.</param>
+/// <param name="IncludeCost">Whether the caller may see cost fields (<c>Inventory.ViewCost</c>); they are null otherwise.</param>
+internal sealed record SearchStockLevelsQuery(
+    SearchStockLevelRequest Request,
+    bool IncludeCost = false) : IQuery<PagedResult<StockLevelDto>>;
 
 internal class SearchStockLevelsQueryHandler(InventoryDbContext context)
     : IQueryHandler<SearchStockLevelsQuery, PagedResult<StockLevelDto>>
@@ -27,15 +31,20 @@ internal class SearchStockLevelsQueryHandler(InventoryDbContext context)
         var paged = await scoped
             .OrderBy(x => x.ProductId)
             .ThenBy(x => x.LocationId)
+            .ToPagedAsync(lookup, cancellationToken);
+
+        var items = paged.Records
             .Select(x => new StockLevelDto
             {
                 Id = x.Id,
                 ProductId = x.ProductId,
                 LocationId = x.LocationId,
                 QuantityOnHand = x.QuantityOnHand,
+                AverageCostBase = request.IncludeCost ? x.AverageCostBase : null,
+                TotalValueBase = request.IncludeCost ? x.TotalValueBase : null,
             })
-            .ToPagedAsync(lookup, cancellationToken);
+            .ToList();
 
-        return new PagedResult<StockLevelDto>(paged.Records, paged.PageNumber, paged.PageSize, paged.TotalRecords);
+        return new PagedResult<StockLevelDto>(items, paged.PageNumber, paged.PageSize, paged.TotalRecords);
     }
 }

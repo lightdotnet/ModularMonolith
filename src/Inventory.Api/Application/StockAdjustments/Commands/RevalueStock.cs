@@ -4,26 +4,26 @@ using StarterKit.Locations.Contracts.Services;
 
 namespace StarterKit.Inventory.Api.Application.StockAdjustments.Commands;
 
-internal sealed record RecordStockMovementCommand(
-    RecordStockMovementRequest Model,
+internal sealed record RevalueStockCommand(
+    RevalueStockRequest Model,
     string PerformedByUserId) : ICommand<IResult>;
 
-internal sealed class RecordStockMovementCommandValidator : AbstractValidator<RecordStockMovementCommand>
+internal sealed class RevalueStockCommandValidator : AbstractValidator<RevalueStockCommand>
 {
-    public RecordStockMovementCommandValidator()
+    public RevalueStockCommandValidator()
     {
         RuleFor(x => x.PerformedByUserId).NotEmpty();
-        RuleFor(x => x.Model).SetValidator(new RecordStockMovementRequestValidator());
+        RuleFor(x => x.Model).SetValidator(new RevalueStockRequestValidator());
     }
 }
 
-internal class RecordStockMovementCommandHandler(
+internal class RevalueStockCommandHandler(
     StockLedger ledger,
     ILocationDirectoryService locationDirectoryService)
-    : ICommandHandler<RecordStockMovementCommand, IResult>
+    : ICommandHandler<RevalueStockCommand, IResult>
 {
     public async Task<IResult> Handle(
-        RecordStockMovementCommand request,
+        RevalueStockCommand request,
         CancellationToken cancellationToken)
     {
         var model = request.Model;
@@ -31,18 +31,18 @@ internal class RecordStockMovementCommandHandler(
         if (!await locationDirectoryService.ExistsAsync(model.LocationId, cancellationToken))
             return Result.NotFound($"Location {model.LocationId} not found");
 
+        // The ledger prices the revaluation against the level (new total = on hand x new unit cost) and
+        // rejects it when nothing is on hand.
         await ledger.ApplyAsync(
             [
                 new StockMovement(
                     model.ProductId,
                     model.LocationId,
-                    model.QuantityDelta,
-                    StockAdjustmentReason.ManualAdjustment,
+                    0,
+                    StockAdjustmentReason.CostRevaluation,
                     request.PerformedByUserId,
                     Note: model.Note,
-                    // Only an inbound movement carries a cost; an omitted one defaults to the current
-                    // average inside the ledger, which rejects it when nothing is on hand.
-                    UnitCostBase: model.QuantityDelta > 0 ? model.UnitCost : null),
+                    UnitCostBase: model.UnitCost),
             ],
             cancellationToken);
 

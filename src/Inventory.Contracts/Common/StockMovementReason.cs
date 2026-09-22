@@ -8,10 +8,14 @@ public enum StockMovementReason
 
     OrderCancellationRestore = 2,
 
-    // Reserved for future use — not produced by any current code path.
     PurchaseReceipt = 3,
 
     TransferIn = 4,
 
     TransferOut = 5,
+
+    PurchaseReturnOut = 6,
+
+    /// <summary>Quantity-neutral change of the moving-average cost of a product at a location.</summary>
+    CostRevaluation = 7,
 }

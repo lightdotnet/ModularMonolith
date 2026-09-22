@@ -52,7 +52,7 @@ public class RecordStockMovementCommandHandlerTests
         // Act
         var result = await handler.Handle(
             new RecordStockMovementCommand(
-                new RecordStockMovementRequest { ProductId = 1, LocationId = LocationId, QuantityDelta = 8, Note = "initial count" },
+                new RecordStockMovementRequest { ProductId = 1, LocationId = LocationId, QuantityDelta = 8, UnitCost = 2m, Note = "initial count" },
                 "user-1"),
             TestContext.Current.CancellationToken);
 
@@ -64,7 +64,7 @@ public class RecordStockMovementCommandHandlerTests
         Assert.Equal(StockAdjustmentReason.ManualAdjustment, adjustment.Reason);
         Assert.Equal("user-1", adjustment.PerformedByUserId);
         Assert.Equal("initial count", adjustment.Note);
-        Assert.Null(adjustment.SourceOrderId);
+        Assert.Null(adjustment.SourceId);
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public class RecordStockMovementCommandHandlerTests
         var handler = new RecordStockMovementCommandHandler(ledger, MakeLocationServiceMock().Object);
 
         // Act & Assert — no existing stock row, so any negative delta is an immediate shortfall.
-        await Assert.ThrowsAsync<Light.Exceptions.ConflictException>(() => handler.Handle(
+        await Assert.ThrowsAsync<StarterKit.Inventory.Contracts.Exceptions.InsufficientStockException>(() => handler.Handle(
             new RecordStockMovementCommand(
                 new RecordStockMovementRequest { ProductId = 1, LocationId = LocationId, QuantityDelta = -1 },
                 "user-1"),

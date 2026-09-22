@@ -1,4 +1,5 @@
 using Light.Exceptions;
+using StarterKit.Inventory.Contracts.Exceptions;
 using StarterKit.Shared.Entities;
 using ValidationException = Light.Exceptions.ValidationException;
 
@@ -46,18 +47,82 @@ public class StockLevel : AuditableEntity<long>
         };
     }
 
-    public bool CanApply(int delta) => QuantityOnHand + delta >= 0;
+    /// <summary>
+    /// Total value of the on-hand stock in base currency, decimal(19,4). Always equals the sum of the
+    /// <c>ValueDeltaBase</c> of the ledger; zero whenever <see cref="QuantityOnHand"/> is zero.
+    /// </summary>
+    public decimal TotalValueBase { get; private set; }
 
-    public void Apply(int delta)
+    /// <summary>Moving-average unit cost — derived, never stored; zero when nothing is on hand.</summary>
+    public decimal AverageCostBase => QuantityOnHand == 0
+        ? 0m
+        : Round(TotalValueBase / QuantityOnHand);
+
+    // Long arithmetic so an extreme delta can neither wrap around nor slip past the guard; the upper
+    // bound keeps the running total representable as an int.
+    public bool CanApply(int delta) =>
+        (long)QuantityOnHand + delta is >= 0 and <= int.MaxValue;
+
+    /// <summary>Value of receiving <paramref name="quantity"/> units at <paramref name="unitCostBase"/>.</summary>
+    public static decimal ValueOfInbound(
+        int quantity,
+        decimal unitCostBase) =>
+        Round(quantity * unitCostBase);
+
+    /// <summary>
+    /// Value that leaves the level when <paramref name="quantity"/> units are issued at the moving
+    /// average. Issuing everything on hand returns the ENTIRE remaining value, so rounding residue can
+    /// never linger on an empty level.
+    /// </summary>
+    public decimal ValueOfOutbound(int quantity)
     {
-        if (!CanApply(delta))
+        if (QuantityOnHand == 0)
+            return 0m;
+
+        return quantity >= QuantityOnHand
+            ? TotalValueBase
+            : Round(TotalValueBase * quantity / QuantityOnHand);
+    }
+
+    /// <summary>Unit cost implied by a <paramref name="value"/> spread over <paramref name="quantity"/> units.</summary>
+    public static decimal UnitCostOf(
+        decimal value,
+        int quantity) =>
+        quantity == 0 ? 0m : Round(value / quantity);
+
+    /// <summary>Value change needed to make the on-hand quantity worth <paramref name="newUnitCostBase"/> each.</summary>
+    public decimal ValueChangeForRevaluation(decimal newUnitCostBase) =>
+        Round(QuantityOnHand * newUnitCostBase) - TotalValueBase;
+
+    /// <summary>
+    /// Applies a signed quantity change together with its signed value change. Refuses a result below
+    /// zero quantity or value, and a result that holds value with no quantity.
+    /// </summary>
+    public void Apply(
+        int quantityDelta,
+        decimal valueDelta = 0m)
+    {
+        if (!CanApply(quantityDelta))
         {
-            throw new ConflictException(
-                $"Insufficient stock for product {ProductId} at location {LocationId}: available {QuantityOnHand}, requested {-delta}.");
+            throw new InsufficientStockException(
+                $"Insufficient stock for product {ProductId} at location {LocationId}: available {QuantityOnHand}, requested {-quantityDelta}.");
         }
 
-        QuantityOnHand += delta;
+        var newQuantity = checked(QuantityOnHand + quantityDelta);
+        var newValue = TotalValueBase + valueDelta;
+
+        if (newValue < 0m)
+            throw Invalid(nameof(valueDelta), "Stock value cannot become negative.");
+
+        if (newQuantity == 0 && newValue != 0m)
+            throw Invalid(nameof(valueDelta), "An empty stock level must hold no value.");
+
+        QuantityOnHand = newQuantity;
+        TotalValueBase = newValue;
     }
+
+    private static decimal Round(decimal value) =>
+        Math.Round(value, 4, MidpointRounding.AwayFromZero);
 
     /// <summary>Rotates the optimistic-concurrency token; called by <c>InventoryDbContext</c> on save.</summary>
     internal void RotateConcurrencyToken() => ConcurrencyToken = Guid.NewGuid().ToString("N");

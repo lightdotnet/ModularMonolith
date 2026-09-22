@@ -14,4 +14,8 @@ public enum StockAdjustmentReason
     TransferIn = 4,
 
     TransferOut = 5,
+
+    PurchaseReturnOut = 6,
+
+    CostRevaluation = 7,
 }

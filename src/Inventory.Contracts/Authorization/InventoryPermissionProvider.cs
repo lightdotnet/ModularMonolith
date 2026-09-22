@@ -15,5 +15,15 @@ public class InventoryPermissionProvider : IPermissionDefinitionProvider
             InventoryPermissions.Stock.Manage,
             "Manage Stock",
             InventoryPermissions.Group);
+
+        yield return new(
+            InventoryPermissions.Stock.ViewCost,
+            "View Stock Cost",
+            InventoryPermissions.Group);
+
+        yield return new(
+            InventoryPermissions.Stock.Revalue,
+            "Revalue Stock Cost",
+            InventoryPermissions.Group);
     }
 }

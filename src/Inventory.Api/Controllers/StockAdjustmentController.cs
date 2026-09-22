@@ -19,13 +19,24 @@ public class StockAdjustmentController(ICurrentUser currentUser) : VersionedApiC
     [HttpGet]
     public async Task<IActionResult> SearchAsync([FromQuery] SearchStockAdjustmentRequest request)
     {
-        return Ok(await Mediator.Send(new SearchStockAdjustmentsQuery(request)));
+        return Ok(await Mediator.Send(new SearchStockAdjustmentsQuery(
+            request,
+            User.CanViewCost())));
     }
 
     [HttpPost]
     [MustHavePermission(InventoryPermissions.Stock.Manage)]
     public async Task<IActionResult> PostAsync([FromBody] RecordStockMovementRequest request)
     {
+        // Manage is enough to supply the unit cost of an inbound adjustment (needed to first-stock a product);
+        // the revalue permission is only required to change the value of stock already on hand (see below).
         return Ok(await Mediator.Send(new RecordStockMovementCommand(request, _currentUserId)));
+    }
+
+    [HttpPost("revaluation")]
+    [MustHavePermission(InventoryPermissions.Stock.Revalue)]
+    public async Task<IActionResult> RevalueAsync([FromBody] RevalueStockRequest request)
+    {
+        return Ok(await Mediator.Send(new RevalueStockCommand(request, _currentUserId)));
     }
 }
