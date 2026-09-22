@@ -46,4 +46,7 @@ export const locationApi = createBackendApiClient(ApiClients.Location);
 export const catalogApi = createBackendApiClient(ApiClients.Catalog);
 export const ordersApi = createBackendApiClient(ApiClients.Orders);
 export const inventoryApi = createBackendApiClient(ApiClients.Inventory);
+export const transfersApi = createBackendApiClient(ApiClients.Transfers);
+export const purchasingApi = createBackendApiClient(ApiClients.Purchasing);
+export const currencyApi = createBackendApiClient(ApiClients.Currency);
 

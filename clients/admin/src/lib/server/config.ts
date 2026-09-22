@@ -20,6 +20,9 @@ const API_BASE_URL_ENV_VARS: Record<ApiClientName, string> = {
   [ApiClients.Catalog]: "CATALOG_API_BASE_URL",
   [ApiClients.Orders]: "ORDERS_API_BASE_URL",
   [ApiClients.Inventory]: "INVENTORY_API_BASE_URL",
+  [ApiClients.Transfers]: "TRANSFERS_API_BASE_URL",
+  [ApiClients.Purchasing]: "PURCHASING_API_BASE_URL",
+  [ApiClients.Currency]: "CURRENCY_API_BASE_URL",
 };
 
 /**

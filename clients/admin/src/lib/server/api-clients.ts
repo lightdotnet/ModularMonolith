@@ -10,6 +10,9 @@ export const ApiClients = {
   Catalog: "Catalog",
   Orders: "Orders",
   Inventory: "Inventory",
+  Transfers: "Transfers",
+  Purchasing: "Purchasing",
+  Currency: "Currency",
 } as const;
 
 export type ApiClientName = (typeof ApiClients)[keyof typeof ApiClients];
