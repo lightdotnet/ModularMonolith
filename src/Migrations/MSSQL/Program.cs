@@ -65,3 +65,20 @@ await ordersInitialiser.TrySeedAsync();
 var inventoryInitialiser = serviceProvider.GetRequiredService<StarterKit.Inventory.Api.Data.InventoryContextInitialiser>();
 
 await inventoryInitialiser.InitialiseAsync();
+
+// Transfers module
+var transfersInitialiser = serviceProvider.GetRequiredService<StarterKit.Transfers.Api.Data.TransfersContextInitialiser>();
+
+await transfersInitialiser.InitialiseAsync();
+
+// Purchasing module
+var purchasingInitialiser = serviceProvider.GetRequiredService<StarterKit.Purchasing.Api.Data.PurchasingContextInitialiser>();
+
+await purchasingInitialiser.InitialiseAsync();
+
+// Currency module
+var currencyInitialiser = serviceProvider.GetRequiredService<StarterKit.Currencies.Api.Data.CurrencyContextInitialiser>();
+
+await currencyInitialiser.InitialiseAsync();
+
+await currencyInitialiser.TrySeedAsync();

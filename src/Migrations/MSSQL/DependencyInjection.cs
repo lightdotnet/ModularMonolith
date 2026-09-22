@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StarterKit.Approval.Api.Data;
 using StarterKit.Catalog.Api.Data;
+using StarterKit.Currencies.Api.Data;
 using StarterKit.Identity.Api.Entities;
 using StarterKit.Infrastructure;
 using StarterKit.Inventory.Api.Data;
@@ -13,6 +14,8 @@ using StarterKit.Orders.Api.Data;
 using StarterKit.Organization.Api.Data;
 using StarterKit.Persistence;
 using StarterKit.Persistence.MigrationSupport;
+using StarterKit.Purchasing.Api.Data;
+using StarterKit.Transfers.Api.Data;
 using System.Reflection;
 
 namespace MSSQL;
@@ -42,6 +45,12 @@ public static class DependencyInjection
         services.AddOrders(configuration);
 
         services.AddInventory(configuration);
+
+        services.AddTransfers(configuration);
+
+        services.AddPurchasing(configuration);
+
+        services.AddCurrency(configuration);
 
         return services;
     }
@@ -203,5 +212,50 @@ public static class DependencyInjection
                 .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
 
         services.AddScoped<InventoryContextInitialiser>();
+    }
+
+    private static void AddTransfers(this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString(DbConnectionNames.Transfers);
+
+        services.AddDbContext<TransfersDbContext>(options =>
+            options
+                .UseSqlServer(connectionString, o =>
+                {
+                    o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName);
+                })
+                .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
+
+        services.AddScoped<TransfersContextInitialiser>();
+    }
+
+    private static void AddPurchasing(this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString(DbConnectionNames.Purchasing);
+
+        services.AddDbContext<PurchasingDbContext>(options =>
+            options
+                .UseSqlServer(connectionString, o =>
+                {
+                    o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName);
+                })
+                .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
+
+        services.AddScoped<PurchasingContextInitialiser>();
+    }
+
+    private static void AddCurrency(this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString(DbConnectionNames.Currency);
+
+        services.AddDbContext<CurrencyDbContext>(options =>
+            options
+                .UseSqlServer(connectionString, o =>
+                {
+                    o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName);
+                })
+                .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
+
+        services.AddScoped<CurrencyContextInitialiser>();
     }
 }

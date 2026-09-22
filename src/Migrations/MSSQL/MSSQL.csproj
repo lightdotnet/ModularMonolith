@@ -39,7 +39,10 @@
     <ProjectReference Include="..\..\Orders.Api\Orders.Api.csproj" />
     <ProjectReference Include="..\..\Organization.Api\Organization.Api.csproj" />
     <ProjectReference Include="..\..\Persistence\Persistence.csproj" />
+    <ProjectReference Include="..\..\Currency.Api\Currency.Api.csproj" />
+    <ProjectReference Include="..\..\Purchasing.Api\Purchasing.Api.csproj" />
     <ProjectReference Include="..\..\Shared\Shared.csproj" />
+    <ProjectReference Include="..\..\Transfers.Api\Transfers.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -51,12 +54,15 @@
   <ItemGroup>
     <Folder Include="Approval\" />
     <Folder Include="Catalog\" />
+    <Folder Include="Currency\" />
     <Folder Include="Inventory\" />
     <Folder Include="LeaveManagement\" />
     <Folder Include="Location\" />
     <Folder Include="Notifications\" />
     <Folder Include="Orders\" />
     <Folder Include="Organization\" />
+    <Folder Include="Purchasing\" />
+    <Folder Include="Transfers\" />
   </ItemGroup>
 
 </Project>

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StarterKit.Locations.Api.Data;
 
@@ -11,9 +12,11 @@ using StarterKit.Locations.Api.Data;
 namespace MSSQL.Location
 {
     [DbContext(typeof(LocationDbContext))]
-    partial class LocationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260921144746_CreateLocationSchema")]
+    partial class CreateLocationSchema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
