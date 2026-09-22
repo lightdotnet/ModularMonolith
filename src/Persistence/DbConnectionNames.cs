@@ -19,4 +19,10 @@ public abstract class DbConnectionNames
     public const string Orders = Default;
 
     public const string Inventory = Default;
+
+    public const string Transfers = Default;
+
+    public const string Purchasing = Default;
+
+    public const string Currency = Default;
 }
