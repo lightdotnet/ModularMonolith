@@ -33,9 +33,8 @@ internal sealed class LeaveRequestApprovalCoordinator(
         if (!new ReconcilableLeaveRequestsSpec().IsSatisfiedBy(entity))
             return;
 
-        var view = await approvalService.GetStatusByRequestAsync(
-            LeaveRequestStatusMap.RequestType,
-            entity.Id,
+        var view = await approvalService.GetStatusAsync(
+            entity.ApprovalRequestId!,
             cancellationToken);
 
         if (view is null)

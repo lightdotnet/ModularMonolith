@@ -159,7 +159,7 @@ public class LeaveRequestApprovalCoordinatorTests
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         var approvalServiceMock = new Mock<IApprovalService>();
         approvalServiceMock
-            .Setup(s => s.GetStatusByRequestAsync("LeaveRequest", entity.Id, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetStatusAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ApprovalStatusView("superseded-approval", "LeaveRequest", entity.Id, ApprovalStatus.Approved, 1));
         var coordinator = new LeaveRequestApprovalCoordinator(
             host.Context, approvalServiceMock.Object, new Mock<IOrgDirectoryService>().Object);

@@ -37,6 +37,22 @@ public interface IApprovalService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lean status lookup by the exact stored approval request id — the id the owning module keeps on
+    /// its own record. Unlike the (type, id) lookups this cannot be shadowed by another request that
+    /// merely names the same source record. <c>null</c> when no such request exists.
+    /// </summary>
+    Task<ApprovalStatusView?> GetStatusAsync(
+        string approvalRequestId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Batched lookup by stored approval request id, keyed by that id. Unknown ids are absent.
+    /// </summary>
+    Task<IReadOnlyDictionary<string, ApprovalStatusView>> GetStatusesAsync(
+        IReadOnlyCollection<string> approvalRequestIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lean status lookup for a single source record — the most recent approval request tied to
     /// <paramref name="requestType"/>/<paramref name="requestId"/>, or <c>null</c> when none exists.
     /// </summary>

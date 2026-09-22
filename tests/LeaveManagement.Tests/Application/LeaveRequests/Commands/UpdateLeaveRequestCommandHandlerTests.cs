@@ -56,7 +56,7 @@ public class UpdateLeaveRequestCommandHandlerTests
             .ReturnsAsync(Result.Success());
         // Reconcile-before-authorize: nothing changed upstream by default.
         approvalServiceMock
-            .Setup(s => s.GetStatusByRequestAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetStatusAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ApprovalStatusView?)null);
         return (orgServiceMock, approvalServiceMock);
     }
@@ -356,7 +356,7 @@ public class UpdateLeaveRequestCommandHandlerTests
         await host.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         var (orgServiceMock, approvalServiceMock) = CreateMocks();
         approvalServiceMock
-            .Setup(s => s.GetStatusByRequestAsync("LeaveRequest", entity.Id, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetStatusAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(StatusView("old-approval", entity.Id, ApprovalStatus.Approved));
         var handler = MakeHandler(host, orgServiceMock, approvalServiceMock);
 
