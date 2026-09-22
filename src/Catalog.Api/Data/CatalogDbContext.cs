@@ -63,7 +63,12 @@ public class CatalogDbContext(
             // Product.UpdateSku(null) (through UpsertProductCommand) — reuse requires that explicit
             // step, soft-delete alone does not free it. Nulls (a cleared SKU) are excluded so any
             // number of products can share a cleared SKU.
-            entity.HasIndex(x => x.Sku).IsUnique().HasFilter("[Sku] IS NOT NULL");
+            entity.HasIndex(x => x.Sku)
+                .IsUnique()
+                .HasProviderFilter(
+                    Database,
+                    "[Sku] IS NOT NULL",
+                    "\"Sku\" IS NOT NULL");
 
             entity.HasIndex(x => x.CategoryId);
 

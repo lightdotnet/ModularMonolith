@@ -1,5 +1,3 @@
-using StarterKit.Shared.Constants;
-
 namespace StarterKit.Catalog.Contracts.Products;
 
 public record UpsertProductRequest
@@ -36,7 +34,12 @@ public sealed class UpsertProductRequestValidator : AbstractValidator<UpsertProd
         RuleFor(x => x.Description).MaximumLength(2000);
         RuleFor(x => x.Sku).MaximumLength(100);
         RuleFor(x => x.Price).GreaterThanOrEqualTo(0);
-        RuleFor(x => x.Currency).NotEmpty().Equal(CurrencyConstants.Default);
+        // Shape only: whether the code is a known, active currency is checked by the handler against
+        // the Currency module.
+        RuleFor(x => x.Currency)
+            .NotEmpty()
+            .Matches("^[A-Za-z]{3}$")
+            .WithMessage("Currency must be a three-letter ISO 4217 code.");
         RuleFor(x => x.VatRate).InclusiveBetween(0, 100);
 
         RuleForEach(x => x.Images).SetValidator(new UpsertProductImageRequestValidator());

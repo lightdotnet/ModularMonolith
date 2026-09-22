@@ -111,10 +111,24 @@ public class UpsertProductRequestValidatorTests
     }
 
     [Fact]
-    public void ShouldHaveError_WhenCurrencyIsNotDefault()
+    public void ShouldNotHaveError_WhenCurrencyIsAnyThreeLetterCode()
     {
         var validator = new UpsertProductRequestValidator();
         var request = ValidRequest() with { Currency = "USD" };
+
+        var result = validator.TestValidate(request);
+
+        result.ShouldNotHaveValidationErrorFor(x => x.Currency);
+    }
+
+    [Theory]
+    [InlineData("US")]
+    [InlineData("USDX")]
+    [InlineData("U1D")]
+    public void ShouldHaveError_WhenCurrencyIsNotThreeLetters(string currency)
+    {
+        var validator = new UpsertProductRequestValidator();
+        var request = ValidRequest() with { Currency = currency };
 
         var result = validator.TestValidate(request);
 

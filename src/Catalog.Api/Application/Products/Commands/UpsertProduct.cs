@@ -1,5 +1,6 @@
 using StarterKit.Catalog.Api.Data;
 using StarterKit.Catalog.Api.Domain.Products;
+using StarterKit.Currencies.Contracts.Services;
 using StarterKit.Shared.ValueObjects;
 
 namespace StarterKit.Catalog.Api.Application.Products.Commands;
@@ -27,7 +28,9 @@ internal sealed class UpsertProductCommandValidator : AbstractValidator<UpsertPr
     }
 }
 
-internal class UpsertProductCommandHandler(CatalogDbContext context)
+internal class UpsertProductCommandHandler(
+    CatalogDbContext context,
+    ICurrencyService currencyService)
     : ICommandHandler<UpsertProductCommand, IResult<long>>
 {
     public async Task<IResult<long>> Handle(
@@ -53,6 +56,17 @@ internal class UpsertProductCommandHandler(CatalogDbContext context)
 
             if (existing is null)
                 return Result<long>.NotFound($"Product {id} not found");
+
+            // A product may be priced in any active currency the Currency module knows. An unchanged
+            // currency is not re-checked, so a product whose currency was deactivated later can still
+            // be edited; only a currency change has to land on an active one.
+            var currencyUnchanged = string.Equals(
+                existing.Price.Currency,
+                model.Currency.Trim(),
+                StringComparison.OrdinalIgnoreCase);
+
+            if (!currencyUnchanged && !await IsActiveCurrencyAsync(model.Currency, cancellationToken))
+                return Result<long>.NotFound($"Currency {model.Currency} not found or is not active");
 
             entity = existing;
 
@@ -95,6 +109,9 @@ internal class UpsertProductCommandHandler(CatalogDbContext context)
         }
         else
         {
+            if (!await IsActiveCurrencyAsync(model.Currency, cancellationToken))
+                return Result<long>.NotFound($"Currency {model.Currency} not found or is not active");
+
             var sku = new Sku(model.Sku!);
 
             // IgnoreQueryFilters: a soft-deleted product's SKU is filtered out of the default query, so
@@ -133,5 +150,14 @@ internal class UpsertProductCommandHandler(CatalogDbContext context)
         await context.SaveChangesAsync(cancellationToken);
 
         return Result<long>.Success(entity.Id);
+    }
+
+    private async Task<bool> IsActiveCurrencyAsync(
+        string code,
+        CancellationToken cancellationToken)
+    {
+        var currency = await currencyService.GetAsync(code, cancellationToken);
+
+        return currency is { IsActive: true };
     }
 }
