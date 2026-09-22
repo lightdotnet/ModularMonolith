@@ -52,6 +52,7 @@ internal class RecordPaymentCommandHandler(
             request.OrderId,
             order.OrderCode.Value,
             new Money(model.Amount, model.Currency),
+            order.CurrencyCode,
             paymentType.Id,
             paymentType.Name,
             model.PaidAt,

@@ -6,6 +6,7 @@ using StarterKit.Orders.Api.Domain.Payments;
 using StarterKit.Persistence.Context;
 using StarterKit.Persistence.Extensions;
 using StarterKit.Shared;
+using StarterKit.Shared.Constants;
 
 namespace StarterKit.Orders.Api.Data;
 
@@ -69,6 +70,13 @@ public class OrdersDbContext(
         {
             entity.ToTable(name: "Orders");
 
+            // Supports the orphaned-stock reconciliation sweep, which only looks at never-placed orders.
+            entity.HasIndex(x => new { x.Status, x.Created })
+                .HasProviderFilter(
+                    Database,
+                    "[PlacedAt] IS NULL",
+                    "\"PlacedAt\" IS NULL");
+
             entity.HasIndex(x => x.LocationId);
 
             // Converted scalar column, not an owned type — same reasoning as Catalog's Sku/this
@@ -83,6 +91,13 @@ public class OrdersDbContext(
             entity.ConfigureAuditableEntity<Order, long>();
 
             entity.Property(x => x.LocationId).HasMaxLength(450);
+
+            // The default backfills rows that existed before the column was added; new orders always
+            // set the code explicitly (the base currency at creation).
+            entity.Property(x => x.CurrencyCode)
+                .HasMaxLength(3)
+                .IsRequired()
+                .HasDefaultValue(CurrencyConstants.Default);
 
             entity.Property(x => x.MemberId).HasMaxLength(450);
 
@@ -153,6 +168,14 @@ public class OrdersDbContext(
             // Plain denormalized snapshot of the parent Order.OrderCode.Value — no FK, no index,
             // same treatment as Sku/ProductId above.
             entity.Property(x => x.OrderCode).HasMaxLength(OrderCode.MaxLength);
+
+            // Snapshot of the catalog price before conversion into the order currency — all four are
+            // null unless the catalog currency differed from the order currency.
+            entity.Property(x => x.CatalogUnitPrice).HasColumnType("decimal(18,2)");
+
+            entity.Property(x => x.CatalogCurrency).HasMaxLength(3);
+
+            entity.Property(x => x.AppliedRate).HasColumnType("decimal(18,8)");
 
             entity.OwnsOne(
                 x => x.UnitPrice,

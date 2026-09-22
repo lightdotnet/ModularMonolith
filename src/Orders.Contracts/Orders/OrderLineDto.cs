@@ -21,4 +21,14 @@ public class OrderLineDto : BaseDto<long>
     public decimal DiscountAmountPerUnit { get; set; }
 
     public decimal DiscountPercentage { get; set; }
+
+    /// <summary>Catalog price in <see cref="CatalogCurrency"/> before conversion; only set when it differs from the order currency.</summary>
+    public decimal? CatalogUnitPrice { get; set; }
+
+    public string? CatalogCurrency { get; set; }
+
+    /// <summary>1 unit of <see cref="CatalogCurrency"/> = this many units of the order currency.</summary>
+    public decimal? AppliedRate { get; set; }
+
+    public DateTimeOffset? RateEffectiveFrom { get; set; }
 }

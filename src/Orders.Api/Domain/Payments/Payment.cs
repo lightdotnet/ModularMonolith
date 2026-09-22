@@ -67,6 +67,7 @@ public class Payment : AuditableEntity<long>
         long orderId,
         string orderCode,
         Money amount,
+        string orderCurrencyCode,
         string paymentTypeId,
         string paymentTypeName,
         DateTimeOffset paidAt,
@@ -86,6 +87,11 @@ public class Payment : AuditableEntity<long>
             throw Invalid(nameof(paymentTypeName), "A payment type name is required.");
 
         ArgumentNullException.ThrowIfNull(amount);
+
+        // A payment is its own aggregate and holds no reference to the order, so the caller supplies
+        // the order's currency; a payment is always settled in exactly that currency.
+        if (amount.Currency != orderCurrencyCode)
+            throw Invalid(nameof(amount), $"Payment must be in the order currency {orderCurrencyCode}.");
 
         if (amount.Amount <= 0)
             throw Invalid(nameof(amount), "Payment amount must be greater than zero.");

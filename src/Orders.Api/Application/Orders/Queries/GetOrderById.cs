@@ -40,7 +40,7 @@ internal class GetOrderByIdQueryHandler(OrdersDbContext context)
         FeesTotal = entity.FeesTotal,
         Total = entity.Total,
         AmountPaid = entity.AmountPaid.Amount,
-        Currency = entity.AmountPaid.Currency,
+        Currency = entity.CurrencyCode,
         PlacedAt = entity.PlacedAt,
         CancelledAt = entity.CancelledAt,
         FulfilledAt = entity.FulfilledAt,
@@ -59,6 +59,10 @@ internal class GetOrderByIdQueryHandler(OrdersDbContext context)
                 RequestedSalePrice = x.RequestedSalePrice?.Amount,
                 DiscountAmountPerUnit = x.DiscountAmountPerUnit,
                 DiscountPercentage = x.DiscountPercentage,
+                CatalogUnitPrice = x.CatalogUnitPrice,
+                CatalogCurrency = x.CatalogCurrency,
+                AppliedRate = x.AppliedRate,
+                RateEffectiveFrom = x.RateEffectiveFrom,
             })
             .ToList(),
         Fees = entity.Fees

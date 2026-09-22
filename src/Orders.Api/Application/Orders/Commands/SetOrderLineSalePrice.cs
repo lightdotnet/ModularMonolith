@@ -1,6 +1,5 @@
 using StarterKit.Orders.Api.Data;
 using StarterKit.Orders.Api.Domain.Orders;
-using StarterKit.Shared.Constants;
 using StarterKit.Shared.ValueObjects;
 
 namespace StarterKit.Orders.Api.Application.Orders.Commands;
@@ -36,7 +35,7 @@ internal class SetOrderLineSalePriceCommandHandler(OrdersDbContext context)
             return Result.NotFound($"Order {request.OrderId} not found");
 
         var salePrice = request.Model.SalePrice.HasValue
-            ? new Money(request.Model.SalePrice.Value, CurrencyConstants.Default)
+            ? new Money(request.Model.SalePrice.Value, entity.CurrencyCode)
             : null;
 
         entity.SetLineSalePrice(request.OrderLineId, salePrice);

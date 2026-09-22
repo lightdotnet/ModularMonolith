@@ -30,7 +30,11 @@ public class AddOrderLineCommandHandlerTests
         // Arrange
         using var host = new OrdersTestHost();
         var pricingMock = new Mock<ICatalogPricingService>();
-        var handler = new AddOrderLineCommandHandler(host.Context, pricingMock.Object);
+        var handler = new AddOrderLineCommandHandler(
+            host.Context,
+            pricingMock.Object,
+            CurrencyServiceMock.Create().Object,
+            host.DateTime);
 
         // Act
         var result = await handler.Handle(
@@ -53,7 +57,11 @@ public class AddOrderLineCommandHandlerTests
         pricingMock
             .Setup(s => s.GetPriceInfoAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync((ProductPriceInfoDto?)null);
-        var handler = new AddOrderLineCommandHandler(host.Context, pricingMock.Object);
+        var handler = new AddOrderLineCommandHandler(
+            host.Context,
+            pricingMock.Object,
+            CurrencyServiceMock.Create().Object,
+            host.DateTime);
 
         // Act
         var result = await handler.Handle(
@@ -76,7 +84,11 @@ public class AddOrderLineCommandHandlerTests
         pricingMock
             .Setup(s => s.GetPriceInfoAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(MakePriceInfo(ProductStatus.Inactive));
-        var handler = new AddOrderLineCommandHandler(host.Context, pricingMock.Object);
+        var handler = new AddOrderLineCommandHandler(
+            host.Context,
+            pricingMock.Object,
+            CurrencyServiceMock.Create().Object,
+            host.DateTime);
 
         // Act
         var result = await handler.Handle(
@@ -99,7 +111,11 @@ public class AddOrderLineCommandHandlerTests
         pricingMock
             .Setup(s => s.GetPriceInfoAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(MakePriceInfo());
-        var handler = new AddOrderLineCommandHandler(host.Context, pricingMock.Object);
+        var handler = new AddOrderLineCommandHandler(
+            host.Context,
+            pricingMock.Object,
+            CurrencyServiceMock.Create().Object,
+            host.DateTime);
 
         // Act
         var result = await handler.Handle(

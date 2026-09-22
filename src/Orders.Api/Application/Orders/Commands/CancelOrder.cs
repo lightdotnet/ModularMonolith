@@ -43,28 +43,25 @@ internal class CancelOrderCommandHandler(
         if (entity is null)
             return Result.NotFound($"Order {request.Id} not found");
 
-        var wasPlaced = entity.PlacedAt is not null;
-
         entity.Cancel(request.CancelledByUserId, request.Model.Reason, clock.UtcNow);
 
         await context.SaveChangesAsync(cancellationToken);
 
-        if (wasPlaced)
+        // Always attempted: a draft can still carry a decrement from a PlaceOrder whose own save failed
+        // after Inventory committed. The restore is a no-op when nothing was decremented.
+        try
         {
-            try
-            {
-                await inventoryService.RestoreForOrderAsync(
-                    entity.Id,
-                    request.CancelledByUserId,
-                    cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(
-                    ex,
-                    "Failed to restore stock for cancelled order {OrderId}.",
-                    entity.Id);
-            }
+            await inventoryService.RestoreForOrderAsync(
+                entity.Id,
+                request.CancelledByUserId,
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Failed to restore stock for cancelled order {OrderId}.",
+                entity.Id);
         }
 
         return Result.Success();

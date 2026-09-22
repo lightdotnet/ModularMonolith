@@ -31,7 +31,8 @@ public class OrderLine : AuditableEntity<long>
         Money unitPrice,
         VatPercentage vatRate,
         int quantity,
-        Money? requestedSalePrice)
+        Money? requestedSalePrice,
+        CatalogPriceSnapshot? catalogPrice)
     {
         OrderId = orderId;
         OrderCode = orderCode;
@@ -42,6 +43,10 @@ public class OrderLine : AuditableEntity<long>
         VatRate = vatRate;
         Quantity = quantity;
         RequestedSalePrice = requestedSalePrice;
+        CatalogUnitPrice = catalogPrice?.CatalogUnitPrice.Amount;
+        CatalogCurrency = catalogPrice?.CatalogUnitPrice.Currency;
+        AppliedRate = catalogPrice?.AppliedRate;
+        RateEffectiveFrom = catalogPrice?.RateEffectiveFrom;
     }
 
     public long OrderId { get; private set; }
@@ -64,6 +69,23 @@ public class OrderLine : AuditableEntity<long>
     /// <summary>A manual price override for this line, or <c>null</c> to sell at <see cref="UnitPrice"/>.</summary>
     public Money? RequestedSalePrice { get; private set; }
 
+    /// <summary>
+    /// Catalog price in the catalog's own currency, as it was when the line was added — snapshot
+    /// column, populated only when that currency differs from the order currency (otherwise
+    /// <c>null</c>, as are the three properties below). <see cref="UnitPrice"/> stays the price the
+    /// customer is charged, already converted into the order currency.
+    /// </summary>
+    public decimal? CatalogUnitPrice { get; private set; }
+
+    /// <summary>Currency of <see cref="CatalogUnitPrice"/>.</summary>
+    public string? CatalogCurrency { get; private set; }
+
+    /// <summary>Exchange rate applied to convert <see cref="CatalogUnitPrice"/> into <see cref="UnitPrice"/>: 1 unit of <see cref="CatalogCurrency"/> = this many units of the order currency.</summary>
+    public decimal? AppliedRate { get; private set; }
+
+    /// <summary>When the applied rate became effective. Never refreshed after the line is added.</summary>
+    public DateTimeOffset? RateEffectiveFrom { get; private set; }
+
     public virtual Order Order { get; private set; } = null!;
 
     public decimal DiscountAmountPerUnit =>
@@ -81,7 +103,8 @@ public class OrderLine : AuditableEntity<long>
         Money unitPrice,
         VatPercentage vatRate,
         int quantity,
-        Money? requestedSalePrice)
+        Money? requestedSalePrice,
+        CatalogPriceSnapshot? catalogPrice)
     {
         GuardQuantity(quantity);
         GuardSalePriceCap(unitPrice, requestedSalePrice);
@@ -95,7 +118,8 @@ public class OrderLine : AuditableEntity<long>
             unitPrice,
             vatRate,
             quantity,
-            requestedSalePrice);
+            requestedSalePrice,
+            catalogPrice);
     }
 
     internal void UpdateQuantity(int quantity)

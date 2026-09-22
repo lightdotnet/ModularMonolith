@@ -1,5 +1,3 @@
-using StarterKit.Shared.Constants;
-
 namespace StarterKit.Orders.Contracts.Payments;
 
 public record RecordPaymentRequest
@@ -20,7 +18,11 @@ public sealed class RecordPaymentRequestValidator : AbstractValidator<RecordPaym
     public RecordPaymentRequestValidator()
     {
         RuleFor(x => x.Amount).GreaterThan(0);
-        RuleFor(x => x.Currency).NotEmpty().Equal(CurrencyConstants.Default);
+        // Shape only: the payment must equal the order's own currency, which the aggregate enforces.
+        RuleFor(x => x.Currency)
+            .NotEmpty()
+            .Matches("^[A-Za-z]{3}$")
+            .WithMessage("Currency must be a three-letter ISO 4217 code.");
         RuleFor(x => x.PaymentTypeId).NotEmpty().MaximumLength(450);
         RuleFor(x => x.Reference).MaximumLength(200);
     }

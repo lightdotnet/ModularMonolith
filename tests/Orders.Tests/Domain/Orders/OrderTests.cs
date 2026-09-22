@@ -17,14 +17,14 @@ public class OrderTests
     [InlineData("   ")]
     public void Create_ShouldThrowValidationException_WhenLocationIdIsBlank(string locationId)
     {
-        Assert.Throws<ValidationException>(() => Order.Create(locationId, null, Now));
+        Assert.Throws<ValidationException>(() => Order.Create(locationId, null, "VND", Now));
     }
 
     [Fact]
     public void Create_ShouldSucceed_WithDraftStatusAndZeroAmountPaid()
     {
         // Act
-        var order = Order.Create("location-1", "member-1", Now);
+        var order = Order.Create("location-1", "member-1", "VND", Now);
 
         // Assert
         Assert.Equal(OrderStatus.Draft, order.Status);
@@ -38,7 +38,7 @@ public class OrderTests
     public void Create_ShouldGenerateAnOrderCode_WhenNoneIsSupplied()
     {
         // Act
-        var order = Order.Create("location-1", null, Now);
+        var order = Order.Create("location-1", null, "VND", Now);
 
         // Assert — yyyyMMdd + 9-char Crockford Base32 suffix, per OrderCode's own doc comment.
         Assert.Equal(17, order.OrderCode.Value.Length);
@@ -50,7 +50,7 @@ public class OrderTests
     public void Create_ShouldUseTheSuppliedOrderCode_WhenOneIsGiven()
     {
         // Act
-        var order = Order.Create("location-1", null, Now, new OrderCode("CUSTOM-CODE-1"), "EXT-REF-1");
+        var order = Order.Create("location-1", null, "VND", Now, new OrderCode("CUSTOM-CODE-1"), "EXT-REF-1");
 
         // Assert
         Assert.Equal("CUSTOM-CODE-1", order.OrderCode.Value);
@@ -61,7 +61,7 @@ public class OrderTests
     public void RegenerateOrderCode_ShouldReplaceTheOrderCode_WithANewlyGeneratedOne()
     {
         // Arrange
-        var order = Order.Create("location-1", null, Now, new OrderCode("ORIGINAL-CODE"));
+        var order = Order.Create("location-1", null, "VND", Now, new OrderCode("ORIGINAL-CODE"));
 
         // Act
         order.RegenerateOrderCode(Now.AddDays(1));
@@ -75,7 +75,7 @@ public class OrderTests
     public void AddLine_ShouldSnapshotTheOrderCode_OntoTheNewLine()
     {
         // Arrange
-        var order = Order.Create("location-1", null, Now, new OrderCode("SNAPSHOT-CODE"));
+        var order = Order.Create("location-1", null, "VND", Now, new OrderCode("SNAPSHOT-CODE"));
 
         // Act
         OrderBuilder.AddLine(order);
@@ -88,7 +88,7 @@ public class OrderTests
     public void AddFee_ShouldSnapshotTheOrderCode_OntoTheNewFee()
     {
         // Arrange
-        var order = Order.Create("location-1", null, Now, new OrderCode("SNAPSHOT-CODE"));
+        var order = Order.Create("location-1", null, "VND", Now, new OrderCode("SNAPSHOT-CODE"));
 
         // Act
         order.AddFee("Shipping", new Money(1m, CurrencyConstants.Default), "SHIPPING", "Shipping");
@@ -430,5 +430,57 @@ public class OrderTests
         Assert.Equal(20m, order.DiscountAmount);
         Assert.Equal(10m, order.FeesTotal);
         Assert.Equal(190m, order.Total);
+    }
+
+    [Fact]
+    public void MarkStockReconciled_ShouldSetStockReconciledAt_WhenOrderWasNeverPlaced()
+    {
+        // Arrange
+        var order = OrderBuilder.Draft();
+        var reconciledAt = Now.AddMinutes(30);
+
+        // Act
+        order.MarkStockReconciled(reconciledAt);
+
+        // Assert
+        Assert.Equal(reconciledAt, order.StockReconciledAt);
+        Assert.Equal(OrderStatus.Draft, order.Status);
+    }
+
+    [Fact]
+    public void MarkStockReconciled_ShouldSetStockReconciledAt_WhenOrderWasCancelledWithoutEverBeingPlaced()
+    {
+        // Arrange
+        var order = OrderBuilder.Draft();
+        order.Cancel("user-1", "reason", Now);
+
+        // Act
+        order.MarkStockReconciled(Now.AddMinutes(30));
+
+        // Assert
+        Assert.Equal(Now.AddMinutes(30), order.StockReconciledAt);
+        Assert.Null(order.PlacedAt);
+    }
+
+    [Fact]
+    public void MarkStockReconciled_ShouldThrowConflictException_WhenOrderWasPlaced()
+    {
+        // Arrange
+        var order = OrderBuilder.Placed(Now);
+
+        // Act & Assert
+        Assert.Throws<ConflictException>(() => order.MarkStockReconciled(Now.AddMinutes(30)));
+        Assert.Null(order.StockReconciledAt);
+    }
+
+    [Fact]
+    public void MarkStockReconciled_ShouldThrowConflictException_WhenAPlacedOrderWasLaterCancelled()
+    {
+        // Arrange — PlacedAt survives the cancel, so the order still counts as having been placed.
+        var order = OrderBuilder.Placed(Now);
+        order.Cancel("user-1", "reason", Now.AddMinutes(1));
+
+        // Act & Assert
+        Assert.Throws<ConflictException>(() => order.MarkStockReconciled(Now.AddMinutes(30)));
     }
 }

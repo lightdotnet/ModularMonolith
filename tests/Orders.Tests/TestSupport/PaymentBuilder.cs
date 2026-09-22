@@ -15,11 +15,14 @@ internal static class PaymentBuilder
         string? reference = null,
         string recordedByUserId = "user-1",
         string orderCode = "20260101TESTCODE1",
-        string paymentTypeName = "Cash") =>
+        string paymentTypeName = "Cash",
+        string orderCurrencyCode = CurrencyConstants.Default,
+        string currency = CurrencyConstants.Default) =>
         Payment.Create(
             orderId,
             orderCode,
-            new Money(amount, CurrencyConstants.Default),
+            new Money(amount, currency),
+            orderCurrencyCode,
             paymentTypeId,
             paymentTypeName,
             paidAt,

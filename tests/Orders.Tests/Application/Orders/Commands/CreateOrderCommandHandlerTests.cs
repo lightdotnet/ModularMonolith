@@ -12,7 +12,12 @@ namespace Orders.Tests.Application.Orders.Commands;
 public class CreateOrderCommandHandlerTests
 {
     private static CreateOrderCommandHandler MakeHandler(OrdersTestHost host, Mock<ILocationDirectoryService> locationServiceMock) =>
-        new(host.Context, locationServiceMock.Object, host.DateTime, NullLogger<CreateOrderCommandHandler>.Instance);
+        new(
+            host.Context,
+            locationServiceMock.Object,
+            CurrencyServiceMock.Create().Object,
+            host.DateTime,
+            NullLogger<CreateOrderCommandHandler>.Instance);
 
     private static Mock<ILocationDirectoryService> MakeLocationServiceMock(bool locationExists = true)
     {

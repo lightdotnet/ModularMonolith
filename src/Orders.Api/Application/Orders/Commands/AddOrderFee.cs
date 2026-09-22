@@ -1,7 +1,6 @@
 using StarterKit.Orders.Api.Data;
 using StarterKit.Orders.Api.Domain.Orders;
 using StarterKit.Orders.Api.Services;
-using StarterKit.Shared.Constants;
 using StarterKit.Shared.ValueObjects;
 
 namespace StarterKit.Orders.Api.Application.Orders.Commands;
@@ -45,7 +44,7 @@ internal class AddOrderFeeCommandHandler(
         if (feeType is null || feeType.Status != OrderTypeStatus.Active)
             return Result<long>.NotFound($"Fee type {model.FeeTypeId} not found or is not active");
 
-        entity.AddFee(model.Name, new Money(model.Amount, CurrencyConstants.Default), feeType.Id, feeType.Name);
+        entity.AddFee(model.Name, new Money(model.Amount, entity.CurrencyCode), feeType.Id, feeType.Name);
 
         // Order.AddFee appends to the in-memory collection; the new fee's Id is only populated by
         // the identity column once this SaveChangesAsync commits.

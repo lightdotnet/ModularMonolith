@@ -152,7 +152,7 @@ public class PlaceOrderCommandHandlerTests
             .FirstAsync(x => x.Id == order.Id, TestContext.Current.CancellationToken);
         Assert.Equal(OrderStatus.Draft, reloaded.Status);
         inventoryServiceMock.Verify(
-            x => x.RestoreForOrderAsync(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            x => x.RestoreForOrderAsync(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<DateTimeOffset?>()),
             Times.Never);
     }
 
@@ -176,7 +176,7 @@ public class PlaceOrderCommandHandlerTests
                 "user-1",
                 It.IsAny<CancellationToken>()))
             .Callback(() => host.Context.Database.GetDbConnection().Dispose())
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync([]);
         var handler = MakeHandler(host, inventoryServiceMock);
 
         // Act & Assert — the original save failure must still surface to the caller.
@@ -185,7 +185,7 @@ public class PlaceOrderCommandHandlerTests
             TestContext.Current.CancellationToken));
 
         inventoryServiceMock.Verify(
-            x => x.RestoreForOrderAsync(order.Id, "user-1", It.IsAny<CancellationToken>()),
+            x => x.RestoreForOrderAsync(order.Id, "user-1", It.IsAny<CancellationToken>(), It.IsAny<DateTimeOffset?>()),
             Times.Once);
     }
 }

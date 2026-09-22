@@ -1,5 +1,4 @@
 using Light.Exceptions;
-using StarterKit.Shared.Constants;
 using StarterKit.Shared.Entities;
 using StarterKit.Shared.ValueObjects;
 using ValidationException = Light.Exceptions.ValidationException;
@@ -28,6 +27,14 @@ public class Order : AuditableEntity<long>
     }
 
     public string LocationId { get; private set; } = null!;
+
+    /// <summary>
+    /// The currency everything on this order is computed and stored in — the base currency at creation
+    /// time, immutable afterwards. Every <see cref="Money"/> entering the order (line prices, sale
+    /// prices, fees, payments) must be in it; foreign catalog prices are converted before they reach
+    /// the aggregate, with the conversion kept as a snapshot on the line.
+    /// </summary>
+    public string CurrencyCode { get; private set; } = null!;
 
     /// <summary>Opaque forward-compat slot for a loyalty/member identifier — no behaviour hangs off it yet.</summary>
     public string? MemberId { get; private set; }
@@ -62,6 +69,12 @@ public class Order : AuditableEntity<long>
     public string? CancelledReason { get; private set; }
 
     /// <summary>
+    /// Set when the orphaned-stock reconciliation sweep has fenced this never-placed order before
+    /// asking Inventory to restore stock. See <see cref="MarkStockReconciled"/>.
+    /// </summary>
+    public DateTimeOffset? StockReconciledAt { get; private set; }
+
+    /// <summary>
     /// App-managed optimistic-concurrency token, rotated by <c>OrdersDbContext</c> on every update —
     /// mirrors <c>ApprovalRequest.ConcurrencyToken</c>.
     /// </summary>
@@ -89,6 +102,7 @@ public class Order : AuditableEntity<long>
     public static Order Create(
         string locationId,
         string? memberId,
+        string currencyCode,
         DateTimeOffset now,
         OrderCode? orderCode = null,
         string? externalReferenceCode = null)
@@ -96,12 +110,17 @@ public class Order : AuditableEntity<long>
         if (string.IsNullOrWhiteSpace(locationId))
             throw Invalid(nameof(locationId), "A location is required.");
 
+        // Money normalizes (trim/upper-case) and shape-checks the code, so the order currency and the
+        // AmountPaid currency can never disagree.
+        var amountPaid = new Money(0, currencyCode);
+
         return new Order
         {
             LocationId = locationId,
             MemberId = memberId,
+            CurrencyCode = amountPaid.Currency,
             Status = OrderStatus.Draft,
-            AmountPaid = new Money(0, CurrencyConstants.Default),
+            AmountPaid = amountPaid,
             OrderCode = orderCode ?? OrderCode.Generate(now),
             ExternalReferenceCode = externalReferenceCode,
         };
@@ -114,12 +133,29 @@ public class Order : AuditableEntity<long>
         int quantity,
         Money unitPrice,
         VatPercentage vatRate,
-        Money? requestedSalePrice)
+        Money? requestedSalePrice,
+        CatalogPriceSnapshot? catalogPrice = null)
     {
         EnsureDraft();
 
         ArgumentNullException.ThrowIfNull(unitPrice);
         ArgumentNullException.ThrowIfNull(vatRate);
+
+        EnsureOrderCurrency(unitPrice, nameof(unitPrice));
+
+        if (requestedSalePrice is not null)
+            EnsureOrderCurrency(requestedSalePrice, nameof(requestedSalePrice));
+
+        // The snapshot exists exactly when the catalog price had to be converted, i.e. when its
+        // currency differs from the order currency; a same-currency line carries none.
+        if (catalogPrice is not null)
+        {
+            if (catalogPrice.CatalogUnitPrice.Currency == CurrencyCode)
+                throw Invalid(nameof(catalogPrice), "A catalog price snapshot is only kept when its currency differs from the order currency.");
+
+            if (catalogPrice.AppliedRate <= 0)
+                throw Invalid(nameof(catalogPrice), "The applied exchange rate must be greater than zero.");
+        }
 
         var line = OrderLine.Create(
             Id,
@@ -130,7 +166,8 @@ public class Order : AuditableEntity<long>
             unitPrice,
             vatRate,
             quantity,
-            requestedSalePrice);
+            requestedSalePrice,
+            catalogPrice);
 
         _lines.Add(line);
     }
@@ -149,6 +186,9 @@ public class Order : AuditableEntity<long>
         Money? salePrice)
     {
         EnsureDraft();
+
+        if (salePrice is not null)
+            EnsureOrderCurrency(salePrice, nameof(salePrice));
 
         FindLine(orderLineId).SetRequestedSalePrice(salePrice);
     }
@@ -195,6 +235,10 @@ public class Order : AuditableEntity<long>
         string feeTypeName)
     {
         EnsureDraft();
+
+        ArgumentNullException.ThrowIfNull(amount);
+
+        EnsureOrderCurrency(amount, nameof(amount));
 
         _fees.Add(OrderFee.Create(Id, OrderCode.Value, name, amount, feeTypeId, feeTypeName));
     }
@@ -287,6 +331,21 @@ public class Order : AuditableEntity<long>
         };
     }
 
+    /// <summary>
+    /// Fence used by the orphaned-stock reconciliation sweep. Only valid for an order that was never
+    /// placed. Its sole purpose is to make the entity Modified so <c>OrdersDbContext</c> rotates the
+    /// <see cref="ConcurrencyToken"/>: a concurrent <see cref="Place"/> or <see cref="Cancel"/> that
+    /// loaded the same token then fails its save with a concurrency conflict, instead of stock being
+    /// restored underneath an order that is being placed.
+    /// </summary>
+    public void MarkStockReconciled(DateTimeOffset at)
+    {
+        if (PlacedAt is not null)
+            throw new ConflictException("Stock of a placed order cannot be reconciled as orphaned.");
+
+        StockReconciledAt = at;
+    }
+
     /// <summary>Rotates the optimistic-concurrency token; called by <c>OrdersDbContext</c> on save.</summary>
     internal void RotateConcurrencyToken() => ConcurrencyToken = Guid.NewGuid().ToString("N");
 
@@ -305,6 +364,14 @@ public class Order : AuditableEntity<long>
             throw Invalid(nameof(orderLineId), "Order line not found on this order.");
 
         return line;
+    }
+
+    private void EnsureOrderCurrency(
+        Money money,
+        string field)
+    {
+        if (money.Currency != CurrencyCode)
+            throw Invalid(field, $"Amount must be in the order currency {CurrencyCode}.");
     }
 
     private void EnsureDraft()

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using StarterKit.Currencies.Contracts.Services;
 using StarterKit.Locations.Contracts.Services;
 using StarterKit.Orders.Api.Data;
 using StarterKit.Orders.Api.Domain.Orders;
@@ -29,6 +30,7 @@ internal sealed class CreateOrderCommandValidator : AbstractValidator<CreateOrde
 internal class CreateOrderCommandHandler(
     OrdersDbContext context,
     ILocationDirectoryService locationDirectoryService,
+    ICurrencyService currencyService,
     IDateTime clock,
     ILogger<CreateOrderCommandHandler> logger)
     : ICommandHandler<CreateOrderCommand, IResult<long>>
@@ -44,13 +46,18 @@ internal class CreateOrderCommandHandler(
         if (!await locationDirectoryService.ExistsAsync(model.LocationId, cancellationToken))
             return Result<long>.NotFound($"Location {model.LocationId} not found");
 
+        // Every order is created in the base currency (no client-side currency choice yet); the code is
+        // fixed for the life of the order.
+        var baseCurrency = await currencyService.GetBaseCurrencyAsync(cancellationToken);
+
         return string.IsNullOrWhiteSpace(model.OrderCode)
-            ? await CreateWithGeneratedCodeAsync(model, cancellationToken)
-            : await CreateWithCallerSuppliedCodeAsync(model, cancellationToken);
+            ? await CreateWithGeneratedCodeAsync(model, baseCurrency.Code, cancellationToken)
+            : await CreateWithCallerSuppliedCodeAsync(model, baseCurrency.Code, cancellationToken);
     }
 
     private async Task<IResult<long>> CreateWithCallerSuppliedCodeAsync(
         CreateOrderRequest model,
+        string currencyCode,
         CancellationToken cancellationToken)
     {
         var orderCode = new OrderCode(model.OrderCode!);
@@ -64,6 +71,7 @@ internal class CreateOrderCommandHandler(
         var entity = Order.Create(
             model.LocationId,
             model.MemberId,
+            currencyCode,
             clock.UtcNow,
             orderCode,
             model.ExternalReferenceCode);
@@ -87,11 +95,13 @@ internal class CreateOrderCommandHandler(
 
     private async Task<IResult<long>> CreateWithGeneratedCodeAsync(
         CreateOrderRequest model,
+        string currencyCode,
         CancellationToken cancellationToken)
     {
         var entity = Order.Create(
             model.LocationId,
             model.MemberId,
+            currencyCode,
             clock.UtcNow,
             externalReferenceCode: model.ExternalReferenceCode);
 

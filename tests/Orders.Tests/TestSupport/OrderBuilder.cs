@@ -17,10 +17,12 @@ internal static class OrderBuilder
         string? memberId = null,
         DateTimeOffset? now = null,
         string? orderCode = null,
-        string? externalReferenceCode = null) =>
+        string? externalReferenceCode = null,
+        string currencyCode = CurrencyConstants.Default) =>
         Order.Create(
             locationId,
             memberId,
+            currencyCode,
             now ?? DateTimeOffset.UtcNow,
             orderCode is null ? null : new OrderCode(orderCode),
             externalReferenceCode);
@@ -33,15 +35,18 @@ internal static class OrderBuilder
         decimal unitPrice = 100m,
         decimal vatRate = 10m,
         int quantity = 1,
-        decimal? requestedSalePrice = null) =>
+        decimal? requestedSalePrice = null,
+        string currency = CurrencyConstants.Default,
+        CatalogPriceSnapshot? catalogPrice = null) =>
         order.AddLine(
             productId,
             productName,
             sku,
             quantity,
-            new Money(unitPrice, CurrencyConstants.Default),
+            new Money(unitPrice, currency),
             new VatPercentage(vatRate),
-            requestedSalePrice.HasValue ? new Money(requestedSalePrice.Value, CurrencyConstants.Default) : null);
+            requestedSalePrice.HasValue ? new Money(requestedSalePrice.Value, currency) : null,
+            catalogPrice);
 
     public static Order DraftWithLine(
         string locationId = "location-1",

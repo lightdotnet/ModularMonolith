@@ -2,6 +2,7 @@ using Light.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StarterKit.Infrastructure.Modularity;
+using StarterKit.Orders.Api.Application.Orders;
 using StarterKit.Orders.Api.Data;
 using StarterKit.Orders.Api.Services;
 using StarterKit.Orders.Contracts.Authorization;
@@ -20,6 +21,13 @@ public class OrdersModule : AppModule
         services.AddScoped<IOrderTypeCache, OrderTypeCache>();
 
         services.AddSingleton<IPermissionDefinitionProvider, OrdersPermissionProvider>();
+
+        services.AddOptions<OrphanedStockReconciliationOptions>()
+            .BindConfiguration("Orders:StockReconciliation")
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddHostedService<OrphanedStockReconciliationService>();
 
         ShowModuleInfo();
     }
