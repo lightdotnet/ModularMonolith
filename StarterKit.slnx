@@ -43,6 +43,18 @@
     <Project Path="src/Organization.Api/Organization.Api.csproj" />
     <Project Path="src/Organization.Contracts/Organization.Contracts.csproj" />
   </Folder>
+  <Folder Name="/src/transfers-module/">
+    <Project Path="src/Transfers.Api/Transfers.Api.csproj" />
+    <Project Path="src/Transfers.Contracts/Transfers.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/purchasing-module/">
+    <Project Path="src/Purchasing.Api/Purchasing.Api.csproj" />
+    <Project Path="src/Purchasing.Contracts/Purchasing.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/currency-module/">
+    <Project Path="src/Currency.Api/Currency.Api.csproj" />
+    <Project Path="src/Currency.Contracts/Currency.Contracts.csproj" />
+  </Folder>
   <Folder Name="/src/_framework/">
     <Project Path="src/Infrastructure/Infrastructure.csproj" />
     <Project Path="src/Persistence/Persistence.csproj" />
@@ -56,6 +68,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Approval.Tests/Approval.Tests.csproj" />
     <Project Path="tests/Catalog.Tests/Catalog.Tests.csproj" />
+    <Project Path="tests/Currency.Tests/Currency.Tests.csproj" />
     <Project Path="tests/Framework.Tests/Framework.Tests.csproj" />
     <Project Path="tests/Identity.Tests/Identity.Tests.csproj" />
     <Project Path="tests/Inventory.Tests/Inventory.Tests.csproj" />
@@ -63,5 +76,7 @@
     <Project Path="tests/Location.Tests/Location.Tests.csproj" />
     <Project Path="tests/Orders.Tests/Orders.Tests.csproj" />
     <Project Path="tests/Organization.Tests/Organization.Tests.csproj" />
+    <Project Path="tests/Purchasing.Tests/Purchasing.Tests.csproj" />
+    <Project Path="tests/Transfers.Tests/Transfers.Tests.csproj" />
   </Folder>
 </Solution>

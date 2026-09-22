@@ -22,6 +22,7 @@
     <ProjectReference Include="..\Catalog.Api\Catalog.Api.csproj" />
     <ProjectReference Include="..\Identity.Api\Identity.Api.csproj" />
 	<ProjectReference Include="..\Identity.Web\Identity.Web.csproj" />
+    <ProjectReference Include="..\Currency.Api\Currency.Api.csproj" />
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
     <ProjectReference Include="..\Inventory.Api\Inventory.Api.csproj" />
     <ProjectReference Include="..\LeaveManagement.Api\LeaveManagement.Api.csproj" />
@@ -30,7 +31,9 @@
     <ProjectReference Include="..\Notifications.Contracts\Notifications.Contracts.csproj" />
     <ProjectReference Include="..\Orders.Api\Orders.Api.csproj" />
     <ProjectReference Include="..\Organization.Api\Organization.Api.csproj" />
+    <ProjectReference Include="..\Purchasing.Api\Purchasing.Api.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
+    <ProjectReference Include="..\Transfers.Api\Transfers.Api.csproj" />
   </ItemGroup>
 
 </Project>

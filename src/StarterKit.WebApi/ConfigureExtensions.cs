@@ -7,6 +7,7 @@ using Light.Mediator;
 using Microsoft.AspNetCore.RateLimiting;
 using StarterKit.Approval.Api;
 using StarterKit.Catalog.Api;
+using StarterKit.Currencies.Api;
 using StarterKit.Identity.Api;
 using StarterKit.Identity.Web;
 using StarterKit.Infrastructure;
@@ -21,8 +22,10 @@ using StarterKit.Locations.Api;
 using StarterKit.Notifications.Api;
 using StarterKit.Orders.Api;
 using StarterKit.Organization.Api;
+using StarterKit.Purchasing.Api;
 using StarterKit.Shared;
 using StarterKit.Shared.Authorization;
+using StarterKit.Transfers.Api;
 using StarterKit.WebApi.Authentication;
 using System.Reflection;
 using System.Threading.RateLimiting;
@@ -43,6 +46,9 @@ public static class ConfigureExtensions
             typeof(CatalogModule).Assembly,
             typeof(OrdersModule).Assembly,
             typeof(InventoryModule).Assembly,
+            typeof(TransfersModule).Assembly,
+            typeof(PurchasingModule).Assembly,
+            typeof(CurrencyModule).Assembly,
         ];
 
     public static IServiceCollection ConfigureServices(this IServiceCollection services, IConfiguration configuration)
