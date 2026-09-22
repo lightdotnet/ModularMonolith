@@ -1,15 +1,15 @@
 using Light.Domain.ValueObjects;
 using Light.Exceptions;
-using StarterKit.Shared.Constants;
 
 namespace StarterKit.Shared.ValueObjects;
 
 /// <summary>
 /// An amount paired with its currency, treated as one value. Construction (and
-/// <see cref="Update"/>) is guarded: a negative amount or a currency other than
-/// <see cref="CurrencyConstants.Default"/> is rejected with a <see cref="ValidationException"/> —
-/// the single-currency guard is deliberate for v1 and is expected to be relaxed once multi-currency
-/// support is needed.
+/// <see cref="Update"/>) is guarded: a negative amount, or a currency that is not shaped like an
+/// ISO 4217 code (exactly three upper-case letters after trimming/upper-casing), is rejected with a
+/// <see cref="ValidationException"/>. Whether a well-formed code is a known/active currency, and
+/// which currency is the base one, is the Currency module's concern — this value object stays
+/// rule-light and never converts between currencies.
 /// </summary>
 public sealed class Money : ValueObject
 {
@@ -26,11 +26,8 @@ public sealed class Money : ValueObject
         if (amount < 0)
             throw Invalid(nameof(amount), "Amount cannot be negative.");
 
-        if (currency != CurrencyConstants.Default)
-            throw Invalid(nameof(currency), $"Currency must be '{CurrencyConstants.Default}'.");
-
         Amount = amount;
-        Currency = currency;
+        Currency = NormalizeCurrency(currency);
     }
 
     public decimal Amount { get; private set; }
@@ -49,17 +46,28 @@ public sealed class Money : ValueObject
         if (amount < 0)
             throw Invalid(nameof(amount), "Amount cannot be negative.");
 
-        if (currency != CurrencyConstants.Default)
-            throw Invalid(nameof(currency), $"Currency must be '{CurrencyConstants.Default}'.");
-
         Amount = amount;
-        Currency = currency;
+        Currency = NormalizeCurrency(currency);
     }
 
     protected override IEnumerable<object> GetEqualityComponents()
     {
         yield return Amount;
         yield return Currency;
+    }
+
+    private static string NormalizeCurrency(string? currency)
+    {
+        var normalized = currency?.Trim().ToUpperInvariant();
+
+        if (normalized is null
+            || normalized.Length != 3
+            || !normalized.All(c => c is >= 'A' and <= 'Z'))
+        {
+            throw Invalid(nameof(currency), "Currency must be a three-letter ISO 4217 code.");
+        }
+
+        return normalized;
     }
 
     private static ValidationException Invalid(

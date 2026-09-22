@@ -1,4 +1,3 @@
-using System.Reflection;
 using Light.Exceptions;
 using StarterKit.Shared.Constants;
 using StarterKit.Shared.ValueObjects;
@@ -43,15 +42,41 @@ public class MoneyTests
     }
 
     [Fact]
-    public void Constructor_ShouldThrowValidationException_WhenCurrencyIsNotDefault()
+    public void Constructor_ShouldAcceptAnyWellFormedCurrencyCode()
     {
         // Act
-        var ex = Assert.Throws<ValidationException>(() => new Money(100m, "USD"));
+        var money = new Money(100m, "USD");
+
+        // Assert
+        Assert.Equal("USD", money.Currency);
+    }
+
+    [Fact]
+    public void Constructor_ShouldTrimAndUpperCaseTheCurrency()
+    {
+        // Act
+        var money = new Money(100m, " usd ");
+
+        // Assert
+        Assert.Equal("USD", money.Currency);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    [InlineData("US")]
+    [InlineData("USDX")]
+    [InlineData("U1D")]
+    [InlineData("€€€")]
+    public void Constructor_ShouldThrowValidationException_WhenCurrencyIsMalformed(string currency)
+    {
+        // Act
+        var ex = Assert.Throws<ValidationException>(() => new Money(100m, currency));
 
         // Assert
         var error = Assert.Single(ex.ValidationErrors);
         Assert.Equal("currency", error.Key);
-        Assert.Equal($"Currency must be '{CurrencyConstants.Default}'.", Assert.Single(error.Value));
+        Assert.Equal("Currency must be a three-letter ISO 4217 code.", Assert.Single(error.Value));
     }
 
     [Fact]
@@ -84,18 +109,32 @@ public class MoneyTests
     }
 
     [Fact]
-    public void Update_ShouldThrowValidationException_WhenCurrencyIsNotDefault()
+    public void Update_ShouldAcceptAnyWellFormedCurrencyCode()
     {
         // Arrange
         var money = new Money(100m, CurrencyConstants.Default);
 
         // Act
-        var ex = Assert.Throws<ValidationException>(() => money.Update(100m, "USD"));
+        money.Update(100m, "usd");
+
+        // Assert
+        Assert.Equal("USD", money.Currency);
+    }
+
+    [Fact]
+    public void Update_ShouldThrowValidationException_WhenCurrencyIsMalformed()
+    {
+        // Arrange
+        var money = new Money(100m, CurrencyConstants.Default);
+
+        // Act
+        var ex = Assert.Throws<ValidationException>(() => money.Update(100m, "US"));
 
         // Assert
         var error = Assert.Single(ex.ValidationErrors);
         Assert.Equal("currency", error.Key);
-        Assert.Equal($"Currency must be '{CurrencyConstants.Default}'.", Assert.Single(error.Value));
+        Assert.Equal("Currency must be a three-letter ISO 4217 code.", Assert.Single(error.Value));
+        Assert.Equal(CurrencyConstants.Default, money.Currency);
     }
 
     [Fact]
@@ -125,27 +164,10 @@ public class MoneyTests
     public void Equals_ShouldBeFalse_WhenCurrencyDiffers()
     {
         // Arrange
-        // The public/internal API only ever accepts CurrencyConstants.Default, so a
-        // non-default currency can't be reached through Money(...) or Update(...) without
-        // throwing. Materialise a second instance the same way EF does (private parameterless
-        // ctor + property assignment) purely to exercise GetEqualityComponents' currency
-        // component in isolation.
         var a = new Money(100m, CurrencyConstants.Default);
-        var b = (Money)Activator.CreateInstance(typeof(Money), nonPublic: true)!;
-        SetPrivateProperty(b, nameof(Money.Amount), 100m);
-        SetPrivateProperty(b, nameof(Money.Currency), "USD");
+        var b = new Money(100m, "USD");
 
         // Assert
         Assert.NotEqual(a, b);
-    }
-
-    private static void SetPrivateProperty(object target, string propertyName, object value)
-    {
-        var property = target.GetType().GetProperty(
-            propertyName,
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException($"Property {propertyName} not found on {target.GetType().Name}.");
-
-        property.SetValue(target, value);
     }
 }
