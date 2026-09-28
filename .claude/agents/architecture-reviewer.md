@@ -19,7 +19,7 @@ tools: Glob, Grep, Read
 
 - User asks to "review architecture," "check layering," "is this module structured correctly," or similar, for anything under `src/`.
 - Before a large feature is implemented, to validate the target module can support it cleanly, or that a new module is warranted vs. extending an existing one.
-- As part of [review-repository](../workflows/review-repository.md) or [review-architecture](../skills/review-architecture.md).
+- As part of [review-repository](../workflows/review-repository.md) or [review-architecture](../skills/review-architecture/SKILL.md).
 
 ## What to Inspect
 

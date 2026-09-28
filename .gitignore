@@ -422,3 +422,5 @@ FodyWeavers.xsd
 
 # Claude Code personal/local settings (machine-specific permission overrides)
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
+.claude/worktrees/

@@ -1,6 +1,6 @@
 <!--
 Template: API Documentation
-Used by: skills/api.md, agents/api-designer.md, agents/api-contract-reviewer.md
+Used by: skills/generate-docs/SKILL.md, skills/sync-docs/SKILL.md
 Output location: src/docs/architecture/api.md
 Do not populate this file itself — copy its structure into the generated output.
 -->
@@ -36,9 +36,9 @@ _How clients authenticate, what authorization model applies per endpoint._
 
 | Client app | API client location | Hand-written or generated? |
 |---|---|---|
-| | `clients/<app-name>/lib/api/` (or equivalent) | |
+| | `clients/<app-name>/src/modules/*/api/<feature>.api.ts` via `src/lib/server/backend-api.ts` (or equivalent) | |
 
-See [api-contract-reviewer](../../agents/api-contract-reviewer.md) for drift checks across clients.
+Drift between this contract and each client is checked by the api-contract-reviewer agent.
 
 ## Breaking Change History
 

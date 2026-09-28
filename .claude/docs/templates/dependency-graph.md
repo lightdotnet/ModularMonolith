@@ -21,7 +21,7 @@ _Same package pinned to different versions across modules (backend) or in packag
 
 ## Cross-Module Boundary Violations (backend only)
 
-_Any module referencing another module's `Domain`/`Infrastructure` project directly instead of going through its `Api`/public contract — always worth flagging. State "not applicable" for a client-app dependency graph._
+_Any module referencing a project of another module other than that module's `<Module>.Contracts` project — always worth flagging. State "not applicable" for a client-app dependency graph._
 
 ## Notes
 

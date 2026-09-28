@@ -18,8 +18,8 @@ This file indexes the workflows in [workflows/](workflows/). Workflows are step-
 - Starting fresh, don't know where to begin → `new-session`
 - Repo (or a part of it) has no code yet and the user wants the backend/frontend skeleton created → `scaffold-project`
 - User names a specific folder → `analyze-folder`
-- User wants the backend solution understood → `analyze-solution` (see also [skills/analyze-module.md](skills/analyze-module.md) for a single module)
-- User wants a client app understood → [skills/analyze-frontend.md](skills/analyze-frontend.md) for all of `clients/`, [skills/analyze-client.md](skills/analyze-client.md) for one named app
+- User wants the backend solution understood → `analyze-solution` (see also [skills/analyze-module/SKILL.md](skills/analyze-module/SKILL.md) for a single module)
+- User wants a client app understood → [skills/analyze-frontend/SKILL.md](skills/analyze-frontend/SKILL.md) for all of `clients/`, [skills/analyze-client/SKILL.md](skills/analyze-client/SKILL.md) for one named app
 - User wants new behavior/code (backend, frontend, or both) → `implement-feature`
 - User wants a broad, read-only audit across the repo → `review-repository`
 - User explicitly wants docs regenerated/updated to match code → `sync-documentation`

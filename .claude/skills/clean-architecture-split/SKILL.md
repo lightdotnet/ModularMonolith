@@ -16,7 +16,7 @@ Move one backend module from a single `<Module>.Api` project to the four-project
 
 ## Workflow
 
-1. **Justify or stop**: with [dotnet-architect](../agents/dotnet-architect.md), decide whether the split earns its cost. If not, stop here — a well-organized single project is the norm.
+1. **Justify or stop**: with [dotnet-architect](../../agents/dotnet-architect.md), decide whether the split earns its cost. If not, stop here — a well-organized single project is the norm.
 2. **Carve-up plan** (dotnet-architect produces the exact move list):
    - `<Module>.Domain` ← entities, value objects, domain events, domain services, specifications.
    - `<Module>.Application` ← commands/queries + handlers, validators, application-service interfaces.
@@ -26,7 +26,7 @@ Move one backend module from a single `<Module>.Api` project to the four-project
 3. **Wire updates**: list every `ProjectReference` change — `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` point at the project holding the `DbContext` (now `<Module>.Infrastructure`), the composition-root host references `<Module>.Api`, `<Module>.Tests` `InternalsVisibleTo` follows the internal types.
 4. **Plan-approval gate**: a structural refactor touching many files — present the full plan and wait for explicit approval (root `CLAUDE.md` §2.7 / §2.9).
 5. **Execute incrementally**, building between steps.
-6. **Validate direction**: run [architecture-reviewer](../agents/architecture-reviewer.md) — `Api → Application → Domain`, `Infrastructure → Application, Domain`, nothing points back into `Api`.
+6. **Validate direction**: run [architecture-reviewer](../../agents/architecture-reviewer.md) — `Api → Application → Domain`, `Infrastructure → Application, Domain`, nothing points back into `Api`.
 
 ## Expected Outputs
 

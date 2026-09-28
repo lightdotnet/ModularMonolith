@@ -1,6 +1,6 @@
 <!--
 Template: Development Guide
-Used by: onboarding
+Used by: skills/generate-docs/SKILL.md, skills/sync-docs/SKILL.md
 Output location: src/docs/conventions/development-guide.md or clients/<app-name>/docs/conventions/development-guide.md
 Do not populate this file itself — copy its structure into the generated output.
 -->

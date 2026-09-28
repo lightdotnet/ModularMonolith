@@ -75,9 +75,18 @@ routes, backend contract surface, and the auth flow.
   decimals, ISO code trailing). The order list (`OrdersDataTable`) is responsive: the full column set
   on desktop collapses into one stacked card-style block per row (status/location/total/date) below
   the `sm` breakpoint, filterable by location and status.
-- **Approvals** (`/approvals`) against `Approval.Api` — a generic multi-level approval workflow: the
-  caller's pending decisions and own requests, plus (for `approval.requests.view_all`) an admin
-  view-all and a "Create test request" harness that builds an arbitrary-length approver chain.
+- **Approvals** (`/approvals/requests`, `/approvals/requests/[id]`, `/approvals/document-types`)
+  against `Approval.Api` — a generic multi-level approval workflow:
+  - *Requests* — open to any session. Tabs (each fetched on first activation) for decisions waiting
+    on the caller and the caller's own requests, with a create dialog that takes an optional document
+    type and an approver chain picked per level from employees with a linked Identity login; a caller
+    with `approval.requests.view_all` also gets an "All requests" tab with a "Create test request"
+    harness for arbitrary-length chains. Rows open a read-only history `Sheet`.
+  - *Request detail* — the request header plus an `ApprovalTimeline` of its approval steps and the
+    caller's decision actions. It is the deep-link target that notifications, leave requests, and
+    purchase orders point to.
+  - *Document types* — admin catalog (list/create/edit/delete) of the document types that categorize
+    requests.
 - **Leave requests** (`/leave-requests`, `/leave-requests/[id]`) against `LeaveManagement.Api` —
   self-service submission/tracking of the caller's own requests (no permission gate, only a session);
   create/edit/delete restricted to the viewer's own requests in an editable status, each requiring a
@@ -143,31 +152,24 @@ routes, backend contract surface, and the auth flow.
 | Purchase returns | `/purchasing/returns`, `/purchasing/returns/new`, `/purchasing/returns/[id]` | Gated `purchasing.returns.view`; `/new` requires `purchasing.returns.create` and a `?receiptId=`; credit gated `purchasing.returns.credit` |
 | Currencies | `/currency/currencies` | Gated `currency.currencies.view`; create/edit/activate-deactivate gated `currency.currencies.manage` |
 | Exchange rates | `/currency/exchange-rates` | Gated `currency.rates.view`; "Record rate" gated `currency.rates.manage` |
-| Approvals | `/approvals` | Gated `approval.requests.view`; view-all panel + "Create test request" gated `approval.requests.view_all` |
+| Approval requests | `/approvals/requests`, `/approvals/requests/[id]` | **No permission gate** — any session. `approval.requests.view_all` adds the "All requests" tab + "Create test request" |
+| Approval document types | `/approvals/document-types` | Gated `approval.document_types.view`; create/edit/delete gated `approval.document_types.{create,update,delete}` |
 | Leave requests | `/leave-requests`, `/leave-requests/[id]` | **No permission gate** — any session. `leave.requests.manage` unlocks an "All requests" tab + delete-any |
 
-Every `page.tsx` is a one-line re-export from a feature/module barrel. `constants/nav-items.ts`
-assembles `NAV_ITEMS` from each feature's own `NavItem`: `[home, Administration group, Organization
-group, /approvals, /leave-requests, Retail group, Settings]`, where the Retail group holds Location,
-Catalog, Orders, Inventory, Inventory Valuation, Transfers, the four Purchasing items (Suppliers,
-Purchase orders, Goods receipts, Purchase returns), and the two Currency items (Currencies, Exchange
-rates). `/administration`, `/organization`, `/retail`,
-`/settings` have no `page.tsx` and 404 if followed; being ungated they still show in the sidebar and
-⌘K palette.
+Page files, nav assembly, and the nav group/parent routes without a `page.tsx` are covered in
+[architecture.md § Layering](./architecture.md#layering) and
+[§ Module / Route Boundaries](./architecture.md#module--route-boundaries).
 
 ## Backend Integration
 
-Real, but partial. `lib/server/api-clients.ts` registers twelve backend clients — `Identity`,
-`Notifications`, `Organization`, `Location`, `Approval`, `LeaveManagement`, `Catalog`, `Orders`,
-`Inventory`, `Transfers`, `Purchasing`, `Currency` — each resolving its own `*_API_BASE_URL` env var
-(the base URL owns its full path prefix; `http.ts` prepends nothing). `lib/server/backend-api.ts`'s
-`createBackendApiClient(client)` factory produces twelve ready instances (`identityApi` … `locationApi`
-… `leaveManagementApi` … `catalogApi` … `ordersApi` … `inventoryApi` … `transfersApi` …
-`purchasingApi`, `currencyApi`); auth is attached by a request-handler pipeline (`bearerTokenHandler`
-reads the ambient session), not a passed token. The twelve backends are logically separate modules
-currently co-hosted in one process (`StarterKit.WebApi`).
-Error handling, the envelope contract, and the permanent-vs-transient refresh-failure distinction are
-covered in [architecture.md § Key Design Patterns](./architecture.md#key-design-patterns).
+Real, but partial. The client holds one named backend client per backend module, each with its own
+`<MODULE>_API_BASE_URL` env var (the base URL owns its full path prefix; `http.ts` prepends nothing)
+and a ready instance exported by `lib/server/backend-api.ts`'s `createBackendApiClient(client)`
+factory — the full list is in [development-guide.md § Environment](../conventions/development-guide.md#environment).
+Auth is attached by a request-handler pipeline (`bearerTokenHandler` reads the ambient session), not
+a passed token. The backends are logically separate modules currently co-hosted in one process
+(`StarterKit.WebApi`). Error handling, the envelope contract, and the permanent-vs-transient
+refresh-failure distinction are covered in [architecture.md § Key Design Patterns](./architecture.md#key-design-patterns).
 
 Endpoints this client consumes, by module:
 
@@ -179,8 +181,8 @@ Endpoints this client consumes, by module:
   `Identity` backend client) — see Auth Flow.
 - **user-profile** — `user_profile` (GET), `user_profile/token/{list,revoke}`.
 - **users** — `user/search`, `user` (GET-all / PUT / DELETE), get-by-id, create, force-password,
-  `user/get_domain_user/{userName}` (AD lookup). `user/search` also backs the three on-demand
-  user-search components.
+  `user/get_domain_user/{userName}` (AD lookup). `user/search` also backs the on-demand user-search
+  components.
 - **roles** — `role` (GET-all / POST / PUT / DELETE), get-by-id.
 - **permissions** — `permissions` (the definable-permission catalog for the Roles edit dialog).
 - **notifications** — `notification` (admin GET/POST), `user_notification` (self-scoped
@@ -192,7 +194,7 @@ Endpoints this client consumes, by module:
 - **employees** — `employee/search`, `employee/{id}` (GET/PUT/DELETE), `employee` (POST),
   `employee/{id}/org_unit` (POST) + `/{orgUnitId}` (PUT/DELETE), `employee/{id}/login`
   (POST/PUT/DELETE). `searchEmployees` also resolves employee names for the Leave requests "All
-  requests" tab.
+  requests" tab and backs the Approvals approver picker.
 - **locations** — `location/tree`, `location/{id}` (GET/PUT/DELETE), `location/{id}/move`,
   `location` (POST); `location_type` (GET/POST/PUT/DELETE).
 - **catalog** — `category/tree`, `category/{id}` (GET/PUT/DELETE), `category/{id}/children`,
@@ -245,19 +247,20 @@ Endpoints this client consumes, by module:
 - **approvals** — `modules/approvals/api/approvals.api.ts` (admin, `approval.requests.view_all`):
   `approval` (GET search / POST test request). `user-approvals.api.ts` (self-service, server-scoped
   by `UserApprovalController`): `approval/user` (GET / POST), `approval/user/{id}`,
-  `approval/user/{id}/decide`.
+  `approval/user/{id}/decide` (PUT). `document-types.api.ts`: `approval/document_type` (GET — optionally
+  active only / POST), `approval/document_type/{id}` (GET / PUT / DELETE).
 - **leave-requests** — `leave_request/search`, `leave_request/{id}` (GET/PUT/DELETE),
   `leave_request/approvers`, `leave_request` (POST). `employeeId` search filter is honored
   server-side only for `leave.requests.manage`.
 
 Every function returns a normalized `Result`/`ApiResponse` envelope via `call-guard.ts`. Gated pages
-use `lib/server/require-permission.tsx`; `/leave-requests` deliberately does not (see architecture.md
-§ Module/Route Boundaries). Permission-string constants live per-feature/module in
-`constants/permissions.ts`, matching each backend module's own format (e.g.
-`organization.companies.view`, `approval.requests.view_all`, `leave.requests.manage`,
-`currency.rates.manage`). Cost visibility
-across Inventory, Transfers, and Purchasing keys off the single Inventory permission
-`inventory.stock.view_cost` (`INVENTORY_STOCK_PERMISSIONS.ViewCost`).
+use `lib/server/require-permission.tsx`; the deliberately ungated ones do not (see
+[architecture.md § Module / Route Boundaries](./architecture.md#module--route-boundaries)).
+Permission-string constants live per-feature/module in `constants/`, matching each backend module's
+own format (e.g. `organization.companies.view`, `approval.requests.view_all`,
+`leave.requests.manage`, `currency.rates.manage`). Cost visibility across Inventory, Transfers, and
+Purchasing keys off the single Inventory permission `inventory.stock.view_cost`
+(`INVENTORY_STOCK_PERMISSIONS.ViewCost`).
 
 ## Auth Flow
 
@@ -289,7 +292,7 @@ Two entry points converge on the same session-establishment step:
    7-day cap (missing/expired ⇒ `/login?redirect=<path>`, clearing every chunk name), and redirect
    away from the public auth paths when already authenticated. The public-path check is an explicit
    allow-list (`/login`, `/login/microsoft/start`, `/login/microsoft/callback`), not a single
-   comparison. No token refresh or profile refetch anymore.
+   comparison. No token refresh or profile refetch.
 7. **`SessionGate`** (`components/layout/session-gate.tsx`, wrapping `AppShell`) drives freshness. On
    a hard navigation it calls `ensureFreshSessionAction({ refetchProfile: true })` behind a full-page
    overlay. That calls `refreshSessionIfNearExpiry()` (`REFRESH_LEAD_MS` = 5 min) which returns a
@@ -321,4 +324,4 @@ for inspection. `token-cipher.ts` uses Node's `crypto` and `proxy.ts` has no exp
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-21_
+_Last synced: 2026-09-28_

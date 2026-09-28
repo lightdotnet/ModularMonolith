@@ -12,26 +12,28 @@ ASP.NET Core (C#) **Modular Monolith** — one solution (`StarterKit.slnx`). `sr
 
 ## Modules
 
+Which module consumes which seam is recorded only in [docs/architecture/dependency-graph.md](docs/architecture/dependency-graph.md).
+
 | Module | Path | Responsibility |
 |---|---|---|
 | Identity | `src/Identity.Api` + `src/Identity.Contracts` + `src/Identity.Web` | Users, roles, claims; API token issuance (password/AD) + refresh + sessions; interactive cookie login and Microsoft Entra ID (OIDC) external login (`Identity.Web`), also relayed to separate-origin clients via a one-time PKCE code exchange (see `Identity.Web/Pages/Account/ExternalLoginStart.cshtml.cs`); SignalR hub handshake token; permission catalog. |
 | Notifications | `src/Notifications.Api` + `src/Notifications.Contracts` | Notification storage + real-time push over SignalR (admin + self-service surfaces); owns the welcome-mail handlers reacting to Identity's integration events. |
-| Organization | `src/Organization.Api` + `src/Organization.Contracts` | Companies, department/team hierarchy (`OrgUnit`), company-scoped employee levels, employees, and optional employee-to-Identity-login linking. Also exposes `IOrgDirectoryService`, a cross-module seam consumed by `LeaveManagement` and `Purchasing`. |
-| Approval | `src/Approval.Api` + `src/Approval.Contracts` | Generic, reusable multi-level approval-request engine — the calling module resolves the approver chain and drives the workflow via `IApprovalService`; not tied to any specific request type. Module-owned request types are reserved (`ApprovalRequestTypes`) so only the owning module can create them. Consumed by `LeaveManagement` and `Purchasing`. |
-| LeaveManagement | `src/LeaveManagement.Api` + `src/LeaveManagement.Contracts` | Self-service CRUD for employee leave requests — delegates the actual approval workflow entirely to `Approval` via `IApprovalService` and resolves approvers/display names via `Organization`'s `IOrgDirectoryService`; has no decide/approve endpoint of its own. |
-| Location | `src/Location.Api` + `src/Location.Contracts` | Self-referencing physical-location hierarchy (`Location`: Store/Warehouse/Terminal/Bin or any other data-driven type) plus a data-driven `LocationType` catalog replacing what would otherwise be a hardcoded enum — each type declares its own allowed-parent-type rule. Also exposes `ILocationDirectoryService`, a cross-module seam consumed by `Orders`, `Inventory`, `Transfers`, and `Purchasing`. |
-| Catalog | `src/Catalog.Api` + `src/Catalog.Contracts` | Self-referencing product-category tree (`Category`) plus `Product` CRUD/search/activate-deactivate/image management, priced via the shared `Money`/`VatPercentage` value objects in any active currency. Also exposes `ICatalogPricingService`, a cross-module seam consumed by `Orders`, `Transfers`, and `Purchasing`; consumes `Currency`'s `ICurrencyService`. |
-| Currency | `src/Currency.Api` + `src/Currency.Contracts` | The currency catalog (exactly one base currency, 0–4 decimal places) and an append-only exchange-rate history ("1 unit = N units of base"). Exposes `ICurrencyService`, a cross-module seam consumed by `Orders` and `Catalog`. |
-| Orders | `src/Orders.Api` + `src/Orders.Contracts` | Owns the sale lifecycle — draft cart through placement, payment reconciliation, fulfillment, or cancellation — via the `Order` aggregate and a separate `Payment` aggregate sharing one `OrdersDbContext`, plus a data-driven `OrderType` catalog (fee/payment types). An order lives in the base currency and converts a foreign-priced product once when a line is added, via `Currency`'s `ICurrencyService`. Consumes `Catalog`'s `ICatalogPricingService` and `Location`'s `ILocationDirectoryService`, plus `Inventory`'s `IInventoryService`, called synchronously (not via an integration event) to decrement/restore stock on placement/cancellation. Owns `OrphanedStockReconciliationService`, a background sweep restoring stock for never-placed orders that still hold a decrement. |
-| Inventory | `src/Inventory.Api` + `src/Inventory.Contracts` | Tracks on-hand stock and its moving-average value (base currency) per product per location via a `StockLevel` running total and an immutable `StockAdjustment` ledger, coordinated in one commit by the internal `StockLedger` domain service; enforces strict no-oversell. Cost visibility is gated by `inventory.stock.view_cost`; revaluation by `inventory.stock.revalue`. Consumes `Location`'s `ILocationDirectoryService` and exposes `IInventoryService`, the synchronous cross-module seam for stock movement used by `Orders`, `Transfers`, and `Purchasing`. |
-| Transfers | `src/Transfers.Api` + `src/Transfers.Contracts` | Stock transfers between two locations with an in-transit phase (`StockTransfer` aggregate: dispatch issues stock at the source, receipts land it at the destination at the frozen dispatch cost, close writes off the remainder, only a draft can be cancelled). Consumes `Inventory`'s `IInventoryService`, `Location`'s `ILocationDirectoryService`, and `Catalog`'s `ICatalogPricingService`; owns `TransfersPostingReconciliationService` for documents stuck mid-posting. |
-| Purchasing | `src/Purchasing.Api` + `src/Purchasing.Contracts` | Suppliers plus the buying documents — `PurchaseOrder` (approved through `Approval` exactly like `LeaveManagement`), immutable `GoodsReceipt`, and `PurchaseReturn` — moving stock through `Inventory`'s `IInventoryService`. Purchase costs are fixed to the shared kernel's default currency rather than read from `Currency` (see Known Debt). Consumes `Approval`, `Organization`, `Inventory`, `Location`, and `Catalog` contracts; owns an approval and a posting reconciliation sweep. |
+| Organization | `src/Organization.Api` + `src/Organization.Contracts` | Companies, department/team hierarchy (`OrgUnit`), company-scoped employee levels, employees, and optional employee-to-Identity-login linking. Exposes the `IOrgDirectoryService` seam. |
+| Approval | `src/Approval.Api` + `src/Approval.Contracts` | Generic, reusable multi-level approval-request engine — the calling module resolves the approver chain and drives the workflow via `IApprovalService`; not tied to any specific request type. Module-owned request types are reserved (`ApprovalRequestTypes`) so only the owning module can create them. |
+| LeaveManagement | `src/LeaveManagement.Api` + `src/LeaveManagement.Contracts` | Self-service CRUD for employee leave requests; delegates the approval workflow entirely to `Approval` and has no decide/approve endpoint of its own. |
+| Location | `src/Location.Api` + `src/Location.Contracts` | Self-referencing physical-location hierarchy (`Location`: Store/Warehouse/Terminal/Bin or any other data-driven type) plus a data-driven `LocationType` catalog replacing what would otherwise be a hardcoded enum — each type declares its own allowed-parent-type rule. Exposes the `ILocationDirectoryService` seam. |
+| Catalog | `src/Catalog.Api` + `src/Catalog.Contracts` | Self-referencing product-category tree (`Category`) plus `Product` CRUD/search/activate-deactivate/image management, priced via the shared `Money`/`VatPercentage` value objects in any active currency. Exposes the `ICatalogPricingService` seam. |
+| Currency | `src/Currency.Api` + `src/Currency.Contracts` | The currency catalog (exactly one base currency, 0–4 decimal places) and an append-only exchange-rate history ("1 unit = N units of base"). Exposes the `ICurrencyService` seam. |
+| Orders | `src/Orders.Api` + `src/Orders.Contracts` | Owns the sale lifecycle — draft cart through placement, payment reconciliation, fulfillment, or cancellation — via the `Order` aggregate and a separate `Payment` aggregate sharing one `OrdersDbContext`, plus a data-driven `OrderType` catalog (fee/payment types). An order lives in the base currency; stock is decremented/restored synchronously through `Inventory` on placement/cancellation, with an orphaned-stock reconciliation sweep as the backstop. |
+| Inventory | `src/Inventory.Api` + `src/Inventory.Contracts` | Tracks on-hand stock and its moving-average value (base currency) per product per location via a `StockLevel` running total and an immutable `StockAdjustment` ledger, coordinated in one commit by the internal `StockLedger` domain service; enforces strict no-oversell. Cost visibility is gated by `inventory.stock.view_cost`; revaluation by `inventory.stock.revalue`. Exposes `IInventoryService`, the synchronous seam for stock movement. |
+| Transfers | `src/Transfers.Api` + `src/Transfers.Contracts` | Stock transfers between two locations with an in-transit phase (`StockTransfer` aggregate: dispatch issues stock at the source, receipts land it at the destination at the frozen dispatch cost, close writes off the remainder, only a draft can be cancelled); owns a posting reconciliation sweep for documents stuck mid-posting. |
+| Purchasing | `src/Purchasing.Api` + `src/Purchasing.Contracts` | Suppliers plus the buying documents — `PurchaseOrder` (approved through `Approval`), immutable `GoodsReceipt`, and `PurchaseReturn` — moving stock through `Inventory`. Purchase costs are fixed to the shared kernel's default currency rather than read from `Currency` (see Known Debt). Owns an approval and a posting reconciliation sweep. |
 
-Plus shared/host projects: `src/Shared` (shared kernel, leaf), `src/Infrastructure` (cross-cutting infra), `src/Persistence` (EF Core concerns), `src/StarterKit.WebApi` (composition-root host).
+Plus shared/host projects: `src/Shared` (shared kernel, leaf), `src/Infrastructure` (cross-cutting infra), `src/Persistence` (EF Core concerns), `src/StarterKit.WebApi` (composition-root host), and `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` (design-time EF Core migration projects, one per relational provider — see [docs/conventions/migrations.md](docs/conventions/migrations.md)).
 
 ## Design Approach
 
-Backend design is **DDD-first**: model the domain deliberately before writing handlers — aggregate boundaries and invariants, entity vs. value object, domain events for cross-aggregate/cross-module reactions, and business rules living on the aggregate/entity rather than in a `CommandHandler` or service (an anemic model is a smell). `Organization`/`Approval`/`LeaveManagement`/`Location`/`Catalog`/`Currency`/`Orders`/`Transfers`/`Purchasing`'s `Domain/<Feature>/` folders are the pattern; each module doc's § Notable Conventions has the specifics. Stay pragmatic — plain enums where a value object adds nothing, `Light.Specification` only for reused/special-case predicates. Input-shape validation (required/length/enum-range checks) is not a domain rule — it belongs in FluentValidation on the incoming request, not the aggregate; `Location`'s `Domain/` is the reference for this split (see [docs/conventions/coding-conventions.md](docs/conventions/coding-conventions.md)).
+Backend design is **DDD-first**: model the domain deliberately before writing handlers — aggregate boundaries and invariants, entity vs. value object, domain events for cross-aggregate/cross-module reactions, and business rules living on the aggregate/entity rather than in a `CommandHandler` or service (an anemic model is a smell). The `Domain/<Feature>/` folders of every module except `Identity`/`Notifications` are the pattern; each module doc's § Notable Conventions has the specifics. Stay pragmatic — plain enums where a value object adds nothing, `Light.Specification` only for reused/special-case predicates. Input-shape validation (required/length/enum-range checks) is not a domain rule — it belongs in FluentValidation on the incoming request, not the aggregate; `Location`'s `Domain/` is the reference for this split (see [docs/conventions/coding-conventions.md](docs/conventions/coding-conventions.md)).
 
 ## Architectural Constraints ("do not" rules)
 
@@ -49,34 +51,19 @@ Backend design is **DDD-first**: model the domain deliberately before writing ha
 ## Conventions
 
 - [docs/conventions/coding-conventions.md](docs/conventions/coding-conventions.md) — build/tooling, style, structural/testing conventions.
-- [docs/conventions/development-guide.md](docs/conventions/development-guide.md) — local setup, common tasks, where to look for X.
+- [docs/conventions/development-guide.md](docs/conventions/development-guide.md) — local setup (incl. user secrets), running tests, common tasks, where to look for X.
 - [docs/conventions/docker-cli.md](docs/conventions/docker-cli.md) — local Postgres/Redis/pgAdmin via Docker.
-- [docs/conventions/migrations.md](docs/conventions/migrations.md) — EF Core migration CLI cheat sheet.
+- [docs/conventions/migrations.md](docs/conventions/migrations.md) — migration workflow, per-provider migration sets, EF Core migration CLI cheat sheet.
 
 ## Testing
 
-```bash
-dotnet test tests/Framework.Tests/Framework.Tests.csproj
-dotnet test tests/Identity.Tests/Identity.Tests.csproj
-dotnet test tests/Organization.Tests/Organization.Tests.csproj
-dotnet test tests/Approval.Tests/Approval.Tests.csproj
-dotnet test tests/LeaveManagement.Tests/LeaveManagement.Tests.csproj
-dotnet test tests/Location.Tests/Location.Tests.csproj
-dotnet test tests/Catalog.Tests/Catalog.Tests.csproj
-dotnet test tests/Currency.Tests/Currency.Tests.csproj
-dotnet test tests/Orders.Tests/Orders.Tests.csproj
-dotnet test tests/Inventory.Tests/Inventory.Tests.csproj
-dotnet test tests/Transfers.Tests/Transfers.Tests.csproj
-dotnet test tests/Purchasing.Tests/Purchasing.Tests.csproj
-```
+Test commands per project are in [docs/conventions/development-guide.md § Running Tests](docs/conventions/development-guide.md#running-tests).
 
 xUnit v3 runs on Microsoft.Testing.Platform. On the .NET 10 SDK `dotnet test` refuses the legacy VSTest path — if it errors with "opt-in to the new dotnet test experience", run the built test executable directly instead (`tests/<Name>/bin/Debug/net10.0/<Name>.exe`, filters: `-class <FQN>` / `-method <FQN>`).
-
-`Notifications` has no dedicated test project yet (see Known Debt).
 
 ## Known Debt
 
 See [docs/known-debt.md](docs/known-debt.md) — the single, current-state-only list of open backend technical debt/pending architecture decisions. Update it directly when debt is found or resolved; don't re-scatter items back into the architecture docs above.
 
 ---
-_Last synced: 2026-09-21_
+_Last synced: 2026-09-28_

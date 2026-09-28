@@ -17,15 +17,15 @@ Handle tactical Domain-Driven Design for one module's domain layer: get aggregat
 ## Workflow
 
 1. **Scope**: name the module and the single aggregate/feature. Don't model the whole module at once.
-2. **Delegate**: invoke [ddd-modeler](../agents/ddd-modeler.md) with the task and scope.
-3. **Persistence check**: if the model changes the schema, hand the shape to [efcore-specialist](../agents/efcore-specialist.md) for mapping — separate step, model first.
-4. **Layer-direction check**: if the change adds a dependency out of the domain, have [architecture-reviewer](../agents/architecture-reviewer.md) confirm the direction still holds.
+2. **Delegate**: invoke [ddd-modeler](../../agents/ddd-modeler.md) with the task and scope.
+3. **Persistence check**: if the model changes the schema, hand the shape to [efcore-specialist](../../agents/efcore-specialist.md) for mapping — separate step, model first.
+4. **Layer-direction check**: if the change adds a dependency out of the domain, have [architecture-reviewer](../../agents/architecture-reviewer.md) confirm the direction still holds.
 5. **Cross-module reach**: if a rule needs another module's data, stop — route it through that module's `Contracts` seam (a DI interface or a denormalized snapshot label), never a direct domain reference.
 6. **Report**: design or findings ranked — invariant/boundary correctness > model expressiveness > naming/style.
 
 ## Expected Outputs
 
-- An aggregate map (roots, boundaries, invariants) in the [domain-model template](../docs/templates/domain-model.md) shape, or a reviewed `Domain/` folder with ranked findings.
+- An aggregate map (roots, boundaries, invariants) in the [domain-model template](../../docs/templates/domain-model.md) shape, or a reviewed `Domain/` folder with ranked findings.
 - A clear statement of where each business rule lives and why.
 
 ## Best Practices

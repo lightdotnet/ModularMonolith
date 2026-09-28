@@ -17,7 +17,7 @@ Handle EF Core-specific tasks (model design, migration review, query performance
 ## Workflow
 
 1. **Identify the DbContext in scope**: locate the owning module explicitly; don't assume there's only one context in the backend.
-2. **Delegate**: invoke [efcore-specialist](../agents/efcore-specialist.md) with the specific task and scope.
+2. **Delegate**: invoke [efcore-specialist](../../agents/efcore-specialist.md) with the specific task and scope.
 3. **For migrations**: review the specific migration file(s) for destructive operations before considering them safe to apply.
 4. **For performance**: get the actual query/LINQ shape from the user or the code, not a hypothetical.
 5. **Watch for cross-module reach**: if a query needs data owned by another module, flag it — that should go through the owning module's contract, not a direct join across `DbContext`s/schemas.

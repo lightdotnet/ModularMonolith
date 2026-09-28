@@ -21,7 +21,7 @@ Implements an **already-approved** backend change under `src/`. This agent write
 
 ## When to Use
 
-- The "implement" step of [implement-feature](../workflows/implement-feature.md), [create-feature](../skills/create-feature.md), or [refactor](../skills/refactor.md), once the plan is approved.
+- The "implement" step of [implement-feature](../workflows/implement-feature.md), [create-feature](../skills/create-feature/SKILL.md), or [refactor](../skills/refactor/SKILL.md), once the plan is approved.
 - A small, well-scoped backend edit the user has explicitly asked for and approved.
 
 ## What to Inspect

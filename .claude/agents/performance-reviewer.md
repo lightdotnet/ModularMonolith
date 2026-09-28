@@ -17,7 +17,7 @@ tools: Glob, Grep, Read, Bash
 
 - User asks for a performance review of specific code or reports a slowness symptom.
 - Before shipping code expected to sit on a hot API path (e.g. an endpoint a client calls on every page load).
-- As part of [performance skill](../skills/performance.md) or [review-repository](../workflows/review-repository.md).
+- As part of [performance skill](../skills/performance/SKILL.md) or [review-repository](../workflows/review-repository.md).
 
 ## What to Inspect
 

@@ -1,6 +1,6 @@
 <!--
 Template: Architecture (Backend or one Client App)
-Used by: skills/review-architecture.md, agents/architecture-reviewer.md, agents/nextjs-architect.md
+Used by: skills/generate-docs/SKILL.md, skills/sync-docs/SKILL.md
 Output location: src/docs/architecture/architecture.md or clients/<app-name>/docs/architecture/architecture.md
 Do not populate this file itself — copy its structure into the generated output.
 -->

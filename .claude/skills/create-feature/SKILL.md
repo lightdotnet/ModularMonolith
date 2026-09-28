@@ -1,51 +1,33 @@
 ---
 name: create-feature
-description: Playbook for adding new functionality that may span a backend module (src/), one or more client apps (clients/), or both, from plan to incremental implementation.
+description: Playbook for a feature that spans a backend module (src/) and one or more client apps (clients/) — settle the API contract first, then coordinate backend and client work. The shared plan → approval → implement → review procedure lives in workflows/implement-feature.md.
 ---
 
 # Skill: Create Feature
 
 ## Purpose
 
-Guide the addition of new functionality without assuming repo-wide impact, and without skipping planning for anything non-trivial. Most features in this app touch both stacks (a backend endpoint + the client UI that calls it) — plan both sides together so the contract between them is settled before code is written. If the feature needs to reach more than one client app, confirm that explicitly rather than assuming.
+Cover what is specific to a full-stack feature: a backend endpoint plus the client UI that calls it, planned together so the contract between them is settled before code is written. Everything else — design-agent selection, the plan → approval gate, implementation via the `*-developer` agents, presenting the code back, and tests/contract checks/docs only on explicit request — follows [implement-feature](../../workflows/implement-feature.md) and is not repeated here.
 
 ## Inputs
 
 - A description of the desired feature/behavior.
-- Which side(s) it touches: a new/changed backend module, new/changed UI in one or more named client apps, or both (ask if unclear — including which client app(s), once `clients/` has more than one).
-- Any relevant existing documentation for the target scope: `src/CLAUDE.md`/`src/docs/` (backend), `clients/<app-name>/CLAUDE.md`/`clients/<app-name>/docs/` (clients). See the `/context-backend`/`/context-frontend`/`/context-full` commands ([commands/](../commands/)) to load the right set.
+- Which side(s) it touches and, if more than one app exists under `clients/`, which client app(s) — confirm explicitly rather than assuming.
 
 ## Workflow
 
-1. **Scope**: confirm which module(s) and/or client app(s) the feature touches. If it could plausibly need a new module vs. extending an existing one, ask.
-2. **Read minimally**: read only the files/projects directly relevant (target module, its direct dependencies, the relevant client app(s), existing similar features as reference).
-3. **Delegate design questions**:
-   - [dotnet-architect](../agents/dotnet-architect.md) for backend module/structural decisions and strategic DDD (bounded context, cross-module integration mechanism).
-   - [ddd-modeler](../agents/ddd-modeler.md) for the domain model of any backend feature that adds or reshapes one — aggregate boundaries, invariants, value objects, domain events. This is the default design step for backend domain work, not an afterthought.
-   - [api-designer](../agents/api-designer.md) if new/changed backend API surface is involved.
-   - [efcore-specialist](../agents/efcore-specialist.md) if data access is involved.
-   - [nextjs-architect](../agents/nextjs-architect.md) for a client app's routing/data-fetching/state decisions.
-4. **Settle the contract first** if the feature spans both stacks: agree the API shape (routes, DTOs, error cases) before writing client code against it — treat it as a small design step, not an afterthought.
-5. **Produce a plan**: outline the approach, files to add/change on each side (naming which client app(s) if more than one is touched), and any API-contract implications. Present it before writing code (see [workflows/implement-feature.md](../workflows/implement-feature.md)).
-6. **Wait for explicit approval** before implementing — this gate applies to every add/modify/feature request, not just large ones (see root `CLAUDE.md` §2.9).
-7. **Implement incrementally**, delegating the code changes to [dotnet-developer](../agents/dotnet-developer.md) (backend) and [nextjs-developer](../agents/nextjs-developer.md) (client app), each only after the plan is approved: backend first (confirming it builds) then each client against the real contract, or vice versa — small, reviewable steps rather than one large change across the whole stack at once. If the plan included tests, write that test code as part of this step.
-8. **Present the implemented code back to the user for review.** Stop here — don't automatically proceed to running tests or updating docs.
-9. **Run tests / check coverage only when asked**: once the user has reviewed the code and explicitly requests it, run the automated test suite and/or use [testing-reviewer](../agents/testing-reviewer.md) to check coverage of edge cases.
-10. **Verify the contract holds, if asked**: if both sides changed and the user wants it checked, run [api-contract-reviewer](../agents/api-contract-reviewer.md) to confirm every affected client actually matches what the backend now exposes.
-11. **Docs**: update documentation only if the user requests it, as a separate follow-up (see [sync-docs](sync-docs.md)).
+1. **Run [implement-feature](../../workflows/implement-feature.md) steps 1–3** (docs, scope, design agents).
+2. **Settle the contract first**: agree the API shape (routes, DTOs, error cases) with [api-designer](../../agents/api-designer.md) before any client code is planned against it. For a change to an existing endpoint, classify it as additive or breaking and list each affected client app.
+3. **Plan both sides together**: the plan (implement-feature step 5) names the backend files and each client app's files, the agreed contract, and the order of work.
+4. **Coordinate implementation** (after approval): backend first via [dotnet-developer](../../agents/dotnet-developer.md), confirmed to build, then each client against the real contract via [nextjs-developer](../../agents/nextjs-developer.md) — or client first only against the explicitly agreed contract. Keep the steps small and reviewable rather than one change across the whole stack at once.
+5. **Continue with [implement-feature](../../workflows/implement-feature.md) steps 8–11** (present the code; tests, [api-contract-reviewer](../../agents/api-contract-reviewer.md), and docs only when the user explicitly asks).
 
 ## Expected Outputs
 
-- An approved implementation plan, agreed before any code was written.
-- Working code changes scoped to the target module(s)/client app(s), presented back for review before tests/docs are touched.
-- A clear note of any API contract added/changed.
-- Test execution, contract verification, and documentation updates only once the user explicitly asks for each.
+- An agreed API contract, recorded in the approved plan before any client code was written.
+- Backend and client changes that match that contract, presented back for review per implement-feature.
 
 ## Best Practices
 
-- Don't introduce a new shared/building-blocks abstraction unless the feature genuinely needs to be reused across modules (backend) or across client apps.
-- Keep the change scoped to the target module(s); if it turns out to require touching another module's internals, stop and confirm with the user first.
-- Prefer extending existing patterns (in the module or in the client app) over inventing new ones.
 - Don't let a client guess at a contract that hasn't been implemented yet — either the backend exists first, or the contract is explicitly agreed before client work starts.
-- Never skip the plan-approval gate because a change "looks small" — the user asked for this checkpoint on every add/modify/feature request, not just big ones.
-- Never chain straight from "implementation done" into running the test suite or updating docs — both wait for the user's explicit say-so after they've reviewed the code.
+- A contract change ripples into every client that consumes the endpoint — check all of `clients/*`, not just the app named in the request (see [AI_CONTEXT.md § Full-Stack Safety Rules](../../AI_CONTEXT.md#full-stack-safety-rules)).

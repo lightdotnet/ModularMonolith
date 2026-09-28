@@ -70,32 +70,30 @@ the rule for a contributor:
 - **One consolidated `<name>.api.ts` per feature/module**, wrapping every backend call it makes via a
   `lib/server/backend-api.ts` instance + `lib/server/call-guard.ts`. Not one file per endpoint.
   `*-action.ts` Server Actions stay one file per action.
-- **Backend client selection.** Pick the `lib/server/backend-api.ts` instance for the backend the
-  endpoint belongs to — `identityApi` / `notificationsApi` / `organizationApi` / `locationApi` /
-  `approvalApi` / `leaveManagementApi` / `catalogApi` / `ordersApi` / `inventoryApi` / `transfersApi` /
-  `purchasingApi` / `currencyApi` (twelve, one per backend module, all pre-wired with bearer-token
-  auth). Don't
-  import `lib/server/http.ts` directly unless you're a documented pre-session-cookie exception
+- **Backend client selection.** Pick the `lib/server/backend-api.ts` instance for the backend module
+  the endpoint belongs to (one per module, all pre-wired with bearer-token auth — full list in
+  [development-guide.md § Environment](./development-guide.md#environment)). Don't import
+  `lib/server/http.ts` directly unless you're a documented pre-session-cookie exception
   (`token.api.ts`, `user-profile.api.ts`'s `getCurrentUser`). Add a backend by adding one
   `createBackendApiClient(...)` call, not a bespoke file.
 - **`call-guard.ts` helper choice**: `guardCall` / `guardResponseCall` for this backend (every
   response is envelope-wrapped); `guardRawCall` is almost never right — verify against a sibling
   endpoint.
-- **Permission strings live per-feature/module** in `constants/permissions.ts`, kept in sync by hand
-  with the backend's own constants (lowercase, dotted — e.g. `identity.users.view`,
-  `approval.requests.view_all`). Nav metadata follows the same ownership: one `constants/nav-item.ts`
-  per nav-bearing feature/module; `constants/nav-items.ts` only assembles them.
+- **Permission strings live per-feature/module** in `constants/`, kept in sync by hand with the
+  backend's own constants (lowercase, dotted — e.g. `identity.users.view`,
+  `approval.requests.view_all`). Nav metadata follows the same ownership: each nav-bearing
+  feature/module owns its `NavItem` in `constants/`; `constants/nav-items.ts` only assembles them.
 - **Page-level permission gate**: call `lib/server/require-permission.tsx`'s `requirePermission(permission)`
   at the top of the page, then `if (denied) return denied;` before the data fetch. Don't inline a
-  per-page session-resolve / check / `Empty` block. `modules/leave-requests` is the deliberate
-  exception (no view permission — see architecture.md).
+  per-page session-resolve / check / `Empty` block. The deliberately ungated pages are listed in
+  [architecture.md § Module / Route Boundaries](../architecture/architecture.md#module--route-boundaries).
 - **`lib/server/` vs `lib/shared/`**: `lib/server/*` is server-only (env, fetch wrapper, cookie
   crypto, JWT, refresh, the page gate); `lib/shared/*` is client-safe and used by 2+ features or
   layout chrome. Permission logic lives in `lib/shared/authorization.ts` (plain args); the
   `lib/server/authorization.ts` wrapper derives `userName` from the session.
-- **`app/` is routing-only** — every `page.tsx`/`layout.tsx` re-exports a feature/module component
-  or composes `AppShell` + a session call; no business logic. The one non-page route,
-  `app/api/health/route.ts`, is a static `204`.
+- **`app/` is routing-only** — no business logic; the allowed `page.tsx` shapes are described in
+  [architecture.md § Layering](../architecture/architecture.md#layering). The one non-page route
+  outside the login relay, `app/api/health/route.ts`, is a static `204`.
 - **Presentational shared components take no feature/module dependency** — `components/shared/*`,
   `components/toast/*`, `components/foundation/*`, `components/command/*`, `components/ui/*` import
   only each other, `lib/shared/utils`, and libraries.
@@ -128,4 +126,4 @@ first — the `src/`-rooted feature/module + barrel layout, the consolidated `<n
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-21_
+_Last synced: 2026-09-28_

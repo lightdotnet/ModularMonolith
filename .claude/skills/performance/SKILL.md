@@ -18,9 +18,9 @@ Diagnose and address concrete performance issues in scoped code — never a spec
 
 1. **Scope**: identify the specific hot path or symptom in question, and which side of the stack it's on.
 2. **Delegate diagnosis**:
-   - [performance-reviewer](../agents/performance-reviewer.md) for backend CLR/async/algorithmic issues.
-   - [efcore-specialist](../agents/efcore-specialist.md) if the bottleneck is a database query.
-   - [nextjs-architect](../agents/nextjs-architect.md) for frontend bundle size, hydration cost, or re-render issues.
+   - [performance-reviewer](../../agents/performance-reviewer.md) for backend CLR/async/algorithmic issues.
+   - [efcore-specialist](../../agents/efcore-specialist.md) if the bottleneck is a database query.
+   - [nextjs-architect](../../agents/nextjs-architect.md) for frontend bundle size, hydration cost, or re-render issues.
 3. **Distinguish measured vs. theoretical**: prefer fixes backed by actual profiling/benchmark evidence; flag unmeasured suggestions as such.
 4. **Weigh readability**: avoid micro-optimizations that meaningfully hurt clarity for marginal, unmeasured gains.
 5. **Report/implement**: present the diagnosis and fix; implement only after the user agrees the tradeoff is worth it.

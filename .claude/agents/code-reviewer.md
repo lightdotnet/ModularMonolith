@@ -17,7 +17,7 @@ tools: Glob, Grep, Read
 ## When to Use
 
 - User asks to "review this code," "review this PR/diff," or points at specific backend files/changes.
-- As part of [review-code](../skills/review-code.md) or [review-repository](../workflows/review-repository.md).
+- As part of [review-code](../skills/review-code/SKILL.md) or [review-repository](../workflows/review-repository.md).
 
 ## What to Inspect
 

@@ -49,8 +49,8 @@ authentication composition (`Authentication/ApiAuthenticationExtensions.AddApiAu
 (`src/Identity.Web/Program.cs`): cookie-authenticated Razor Pages only, no Bearer/policy/hub schemes,
 no `/api`. It composes the Identity assembly's platform + mediator services itself and scans only that
 assembly, so it has no cross-module integration-event handlers ([known-debt.md](../known-debt.md) D6).
-The two hosts hand-compose the Identity platform independently and have drifted
-([known-debt.md](../known-debt.md), structural).
+Both hosts register the same mediator pipeline behaviors; they differ only in assembly-scan scope, and
+the two compositions are still maintained separately ([known-debt.md](../known-debt.md), structural).
 
 ## Dependency Direction
 
@@ -239,20 +239,11 @@ The full route/permission inventory per module lives in each module doc's § Pub
 
 ## Known Architectural Risks / Debt
 
-Module-specific debt lives in each module doc's § Notable Conventions and the canonical
-[known-debt.md](../known-debt.md). Only genuinely cross-cutting risks not owned by a single module
-are tracked here:
-
-| Finding | Severity | Notes |
-|---|---|---|
-| `Persistence/MigrationSupport/MigrationsExtensions.AddMigrationsServices` registers mediator handlers via `Assembly.GetExecutingAssembly()` (the `Persistence` assembly) | Medium | Won't pick up handlers in module assemblies — revisit once a module with domain-event handlers relies on migration-time dispatch. |
-| `ApiControllerBase`/`VersionedApiController` (`src/Infrastructure/Endpoints/`) duplicate an identical `_mediator` lazy property | Low | Likely unavoidable — they derive from two different vendor base classes. |
-| `Identity.Web` and `StarterKit.WebApi` hand-compose the Identity platform + mediator independently and have drifted | Low–Medium | See [known-debt.md](../known-debt.md) (structural) — candidate fix is a shared `AddIdentityHost` composition helper. |
-| Inventory postings and their calling module's commit are two commits, not one transaction (`Orders`, `Transfers`, `Purchasing`) | Low–Medium | Recovered by idempotent retries plus each module's reconciliation sweep; residual risks are listed in [known-debt.md](../known-debt.md). |
+All open backend risks and debt — cross-cutting and module-specific — are tracked in [known-debt.md](../known-debt.md).
 
 ## Notes
 
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-21_
+_Last synced: 2026-09-28_

@@ -17,9 +17,9 @@ Handle frontend structural tasks (new route/feature shape, data-fetching approac
 ## Workflow
 
 1. **Identify the app and area in scope**: which `clients/<app-name>/`, and which route/feature under its `app/` (or `pages/`) this touches.
-2. **Delegate**: invoke [nextjs-architect](../agents/nextjs-architect.md) with the specific task and scope.
+2. **Delegate**: invoke [nextjs-architect](../../agents/nextjs-architect.md) with the specific task and scope.
 3. **Check existing patterns first**: look at that app's `lib/` (or equivalent) and neighboring routes/components before proposing a new data-fetching or state-management approach — reuse what's established in that app.
-4. **For anything calling the backend**: confirm the API contract with [api-designer](../agents/api-designer.md)/[api-contract-reviewer](../agents/api-contract-reviewer.md) rather than guessing the shape.
+4. **For anything calling the backend**: confirm the API contract with [api-designer](../../agents/api-designer.md)/[api-contract-reviewer](../../agents/api-contract-reviewer.md) rather than guessing the shape.
 5. **Report**: the recommended structure/pattern with rationale, and what (if anything) needs to change in shared frontend infrastructure (API client, layout, providers).
 
 ## Expected Outputs

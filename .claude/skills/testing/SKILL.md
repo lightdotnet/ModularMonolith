@@ -17,9 +17,9 @@ Assess and improve test coverage/quality for specific backend or frontend code, 
 ## Workflow
 
 1. **Scope**: identify the specific code/module/frontend area whose tests are in question.
-2. **Delegate review**: invoke [testing-reviewer](../agents/testing-reviewer.md) for a coverage/quality assessment.
+2. **Delegate review**: invoke [testing-reviewer](../../agents/testing-reviewer.md) for a coverage/quality assessment.
 3. **Prioritize public surface**: on the backend, prioritize coverage of a module's `Api`/`Application` entry points; on a client app, prioritize components/hooks with real logic over presentational ones.
-4. **If adding tests**: implement the highest-priority missing cases first, following existing test conventions (framework, naming, mocking style) rather than introducing a second stack (e.g. don't add Vitest alongside an existing Jest setup without reason).
+4. **If adding tests**: propose the highest-priority missing cases as a plan and wait for the user's approval (root `CLAUDE.md` §2.9); once approved, hand the writing to [dotnet-developer](../../agents/dotnet-developer.md) (backend) / [nextjs-developer](../../agents/nextjs-developer.md) (client app), following existing test conventions (framework, naming, mocking style) rather than introducing a second stack. Run the test suite only when the user explicitly asks for it.
 5. **Report**: coverage summary, prioritized gaps, and (if implemented) what was added.
 
 ## Expected Outputs

@@ -11,72 +11,72 @@ Feature-folder layering, split across two top-level roots under `clients/admin/s
 
 ```text
 src/
-  app/                  routing only. Every page.tsx is a one-line re-export from a feature/module
-                         barrel — no logic in app/. Root + (dashboard) error.tsx boundaries branch on
+  app/                  routing only — no logic. Each page.tsx is either a re-export of a
+                         feature/module barrel's page component or, for a dynamic route, a thin
+                         wrapper that unwraps/forwards the route's params (or searchParams) to one.
+                         Root + (dashboard) error.tsx boundaries branch on
                          isRecoverableDeploymentError (deploy-stale-tab self-recovery); (dashboard)/
                          loading.tsx is a centered spinner cascading to nested routes; api/health/
-                         route.ts is a static 204 liveness probe. /administration, /organization,
-                         /retail, /settings are nav-only placeholders with no page.tsx.
+                         route.ts is a static 204 liveness probe; login/microsoft/{start,callback}/
+                         route.ts are the Microsoft login relay's Route Handlers. Nav-only group
+                         routes have no page.tsx (see Module / Route Boundaries).
   features/home/         the one feature not moved under modules/ — components/, constants/nav-item.ts,
                          index.ts; no api/ of its own (calls other modules' barrels/actions).
   modules/<domain>/<name>/
-                         identity/{auth,user-profile,users,roles}, notifications (flat, no nesting),
-                         organization/{companies,departments,employees}, location, catalog, orders,
-                         inventory, transfers, purchasing/{suppliers,purchase-orders,goods-receipts,
-                         purchase-returns,common}, currency/{currencies,exchange-rates,common},
-                         approvals, leave-requests. Each owns: api/ (one
+                         one folder per feature — nested under a domain folder where one backend
+                         module spans several features, flat where it doesn't. Each owns: api/ (one
                          consolidated <name>.api.ts + one file per *-action.ts Server Action),
                          components/, optional types/ (single-consumer, or a barrel-re-exported feature
-                         DTO), optional constants/ ({permissions,nav-item}.ts), and an index.ts barrel —
-                         the only sanctioned cross-module import surface. purchasing/common holds the
-                         Purchasing-wide shared pieces (permissions, enums, validation, status badges,
-                         lookup hints) and currency/common the Currency-wide permissions, limits, and
-                         URL-param parsers, rather than a feature of their own.
+                         DTO), optional constants/ (permissions, nav item), and an index.ts barrel —
+                         the only sanctioned cross-module import surface. A domain-level common/
+                         holds that domain's shared pieces (permissions, enums, limits, helpers)
+                         rather than a feature of its own.
   components/
-    ui/                  shadcn-CLI primitives + a few hand-written/hand-modified additions
-                         (native-select, popover, command, combobox, button-group). Leaf layer.
-    foundation/          use-listbox / use-virtual-list / floating-overlay (serve components/command/*
-                         and the virtualized DataTable body) + portal-container.ts (React Context
-                         letting a Popover portal into an open Dialog's own DOM node).
+    ui/                  shadcn-CLI primitives plus a few hand-written/hand-modified additions. Leaf
+                         layer.
+    foundation/          low-level listbox / virtual-list / floating-overlay hooks serving
+                         components/command/* and the virtualized DataTable body, plus
+                         portal-container.ts (React Context letting a Popover portal into an open
+                         Dialog's own DOM node).
     command/             Cmd/Ctrl+K palette; reached via components/shared/search-box.tsx.
-                         CommandPaletteProvider has no consumer.
-    layout/             app chrome — topbar, sidebar, app-shell, breadcrumbs, user-menu, session-gate
-                         (+ session-loading / session-unreachable overlays), deployment-recovery-notice.
-    theme/             theme + accent-color providers/pickers, use-has-mounted.
-    shared/            cross-feature building blocks with no feature knowledge: data-table/,
-                         search-box.tsx, access-denied.tsx, local-date-time.tsx, object-viewer/ (unused).
-    toast/             themed sonner wrapper (notifySuccess / notifyError).
-  hooks/               use-sidebar, use-scrolled, use-guarded-action, use-action-success-toast.
+    layout/              app chrome — topbar, sidebar, shell, breadcrumbs, user menu, the session gate
+                         and its overlays, the deploy-recovery notice.
+    theme/               theme + accent-color providers/pickers.
+    shared/              cross-feature building blocks with no feature knowledge (data-table/, the
+                         search box, access-denied, hydration-safe rendering helpers).
+    toast/               themed sonner wrapper (notifySuccess / notifyError).
+  hooks/                 app-wide client hooks (sidebar/scroll state, guarded-action and
+                         action-success-toast helpers).
   lib/
-    server/            server-only (import "server-only" on line 1 of all 18 files): http.ts,
-                         call-guard.ts, config.ts, the session + cookie-codec + JWT + refresh chain,
-                         api-clients.ts / backend-api.ts (bearer-token handler pipeline),
-                         require-permission.tsx (the one .tsx module here — returns JSX).
-    shared/            client-safe helpers: utils.ts (cn), menu.ts, authorization.ts,
-                         dedupe-claims.ts, user-display.ts, deployment-recovery.ts ("use client").
+    server/              server-only — every file under lib/server/ starts with import "server-only":
+                         the fetch wrapper (http.ts) and its request-handler pipeline, call-guard.ts,
+                         config.ts, the backend-client registry (api-clients.ts / backend-api.ts), the
+                         session + cookie-codec + JWT + refresh chain, and the permission helpers
+                         including require-permission.tsx (the page gate, returns JSX).
+    shared/              client-safe helpers (cn, menu building, permission logic, display/status
+                         helpers); deployment-recovery.ts ("use client") is the browser-only outlier.
   constants/nav-items.ts  assembly only — imports each feature/module's own NavItem (by direct file
                          path, not barrel — see Dependency Direction) and composes NAV_ITEMS.
-  types/               api.ts, claim.ts, nav.ts, session.ts.
-  proxy.ts             thin auth gate only — decrypt / validate / hydrate the session cookie(s),
+  types/                 app-wide shared types (API envelope, claims, nav, session).
+  proxy.ts               thin auth gate only — decrypt / validate / hydrate the session cookie(s),
                          enforce the hard 7-day session cap, keep /login unreachable once authenticated.
                          No token refresh, no feature/module imports.
 ```
 
-`app/*` pages are pure re-exports from a feature/module barrel; each feature/module owns its own
-`api/` + `components/` + optional `types/`/`constants/`, exposed through one `index.ts`.
 `components/layout/*` and `components/theme/*` (app chrome) compose `components/ui/*` +
 `hooks/*` + `lib/shared/*`; `components/shared/*` and `components/toast/*` are cross-feature,
 feature-agnostic building blocks at the same layer; `components/ui/*` is the leaf primitive layer.
 
-**Nav tree assembly**: each nav-bearing feature/module owns one `NavItem` in its `constants/nav-item.ts`
-(label, href, icon, and — where gated — the permission). `constants/nav-items.ts` only *assembles*
-these into `NAV_ITEMS`, declaring itself just the three group nodes (`/administration`, `/organization`,
-`/retail` — each spans multiple modules) and the `/settings` leaf (no owning feature). Final order:
-`[home, Administration group, Organization group, /approvals, /leave-requests, Retail group,
-/settings]` — `/approvals` and `/leave-requests` are top-level leaves, not nested in a group.
-`NavItem.exact` marks an item active only on an exact path match, for a parent whose sibling lives
-under its path (Inventory vs. `/inventory/valuation`). `Sidebar` and the topbar `SearchBox` both filter
-this same tree client-side via `lib/shared/menu.ts`'s `buildVisibleMenu(NAV_ITEMS, can)`.
+**Nav tree assembly**: each nav-bearing feature/module owns its `NavItem` in its `constants/`
+(label, href, icon, and — where gated — the permission); a module may own a parent node with its own
+children (`APPROVALS_NAV_ITEM` is `/approvals` over "Requests" and "Document types").
+`constants/nav-items.ts` only *assembles* these into `NAV_ITEMS`, declaring itself just the three
+cross-module group nodes (`/administration`, `/organization`, `/retail`) and the `/settings` leaf (no
+owning feature). Final order: `[home, Administration group, Organization group, Approvals, Leave
+requests, Retail group, Settings]` — Approvals and Leave requests sit at top level, not inside a
+group. `NavItem.exact` marks an item active only on an exact path match, for a parent whose sibling
+lives under its path (Inventory vs. `/inventory/valuation`). `Sidebar` and the topbar `SearchBox` both
+filter this same tree client-side via `lib/shared/menu.ts`'s `buildVisibleMenu(NAV_ITEMS, can)`.
 
 ## Dependency Direction
 
@@ -111,8 +111,9 @@ a feature/module's index.ts barrel             the only sanctioned cross-module 
 components/layout/*, components/theme/*         app chrome. Reaches into three specific feature files
         ^                                        directly (topbar -> notification-bell, user-menu ->
         |                                        logout-action, session-gate -> ensure-fresh-session-action).
-app/**/{page,layout}.tsx, app/api/health,      routing — pure re-exports from a barrel, or (proxy.ts)
-src/proxy.ts                                    direct lib/server/* calls only.
+app/**/{page,layout}.tsx, app/api/health,      routing — barrel re-exports or thin params wrappers
+src/proxy.ts                                    (see Layering), or (proxy.ts) direct lib/server/* calls
+                                                only.
 ```
 
 No cycles found among internal imports.
@@ -139,11 +140,10 @@ No cycles found among internal imports.
 
 - **Auth-token injection via a request-handler pipeline.** `http.ts` has no `accessToken` option — it
   takes `handlers` run before `fetch`. `lib/server/backend-api.ts`'s `createBackendApiClient(client)`
-  factory pre-wires `bearerTokenHandler` (reads the ambient session) and a fixed backend client; twelve
-  instances (`identityApi`/`notificationsApi`/`organizationApi`/`locationApi`/`approvalApi`/
-  `leaveManagementApi`/`catalogApi`/`ordersApi`/`inventoryApi`/`transfersApi`/`purchasingApi`/
-  `currencyApi`) cover the twelve backend modules. Pre-session call sites pass
-  `explicitBearerTokenHandler(token)` instead. `http.ts` never imports sessions.
+  factory pre-wires `bearerTokenHandler` (reads the ambient session) and a fixed backend client; it
+  exports one instance per backend module (the full list is in
+  [development-guide.md § Environment](../conventions/development-guide.md#environment)). Pre-session
+  call sites pass `explicitBearerTokenHandler(token)` instead. `http.ts` never imports sessions.
 
 - **Session freshness moved off blocking middleware into a client-driven gate.** `proxy.ts` now only
   enforces the 7-day cap and the `/login` redirect. `components/layout/session-gate.tsx` (mounted in
@@ -175,9 +175,9 @@ No cycles found among internal imports.
 - **Shared `requirePermission` / `AccessDenied` page gate.** `lib/server/require-permission.tsx`
   resolves the session (redirecting to `/login` if none), checks the permission, and returns
   `{ session, denied }`; a page does `if (denied) return denied;` before its own fetch. Every gated
-  page uses this. `modules/leave-requests` is the deliberate exception — its pages call
-  `resolveSession()` directly (no view permission exists); `LEAVE_REQUESTS_PERMISSIONS.Manage` is
-  checked ad hoc to branch UI, not to gate the route.
+  page uses this. The deliberately ungated pages (see [Module / Route Boundaries](#module--route-boundaries))
+  call `resolveSession()` directly and check their secondary permission ad hoc to branch UI, not to
+  gate the route.
 
 - **Secondary permissions branch the UI; the backend nulls what a viewer may not see.** Beyond the
   route gate, pages call `hasPermission(session, …)` (`lib/server/authorization.ts`) to show or hide
@@ -191,24 +191,28 @@ No cycles found among internal imports.
   detail on open (via a `get-*-detail-action.ts`) rather than trusting the row they were opened with,
   which would silently wipe those arrays on save. The picklist itself is fetched the same way (on
   open, not preloaded as a page prop). **Lazy tab-scoped variant**: `edit-employee-dialog.tsx` fetches
-  the org-unit tree / level picklists only the first time the "Departments & Teams" tab is activated.
+  the org-unit tree / level picklists only the first time the "Departments & Teams" tab is activated;
+  `ApprovalsTabs` likewise fetches each tab's list only on its first activation.
 
-- **Three feature-owned duplicates of the on-demand user-search combobox, by design.**
-  `notifications`, `organization/employees`, and `approvals` each re-implement the same
-  debounced (300ms), min-3-char `searchUsersAction`-backed picker rather than sharing one — all three
-  need a Server Action from `identity/users`, and `components/shared/*` may not depend on a
-  feature/module. `leave-requests`'s approver picker is a different shape (a plain `NativeSelect` over
-  a small pre-fetched candidate list), not a fourth instance; the Purchasing submit-for-approval
-  dialog is the same `NativeSelect` shape over `purchase_order/approvers`, fetched on open.
+- **Feature-owned duplicates of the on-demand people-search combobox, by design.** `notifications`
+  and `organization/employees` each re-implement the same debounced (300ms), min-3-char
+  `searchUsersAction`-backed user picker, and `approvals`' `ApproverSelect` is the same shape backed by
+  `searchEmployeesAction` restricted to employees with a linked Identity login (so an approver step
+  gets both an employee id and a user id) — rather than sharing one, because each needs a Server
+  Action from another module and `components/shared/*` may not depend on a feature/module.
+  `leave-requests`'s approver picker is a different shape (a plain `NativeSelect` over a small
+  pre-fetched candidate list), not another instance; the Purchasing submit-for-approval dialog is the
+  same `NativeSelect` shape over `purchase_order/approvers`, fetched on open.
 
 - **Feature-owned duplicates of an async product-search combobox.** `orders`, `inventory`,
   `transfers`, and `purchasing/purchase-orders` each carry their own `ProductSelect` — debounced
   (300ms), no min-char gate, backed by `searchProductsAction` against `Catalog`'s `product` search
   (`status: Active` only) — rather than sharing one, extending the same "feature-owned small picker
-  over a shared primitive" reasoning as the user-search comboboxes above. `inventory`'s copy documents
-  itself as a copy of `orders`' copy (which documents itself as a copy of the `organization/employees`
-  `UserSelect` pattern), not an independently-designed component. The location pickers in
-  `inventory`, `transfers`, and `purchasing/purchase-orders` are likewise per-feature copies.
+  over a shared primitive" reasoning as the people-search comboboxes above. `inventory`'s copy
+  documents itself as a copy of `orders`' copy (which documents itself as a copy of the
+  `organization/employees` `UserSelect` pattern), not an independently-designed component. The
+  location pickers in `inventory`, `transfers`, and `purchasing/purchase-orders` are likewise
+  per-feature copies.
 
 - **Bounded server-side lookups feeding a select, with a graceful fallback.** A select whose options
   come from another module's list (suppliers for the Purchasing pages, currencies for the Catalog
@@ -263,7 +267,7 @@ No cycles found among internal imports.
   `modules/catalog/components/product-panel.tsx` is the second, and the first that submits a
   `useActionState`-backed form — it merges what would otherwise be separate create/edit
   dialogs (plus inline image-URL management) into one right-side panel. Follows the same
-  controlled-form-state-alongside-`useActionState` + bumped-remount-`key` pattern below; `Sheet` vs.
+  controlled-form-state-alongside-`useActionState` + bumped-remount-`key` pattern above; `Sheet` vs.
   `Dialog` is a per-screen call (a wider/richer form reads better as a panel), not a hard rule.
 
 - **Generic presentational `DataTable<TData>`.** `components/shared/data-table/` composes a toolbar,
@@ -334,12 +338,17 @@ Two route areas: `(dashboard)` (wraps every authenticated page with `resolveSess
 + `AppShell`) and the ungrouped `/login` (root layout only, no shell). One non-page route,
 `app/api/health/route.ts`, is excluded from the `proxy.ts` matcher.
 
-Every leaf under the "Administration"/"Organization"/"Retail" groups and `/approvals` is gated on that
-feature's own `View`/`Read` permission via `requirePermission()`. `/leave-requests` (and `/leave-requests/[id]`)
-is deliberately ungated — only a valid session; `leave.requests.manage` is checked ad hoc inside the
-page to unlock the "All requests" tab and delete-any, never as a route gate. `/administration`,
-`/organization`, `/retail`, `/settings` have no `page.tsx` and 404 if followed; being ungated, they
-still appear in the sidebar and ⌘K palette.
+Every leaf under the "Administration"/"Organization"/"Retail" groups, and `/approvals/document-types`,
+is gated on that feature's own view permission via `requirePermission()`. Two areas are deliberately
+ungated — only a valid session:
+
+- `/approvals/requests` (and `/approvals/requests/[id]`) — anyone can have approvals routed to them;
+  `approval.requests.view_all` is checked ad hoc only to add the "All requests" tab.
+- `/leave-requests` (and `/leave-requests/[id]`) — `leave.requests.manage` is checked ad hoc to
+  unlock the "All requests" tab and delete-any, never as a route gate.
+
+`/administration`, `/organization`, `/approvals`, `/retail`, `/settings` are nav group/parent nodes
+with no `page.tsx` and 404 if followed; being ungated, they still appear in the sidebar and ⌘K palette.
 
 Feature/module isolation is enforced by convention (barrel-only cross-module imports) with a reasoned
 exception set — see [dependency-graph.md](./dependency-graph.md#circular-references). A genuine
@@ -358,13 +367,10 @@ exception set — see [dependency-graph.md](./dependency-graph.md#circular-refer
   (`portal-container.ts`) the Dialog/Popover nesting fix.
 - `components/shared/data-table/*` — the generic list-table block; consumed by every list-bearing
   module with different search/sort/pagination wiring.
-- `components/shared/{search-box,access-denied,local-date-time}.tsx`, `components/shared/object-viewer/*`
-  (unused), `components/toast/*` — feature-agnostic; `access-denied.tsx` is returned by
-  `require-permission.tsx`, not imported by feature code.
-- `lib/shared/*` — client-safe helpers (`cn`, `menu.ts`, `authorization.ts`, `dedupe-claims.ts`,
-  `user-display.ts`); `deployment-recovery.ts` is the browser-only outlier.
-- `lib/server/*` — the server-only building blocks every `api/` layer sits on (`http.ts`,
-  `call-guard.ts`, `config.ts`, the session/refresh chain, `require-permission.tsx`).
+- The rest of `components/shared/*` and `components/toast/*` — feature-agnostic; `access-denied.tsx`
+  is returned by `require-permission.tsx`, not imported by feature code.
+- `lib/shared/*` and `lib/server/*` — the client-safe helpers and the server-only building blocks
+  every `api/` layer sits on (see [Layering](#layering)).
 - Permission-string constants and `NavItem` metadata are **not** shared kernel — each lives in its
   owning feature/module's `constants/`, assembled (not owned) by `constants/nav-items.ts`.
 
@@ -375,11 +381,10 @@ none exists. `pnpm-workspace.yaml` only configures build-script approval, not a 
 
 | Finding | Severity | Notes |
 |---|---|---|
-| `modules/approvals` doc coverage lags the module's current shape | Medium (doc debt) | Prose above still describes the pre-split module (single `/approvals` page, no document-type catalog, no `/approvals/requests/{id}` detail page or `ApprovalTimeline`, `approver-select` searching Identity users rather than linked employees). The api-file split (`approvals.api.ts` / `user-approvals.api.ts`) and lazy `ApprovalsTabs` loading *are* reflected; the rest needs a dedicated `analyze-client` pass. |
 | `proxy.ts` uses Node's `crypto` with no explicit runtime pin | Low–Medium (verify) | `token-cipher.ts` (transitive via `cookie-codec.ts`) uses `createCipheriv`/`createDecipheriv`, unsupported on the classic Edge runtime. `proxy.ts` has no `export const runtime = "nodejs"`; behaviour is consistent with the `proxy.ts` convention defaulting to Node, but that's inferred, not pinned. |
 | SignalR connects browser→backend directly, bypassing Next entirely | Medium (unverified) | Assumes backend CORS is configured for the admin origin — not verified anywhere in this client's code. If misconfigured, the handshake fails and retries silently every 30s. |
 | `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` must be constant across deploys | Low (mitigated) | Unset ⇒ a fresh key per `next build` ⇒ every deploy rotates all Server Action IDs and open tabs hit "Failed to find Server Action". Deploy scripts hoist it from the preserved `standalone/.env`; `deployment-recovery.ts` recovers when churn happens; still must be generated once per server and never changed. |
-| Nav items reference routes with no `page.tsx` (`/settings`, `/administration`, `/organization`, `/retail`) | Low | Group/placeholder nodes 404 if followed; ungated, so they surface in the sidebar and ⌘K palette. `/leave-requests` is ungated *by design*, not omission, and has a real page. |
+| Nav items reference routes with no `page.tsx` (`/settings`, `/administration`, `/organization`, `/approvals`, `/retail`) | Low | Group/parent/placeholder nodes 404 if followed; ungated, so they surface in the sidebar and ⌘K palette. `/approvals/requests` and `/leave-requests` are ungated *by design*, not omission, and have real pages. |
 | Detail-route breadcrumb shows a generic label for the id segment | Low (cosmetic) | `breadcrumbs.tsx` is path-based against `NAV_ITEMS`; `isOpaqueId()` renders `"Details"` for a UUID/hex/numeric segment. No channel for a detail page to inject a real crumb label. |
 | Localized timestamps use the hydration-safe `LocalDateTime` only in `approvals`/`notifications`/`leave-requests` | Low | Other client-rendered `toLocaleString()` sites (`session-lifecycle.tsx`, `object-viewer/utils.ts`) still use the bare form. |
 | Backend list endpoints never populate `Roles`/`Claims` on the DTO | Low (worked around) | Only `GetByIdAsync` populates them. Both edit dialogs re-fetch on open; any future list-reading feature would silently get empty arrays if it forgot to. |
@@ -401,4 +406,4 @@ none exists. `pnpm-workspace.yaml` only configures build-script approval, not a 
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-21_
+_Last synced: 2026-09-28_

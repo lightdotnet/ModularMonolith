@@ -20,6 +20,11 @@ Run from `src/Migrations/{Sqlite,PostgreSQL,MSSQL}` — pick the provider direct
 dotnet ef database update --context NotificationDbContext
 ```
 
+## Migration workflow
+
+- **During development**, each schema change gets one incremental migration, added to `src/Migrations/MSSQL` only (named after the change, e.g. `AddLeaveRequestUserIdStatusIndex`). The other providers are not updated per change.
+- **A full from-scratch regenerate** — deleting a module's migration chain and generating a single baseline named `Create<Module>Schema` (e.g. `CreateLocationSchema`; `Notifications` uses `CreateNotificationSchema`), for MSSQL and/or the other providers — happens only on the user's explicit command, once the module is complete. Until then a provider's baseline may lag the MSSQL chain; the current per-provider state is in § Migration sets.
+
 ## Migration sets
 
 Each provider directory under `src/Migrations/` holds one folder per module. Each module's `<Module>ContextInitialiser` applies its migrations (`MigrateDatabaseAsync`) and each provider's `Program.cs` calls the initialisers; modules with reference data also call `TrySeedAsync`. Seed rows are written at runtime by the initialisers, never by migrations.

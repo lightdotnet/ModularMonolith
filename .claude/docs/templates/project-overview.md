@@ -1,6 +1,6 @@
 <!--
 Template: Project Overview
-Used by: skills/analyze-project.md
+Used by: skills/analyze-project/SKILL.md
 Output location: src/docs/architecture/modules/<ModuleName>/<ProjectName>/overview.md
 Do not populate this file itself — copy its structure into the generated output.
 -->
@@ -22,7 +22,7 @@ _Key public types/members exposed by this project. Summarize, don't reproduce fu
 
 ## Depended On By
 
-_Other projects within the same module (or, if reached via the module's `Api`, by other modules/client apps). A direct reference from outside the module to anything but `Api` is a boundary violation — flag it._
+_Other projects within the same module. Other modules may depend only on the module's `<ModuleName>.Contracts` project; client apps only over HTTP. A reference from another module to any project of this module other than its `<ModuleName>.Contracts` is a boundary violation — flag it._
 
 ## Target Framework(s)
 
