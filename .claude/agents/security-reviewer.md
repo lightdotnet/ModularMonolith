@@ -1,6 +1,6 @@
 ---
 name: security-reviewer
-description: Use for security review across both the backend (src/) and any client app (clients/<app-name>/) — vulnerabilities, secrets, unsafe deserialization, injection risks, auth/authz gaps between a client and the ASP.NET Core API, unsafe defaults, XSS/secret-leakage risks in a client bundle. Invoke for "security review," "check for vulnerabilities," or before merging code that handles input, auth, or crypto. Defensive/review use only.
+description: Use for security review across both the backend (src/) any client app (clients/<app-name>/), and the server-rendered web host src/StarterKit.WebMvc/ (cookie session, token handling, antiforgery, open redirects) — vulnerabilities, secrets, unsafe deserialization, injection risks, auth/authz gaps between a client and the ASP.NET Core API, unsafe defaults, XSS/secret-leakage risks in a client bundle. Invoke for "security review," "check for vulnerabilities," or before merging code that handles input, auth, or crypto. Defensive/review use only.
 tools: Glob, Grep, Read
 ---
 

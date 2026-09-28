@@ -17,11 +17,28 @@ dotnet build StarterKit.slnx
 dotnet run --project src/StarterKit.WebApi/StarterKit.WebApi.csproj
 ```
 
-The default `http` launch profile binds plain HTTP on `http://localhost:5000`, which is the primary Development endpoint — `Program.cs` skips `UseHttpsRedirection()` when `IsDevelopment()`, so no HTTPS listener is needed for local work (this also lets a server-to-server client such as the Next.js admin BFF call the API without hitting the untrusted dev certificate). The `https` profile additionally binds `https://localhost:5001` (ASP.NET dev certificate) for anyone who wants it; outside Development the HTTPS redirect is active as normal.
+The default `http` launch profile binds plain HTTP on `http://localhost:5000`, which is the primary Development endpoint — `Program.cs` skips `UseHttpsRedirection()` when `IsDevelopment()`, so no HTTPS listener is needed for local work (this also lets a server-to-server client such as the Next.js admin BFF or `StarterKit.WebMvc` call the API without hitting the untrusted dev certificate). The `https` profile additionally binds `https://localhost:5001` (ASP.NET dev certificate) for anyone who wants it; outside Development the HTTPS redirect is active as normal.
 
 `src/StarterKit.WebApi/Program.cs` boots the host: configures Serilog, calls `ConfigureServices`, wires MVC/JSON options, then `ConfigurePipelines()` + `MapEndpoints(...)`. By default (`appsettings.json`) `DbProvider` is `MSSQL`, pointing `ConnectionStrings:DefaultConnection` at a local `(localdb)\mssqllocaldb` instance — switch to `InMemory`/`Sqlite`/`PostgreSQL` via `IConfiguration["DbProvider"]` (and matching `ConnectionStrings:DefaultConnection`, commented-out examples for PostgreSQL/Sqlite are already present in `appsettings.json`) if you don't have SQL Server LocalDB available. `AllowAnonymous` is `false` by default in `appsettings.json` (`appsettings.Development.json` does not override it) — requests need a valid JWT unless the endpoint is explicitly anonymous.
 
 An existing developer database that no longer matches the current migration ids must be reset first — see [migrations.md § Resetting a developer database](migrations.md#resetting-a-developer-database).
+
+## Running the WebMvc host
+
+`StarterKit.WebMvc` is a separate process that calls `StarterKit.WebApi` over HTTP, so start the API first (default `http` profile, `http://localhost:5000`), then:
+
+```
+dotnet run --project src/StarterKit.WebMvc/StarterKit.WebMvc.csproj --launch-profile https
+```
+
+The `https` profile binds `https://localhost:5101` (plus `http://localhost:5100`); the `http` profile binds `http://localhost:5100` only. `src/StarterKit.WebMvc/appsettings.Development.json` already points `Api:Identity:BaseUrl`/`Api:Notifications:BaseUrl` at `http://localhost:5000/api/v1/`, `IdentityWeb:BaseUrl` at `http://localhost:5000` (co-hosted `Identity.Web`), and `SignalR:HubUrl` at `http://localhost:5000/signalr-hub`, and lists `super` as a super-admin username. The front-end libraries in `libman.json` are restored into `wwwroot/lib/` on build.
+
+`StarterKit.WebApi` needs two local settings for it (e.g. in `src/StarterKit.WebApi/appsettings.Development.json` or user secrets), neither of which is present by default:
+
+- `ExternalLoginRelay:AllowedRedirectUris` must include `https://localhost:5101/Account/ExternalCallback` (exact match; use `http://localhost:5100/Account/ExternalCallback` when running the `http` profile) for Microsoft sign-in.
+- `CorsOrigins` must include `https://localhost:5101` (or `http://localhost:5100`) — the browser opens the SignalR hub connection directly against the API.
+
+Host structure, session/auth flow, and configuration sections: [../architecture/webmvc.md](../architecture/webmvc.md).
 
 ## Running Tests
 
@@ -54,6 +71,8 @@ No special setup needed — all current tests are unit tests using EF Core's InM
   dotnet user-secrets remove "Authentication:Microsoft:ClientSecret" --project src/StarterKit.WebApi/StarterKit.WebApi.csproj
   ```
 
+  `StarterKit.WebMvc.csproj` has its own `UserSecretsId` for the same purpose (e.g. `DataProtection:CertificatePassword`).
+
 - Background reconciliation sweeps bind their options from a per-module section (`LeaveManagement:Reconciliation`, `Orders:StockReconciliation`, `Transfers:PostingReconciliation`, `Purchasing:PostingReconciliation`, `Purchasing:ApprovalReconciliation`). Only `LeaveManagement:Reconciliation` has an `appsettings.json` entry; the others keep every default in code, so a section is only needed to override interval/batch/grace values or disable a sweep.
 
 ## Common Tasks
@@ -63,6 +82,7 @@ No special setup needed — all current tests are unit tests using EF Core's InM
 | Add a backend migration | `dotnet ef migrations add <Name> --project src/Migrations/<Provider>/<Provider>.csproj --context <Module>DbContext --output-dir <Module>` where `<Provider>` is `MSSQL`, `PostgreSQL`, or `Sqlite` (design-time EF migration projects live under top-level `src/Migrations/{MSSQL,PostgreSQL,Sqlite}`). See [migrations.md](migrations.md) for the migration workflow (which providers to update when), the current migration set per module/provider, and the full EF CLI cheat sheet. |
 | Run local infra (Postgres, Redis, pgAdmin) via Docker | See [docker-cli.md](docker-cli.md). |
 | Run the API locally | `dotnet run --project src/StarterKit.WebApi/StarterKit.WebApi.csproj` |
+| Run the WebMvc host locally | Start the API, then `dotnet run --project src/StarterKit.WebMvc/StarterKit.WebMvc.csproj --launch-profile https` — see § Running the WebMvc host for the WebApi settings it needs. |
 | Run the backend test suite | Run each module's `dotnet test tests/<Module>.Tests/<Module>.Tests.csproj` in turn — see § Running Tests. |
 | Build the whole solution | `dotnet build StarterKit.slnx` |
 
@@ -84,6 +104,7 @@ No special setup needed — all current tests are unit tests using EF Core's InM
 - Transfers module (stock transfers with an in-transit phase): `src/Transfers.Api/` (the `StockTransfer` aggregate in `Domain/StockTransfers/`, DbContext in `Data/`, CQRS handlers + `TransferPosting` + the `TransfersPostingReconciliationService` sweep in `Application/StockTransfers/`, controllers in `Controllers/`); public DTOs/requests/permissions in `src/Transfers.Contracts/`. Deep-dive doc: [../architecture/modules/Transfers.md](../architecture/modules/Transfers.md).
 - Purchasing module (suppliers, purchase orders, goods receipts, purchase returns): `src/Purchasing.Api/` (aggregates in `Domain/{Suppliers,PurchaseOrders,GoodsReceipts,PurchaseReturns}/`, DbContext in `Data/`, CQRS handlers in `Application/<Feature>/{Commands,Queries}`, approval coordinator/handler/sweep in `Application/PurchaseOrders/`, posting + sweep in `Application/Posting/`, controllers in `Controllers/`); public DTOs/requests/permissions in `src/Purchasing.Contracts/`. Deep-dive doc: [../architecture/modules/Purchasing.md](../architecture/modules/Purchasing.md).
 - Host wiring/startup (`Program.cs`, `appsettings*.json`): `src/StarterKit.WebApi/`.
+- Server-rendered web host (MVC + Razor Pages screens, per-module backend service clients, cookie session, shared tag helpers): `src/StarterKit.WebMvc/`. Structure doc: [../architecture/webmvc.md](../architecture/webmvc.md).
 - Tests: `tests/Framework.Tests/<ProjectName>/...` (mirrors `Shared/`, `Infrastructure/`, `Persistence/`) and `tests/<Module>.Tests/<Area>/...` for each module (mirrors that module's own `<Module>.Api` folder structure, plus a `TestSupport/` folder for shared test infrastructure).
 
 ## Notes

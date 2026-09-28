@@ -52,6 +52,12 @@ assembly, so it has no cross-module integration-event handlers ([known-debt.md](
 Both hosts register the same mediator pipeline behaviors; they differ only in assembly-scan scope, and
 the two compositions are still maintained separately ([known-debt.md](../known-debt.md), structural).
 
+`StarterKit.WebMvc` is a **separate, server-rendered web host** (MVC controllers + Razor Pages) that
+is not a module host at all: it loads no module assembly and no `DbContext`, references only module
+`Contracts` (DTOs, permission constants), and reaches every module through the JSON API over HTTP —
+the same integration shape as `clients/admin`. It keeps its own encrypted cookie session holding the
+backend tokens. Its structure, session/auth flow, and security constraints are in [webmvc.md](webmvc.md).
+
 ## Dependency Direction
 
 Expected `Api → Application → Domain`; not compiler-enforceable within a module (folder-based
@@ -192,7 +198,14 @@ have no outgoing cross-module dependency of their own. `Identity.Api` references
   primitives directly and delegating to the Contracts validator via
   `RuleFor(x => x.Model).SetValidator(new XRequestValidator())`. Paired with the convention that
   domain aggregates hold only real invariants, not input-shape checks — see
-  [../conventions/coding-conventions.md](../conventions/coding-conventions.md).
+  [../conventions/coding-conventions.md](../conventions/coding-conventions.md). The command-level
+  validators are `internal`, and the hosts' `AddValidatorsFromAssemblies` scan currently skips internal
+  types, so they are not registered — [known-debt.md](../known-debt.md).
+- **Optional whitelisted sorting on paged searches.** Where a paged search accepts a sort, the
+  `Contracts` request carries optional `SortBy`/`SortDirection` with the allowed field names published
+  as a constants class next to it; the handler/service maps only those names and falls back to the
+  default ordering for anything else, always adding a stable tie-breaker. Current adopters: `Identity`'s
+  `user/search` and `Notifications`' list endpoints — see each module doc.
 
 ## Shared Kernel / Common Building Blocks
 

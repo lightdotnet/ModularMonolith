@@ -1,6 +1,6 @@
 ---
 name: frontend-code-reviewer
-description: Use for general-purpose code quality review of React/TypeScript/Next.js changes or files under a client app in clients/<app-name>/ — correctness, readability, maintainability, idiomatic React/hooks usage, accessibility basics. Invoke for "review this frontend code," "review my component," or PR-style review requests on a client app. For backend/C# code use code-reviewer. For routing/data-fetching/state-management structural decisions use nextjs-architect.
+description: Use for general-purpose code quality review of React/TypeScript/Next.js changes or files under a client app in clients/<app-name>/, and of the Razor views/tag helpers/vanilla JS under src/StarterKit.WebMvc/ — correctness, readability, maintainability, idiomatic React/hooks usage, accessibility basics. Invoke for "review this frontend code," "review my component," or PR-style review requests on a client app. For backend/C# code use code-reviewer. For routing/data-fetching/state-management structural decisions use nextjs-architect.
 tools: Glob, Grep, Read
 ---
 

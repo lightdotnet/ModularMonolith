@@ -4,7 +4,7 @@ Project-specific guidance for the backend solution under `src/`. See the root [C
 
 ## Purpose
 
-ASP.NET Core (C#) **Modular Monolith** — one solution (`StarterKit.slnx`). `src/StarterKit.WebApi` is the primary deployable process; `src/Identity.Web` (the Identity module's Razor Pages login host) is co-hosted there and can also run standalone as a login-only host. Built on the private `Lightsoft.*` (`Light.*`) vendor framework family (mediator, `Result`/`Paged` contracts, domain base types, ASP.NET Core authorization/modularity/CORS helpers, EF Core helpers, caching, Serilog).
+ASP.NET Core (C#) **Modular Monolith** — one solution (`StarterKit.slnx`). `src/StarterKit.WebApi` is the primary deployable process; `src/Identity.Web` (the Identity module's Razor Pages login host) is co-hosted there and can also run standalone as a login-only host. `src/StarterKit.WebMvc` is a separate server-rendered MVC/Razor Pages host that is **not** a module host — it references only module `Contracts` and calls `StarterKit.WebApi` over HTTP, like a client app; see [docs/architecture/webmvc.md](docs/architecture/webmvc.md). Built on the private `Lightsoft.*` (`Light.*`) vendor framework family (mediator, `Result`/`Paged` contracts, domain base types, ASP.NET Core authorization/modularity/CORS helpers, EF Core helpers, caching, Serilog).
 
 ## Stack
 
@@ -29,7 +29,7 @@ Which module consumes which seam is recorded only in [docs/architecture/dependen
 | Transfers | `src/Transfers.Api` + `src/Transfers.Contracts` | Stock transfers between two locations with an in-transit phase (`StockTransfer` aggregate: dispatch issues stock at the source, receipts land it at the destination at the frozen dispatch cost, close writes off the remainder, only a draft can be cancelled); owns a posting reconciliation sweep for documents stuck mid-posting. |
 | Purchasing | `src/Purchasing.Api` + `src/Purchasing.Contracts` | Suppliers plus the buying documents — `PurchaseOrder` (approved through `Approval`), immutable `GoodsReceipt`, and `PurchaseReturn` — moving stock through `Inventory`. Purchase costs are fixed to the shared kernel's default currency rather than read from `Currency` (see Known Debt). Owns an approval and a posting reconciliation sweep. |
 
-Plus shared/host projects: `src/Shared` (shared kernel, leaf), `src/Infrastructure` (cross-cutting infra), `src/Persistence` (EF Core concerns), `src/StarterKit.WebApi` (composition-root host), and `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` (design-time EF Core migration projects, one per relational provider — see [docs/conventions/migrations.md](docs/conventions/migrations.md)).
+Plus shared/host projects: `src/Shared` (shared kernel, leaf), `src/Infrastructure` (cross-cutting infra), `src/Persistence` (EF Core concerns), `src/StarterKit.WebApi` (composition-root host), `src/StarterKit.WebMvc` (server-rendered web host, HTTP client of the API — [docs/architecture/webmvc.md](docs/architecture/webmvc.md)), and `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` (design-time EF Core migration projects, one per relational provider — see [docs/conventions/migrations.md](docs/conventions/migrations.md)).
 
 ## Design Approach
 
@@ -38,20 +38,22 @@ Backend design is **DDD-first**: model the domain deliberately before writing ha
 ## Architectural Constraints ("do not" rules)
 
 - **Every module's `<Module>.Contracts` project is the only seam other modules or the host may reference.** Never reference another module's internals (its single-project folders, or a split module's `Domain`/`Application`/`Infrastructure`/`Api`) directly. (`Identity.Web → Identity.Api` is allowed — both are the same module.)
+- **`StarterKit.WebMvc` reaches modules only over HTTP.** It may reference `<Module>.Contracts` (DTOs, permission constants) and nothing else of the backend — no module `.Api`, `Identity.Web`, `Infrastructure`, or `Persistence`, no mediator dispatch. Screens depend on its per-module service interfaces, never on `HttpClient` directly — see [docs/architecture/webmvc.md](docs/architecture/webmvc.md).
 - **One `DbContext` per module is the default**, even when modules share one physical database (current state: all twelve modules — `Identity`/`Notifications`/`Organization`/`Approval`/`LeaveManagement`/`Location`/`Catalog`/`Currency`/`Orders`/`Inventory`/`Transfers`/`Purchasing` — share one DB, separated by schema/table).
 - Full module structure convention (single-project vs. Clean-Architecture split, `.Api`-suffix naming) — see [docs/architecture/architecture.md § Layering](docs/architecture/architecture.md#layering).
 
 ## Architecture
 
 - [docs/architecture/overview.md](docs/architecture/overview.md) — solution overview, dependency graph summary, entry points.
-- [docs/architecture/architecture.md](docs/architecture/architecture.md) — layering, dependency direction, key design patterns, shared kernel.
+- [docs/architecture/architecture.md](docs/architecture/architecture.md) — layering, hosts, dependency direction, key design patterns, shared kernel.
 - [docs/architecture/dependency-graph.md](docs/architecture/dependency-graph.md) — package references, circular-reference/boundary-violation check.
+- [docs/architecture/webmvc.md](docs/architecture/webmvc.md) — the `StarterKit.WebMvc` host: backend service seam, cookie session/auth flow, UI kit, CSP and other security constraints. Screen-level implementation rules: the [razor-web skill](../.claude/skills/razor-web/SKILL.md).
 - [docs/architecture/modules/Identity.md](docs/architecture/modules/Identity.md) / [docs/architecture/modules/Notifications.md](docs/architecture/modules/Notifications.md) / [docs/architecture/modules/Organization.md](docs/architecture/modules/Organization.md) / [docs/architecture/modules/Approval.md](docs/architecture/modules/Approval.md) / [docs/architecture/modules/LeaveManagement.md](docs/architecture/modules/LeaveManagement.md) / [docs/architecture/modules/Location.md](docs/architecture/modules/Location.md) / [docs/architecture/modules/Catalog.md](docs/architecture/modules/Catalog.md) / [docs/architecture/modules/Currency.md](docs/architecture/modules/Currency.md) / [docs/architecture/modules/Orders.md](docs/architecture/modules/Orders.md) / [docs/architecture/modules/Inventory.md](docs/architecture/modules/Inventory.md) / [docs/architecture/modules/Transfers.md](docs/architecture/modules/Transfers.md) / [docs/architecture/modules/Purchasing.md](docs/architecture/modules/Purchasing.md) — per-module deep dive.
 
 ## Conventions
 
 - [docs/conventions/coding-conventions.md](docs/conventions/coding-conventions.md) — build/tooling, style, structural/testing conventions.
-- [docs/conventions/development-guide.md](docs/conventions/development-guide.md) — local setup (incl. user secrets), running tests, common tasks, where to look for X.
+- [docs/conventions/development-guide.md](docs/conventions/development-guide.md) — local setup (incl. user secrets), running the API and the WebMvc host, running tests, common tasks, where to look for X.
 - [docs/conventions/docker-cli.md](docs/conventions/docker-cli.md) — local Postgres/Redis/pgAdmin via Docker.
 - [docs/conventions/migrations.md](docs/conventions/migrations.md) — migration workflow, per-provider migration sets, EF Core migration CLI cheat sheet.
 

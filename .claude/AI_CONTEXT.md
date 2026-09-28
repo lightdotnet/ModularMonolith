@@ -40,7 +40,7 @@ Always assume, until verified otherwise for the specific task at hand:
 Delegate to a specialized agent when:
 
 - The task maps directly to one agent's domain (backend architecture, strategic/tactical DDD, EF Core, API design, frontend architecture, security, performance, testing, docs, dependencies).
-- Implementing an approved plan of any real size — hand the code changes to `dotnet-developer` (backend) / `nextjs-developer` (client app) rather than editing inline.
+- Implementing an approved plan of any real size — hand the code changes to `dotnet-developer` (backend) / `nextjs-developer` (client app) / `razor-web-developer` (`src/StarterKit.WebMvc`) rather than editing inline.
 - The investigation would require reading many files whose contents don't need to stay in the main context.
 - A second, independent opinion is valuable (e.g. security or architecture review).
 

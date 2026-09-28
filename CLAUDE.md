@@ -12,9 +12,9 @@ This file is the entry point for every Claude Code session in this repository. R
 
 This repository is a **starter template monorepo for a full-stack application**: a C#/.NET backend and one or more frontend clients, meant to be cloned/forked as the starting point for new projects.
 
-- **Backend** — `src/` — ASP.NET Core Web API, **C#**, organized as a **Modular Monolith**. One solution (`StarterKit.slnx`), one deployable process. See [src/CLAUDE.md](src/CLAUDE.md) for module structure, stack, and backend-specific rules.
-- **Clients** — `clients/` — one or more frontend apps, each in its own subfolder (e.g. `clients/admin/`, the current admin console). Each client consumes the backend exclusively over HTTP as a JSON API — the backend's MVC controllers are **API-only** (no server-rendered Razor views). See [clients/admin/CLAUDE.md](clients/admin/CLAUDE.md) for that app's stack and rules.
-- **Integration** — the only contract between backend and any client is the HTTP API surface (routes, DTOs, status/error shapes). No side reaches into another's internals; there is no shared DB access or shared source between `src/` and `clients/*`. See [docs/integration.md](docs/integration.md) for the cross-cutting integration contract.
+- **Backend** — `src/` — ASP.NET Core, **C#**, organized as a **Modular Monolith**. One solution (`StarterKit.slnx`). `StarterKit.WebApi` is the primary deployable (the JSON API, co-hosting the Identity module's `Identity.Web` login pages); `StarterKit.WebMvc` is a separate server-rendered MVC/Razor Pages host that consumes that API over HTTP like a client. See [src/CLAUDE.md](src/CLAUDE.md) for module structure, stack, and backend-specific rules.
+- **Clients** — `clients/` — one or more frontend apps, each in its own subfolder (e.g. `clients/admin/`, the current admin console). Each client consumes the backend exclusively over HTTP as a JSON API — the API controllers return JSON only; server-rendered HTML exists only in `Identity.Web` (login) and `StarterKit.WebMvc`. See [clients/admin/CLAUDE.md](clients/admin/CLAUDE.md) for that app's stack and rules.
+- **Integration** — the only contract between the backend and any consumer (each client app, and `StarterKit.WebMvc`) is the HTTP API surface (routes, DTOs, status/error shapes). No side reaches into another's internals; there is no shared DB access or shared source between `src/` and `clients/*`. See [docs/integration.md](docs/integration.md) for the cross-cutting integration contract.
 
 Consequences of this:
 
@@ -56,6 +56,7 @@ Specialized agents live in [.claude/agents/](.claude/agents/). Prefer delegating
 | [efcore-specialist](.claude/agents/efcore-specialist.md) | EF Core models, migrations, query performance, DbContext design per module |
 | [api-designer](.claude/agents/api-designer.md) | Backend REST API contract design, versioning, DTO shape |
 | [dotnet-developer](.claude/agents/dotnet-developer.md) | Implementing an approved backend change under `src/` — writes C# to convention, build-sanity only (never runs the test suite) |
+| [razor-web-developer](.claude/agents/razor-web-developer.md) | Implementing an approved change under `src/StarterKit.WebMvc/` (MVC + Razor Pages host, HTTP client of the API) — build-sanity only |
 | [code-reviewer](.claude/agents/code-reviewer.md) | General C#/.NET backend code quality review |
 | [nextjs-architect](.claude/agents/nextjs-architect.md) | Next.js/React/TypeScript structure for a given client app — routing, data fetching, state management, component architecture |
 | [nextjs-developer](.claude/agents/nextjs-developer.md) | Implementing an approved change under `clients/admin/` — writes Next.js 16/React 19/TS to convention, lint/build-sanity only |
@@ -79,7 +80,7 @@ Skills live in [.claude/skills/](.claude/skills/) as `<name>/SKILL.md` — each 
 - [generate-docs](.claude/skills/generate-docs/SKILL.md), [sync-docs](.claude/skills/sync-docs/SKILL.md)
 - [analyze-solution](.claude/skills/analyze-solution/SKILL.md) (backend), [analyze-module](.claude/skills/analyze-module/SKILL.md), [analyze-project](.claude/skills/analyze-project/SKILL.md)
 - [analyze-frontend](.claude/skills/analyze-frontend/SKILL.md) (all of `clients/`), [analyze-client](.claude/skills/analyze-client/SKILL.md) (one client app)
-- [efcore](.claude/skills/efcore/SKILL.md), [api](.claude/skills/api/SKILL.md), [nextjs](.claude/skills/nextjs/SKILL.md), [testing](.claude/skills/testing/SKILL.md), [performance](.claude/skills/performance/SKILL.md)
+- [efcore](.claude/skills/efcore/SKILL.md), [api](.claude/skills/api/SKILL.md), [nextjs](.claude/skills/nextjs/SKILL.md), [razor-web](.claude/skills/razor-web/SKILL.md) (screens in `src/StarterKit.WebMvc`), [testing](.claude/skills/testing/SKILL.md), [performance](.claude/skills/performance/SKILL.md)
 
 ## 6. Workflow Usage
 
@@ -130,4 +131,4 @@ Session- and task-level workflows live in [.claude/workflows/](.claude/workflows
 | "Load backend/frontend/full context" | `/context-backend`, `/context-frontend`, or `/context-full` ([.claude/skills/](.claude/skills/)) |
 
 ---
-_Last synced: 2026-09-07_
+_Last synced: 2026-09-28_

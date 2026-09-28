@@ -35,6 +35,7 @@ Package versions are centrally managed via the root `Directory.Packages.props` (
 | Purchasing.Contracts | Lightsoft.AspNetCore.Authorization | Declared directly. |
 | Purchasing.Api | Lightsoft.AspNetCore.Authorization, Lightsoft.EntityFrameworkCore, Lightsoft.Mediator, Lightsoft.Result | Every vendor package it directly uses is declared directly. Also references `Approval.Contracts`, `Organization.Contracts`, `Inventory.Contracts`, `Location.Contracts`, and `Catalog.Contracts` (`ProjectReference`s) — see [modules/Purchasing.md § Dependencies](modules/Purchasing.md#dependencies). |
 | StarterKit.WebApi | AspNetCore.HealthChecks.UI.Client, FluentValidation.DependencyInjectionExtensions, Lightsoft.AspNetCore.Extensions, Lightsoft.AspNetCore.Swagger, Microsoft.AspNetCore.Authentication.JwtBearer, Microsoft.VisualStudio.Azure.Containers.Tools.Targets, Spectre.Console | `Microsoft.AspNetCore.Authentication.JwtBearer` backs the host-owned Bearer + `"HubBearer"` schemes in `Authentication/ApiAuthenticationExtensions`. Uses `Lightsoft.Serilog` and `Lightsoft.FileGenerator` (`services.AddFileGenerator()` in `ConfigureExtensions.cs`) without declaring either (both ride in via `Infrastructure`). |
+| StarterKit.WebMvc | Lightsoft.Serilog, Microsoft.Web.LibraryManager.Build | Separate web host, HTTP client of `StarterKit.WebApi` — see [webmvc.md](webmvc.md). `Lightsoft.Serilog` for `ConfigureSerilog`; `Microsoft.Web.LibraryManager.Build` (`PrivateAssets="all"`) restores the `libman.json` front-end libraries on build. |
 | Framework.Tests | (test packages via `tests/ModuleTests.props`) | Opts out of central package management through the shared props. |
 | Identity.Tests | (test packages via `tests/ModuleTests.props`) | Mocks `UserManager<User>`/`IMediator`; else a real Sqlite in-memory `IdentityDbContext`. |
 | Organization.Tests | (test packages via `tests/ModuleTests.props`) | Mocks `Identity.Contracts.Services.IUserService` in the employee-login tests; else runs against a real Sqlite in-memory `OrganizationDbContext`. |
@@ -52,7 +53,7 @@ The undeclared-transitive-dependency pattern (a project using a vendor type with
 
 ## Circular References
 
-None found. `Shared` is the only true leaf (no `ProjectReference`s). Every module's `Contracts` project references `Shared`, so none of them is a true leaf either. Dependency direction is one-way throughout: `Api`/`Contracts` projects → `Infrastructure`/`Persistence` → `Shared`; `Identity.Web` → `Identity.Api` (intra-module); and `StarterKit.WebApi` (composition-root host) → all twelve business modules plus `Identity.Web`. No project-reference cycle exists anywhere.
+None found. `Shared` is the only true leaf (no `ProjectReference`s). Every module's `Contracts` project references `Shared`, so none of them is a true leaf either. Dependency direction is one-way throughout: `Api`/`Contracts` projects → `Infrastructure`/`Persistence` → `Shared`; `Identity.Web` → `Identity.Api` (intra-module); `StarterKit.WebApi` (composition-root host) → all twelve business modules plus `Identity.Web`; and `StarterKit.WebMvc` (separate web host) → `Identity.Contracts` and `Notifications.Contracts` only. No project-reference cycle exists anywhere.
 
 ```text
 Infrastructure -> Shared
@@ -142,6 +143,8 @@ StarterKit.WebApi -> Transfers.Api
 StarterKit.WebApi -> Purchasing.Api
 StarterKit.WebApi -> Infrastructure
 StarterKit.WebApi -> Shared
+StarterKit.WebMvc -> Identity.Contracts
+StarterKit.WebMvc -> Notifications.Contracts
 Framework.Tests -> Shared
 Framework.Tests -> Infrastructure
 Framework.Tests -> Persistence
@@ -182,7 +185,7 @@ Note: `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` also reference each migrated mo
 
 ## Cross-Module Boundary Violations (backend only)
 
-None found. `Identity.Web → Identity.Api` is a direct project reference into another project's internals, but both projects belong to the **same module** (the Identity bounded context), so it is not a cross-module edge.
+None found. `Identity.Web → Identity.Api` is a direct project reference into another project's internals, but both projects belong to the **same module** (the Identity bounded context), so it is not a cross-module edge. `StarterKit.WebMvc` is not a module; its only backend references are `Identity.Contracts` and `Notifications.Contracts` (DTOs and permission constants), and every call into a module goes over HTTP to `StarterKit.WebApi` — compliant with the `Contracts`-only rule.
 
 Nineteen business-module-to-business-module dependencies exist, all compliant (each reaches only the other module's `Contracts` seam):
 
