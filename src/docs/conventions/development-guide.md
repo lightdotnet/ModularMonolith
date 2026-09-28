@@ -33,10 +33,10 @@ dotnet run --project src/StarterKit.WebMvc/StarterKit.WebMvc.csproj --launch-pro
 
 The `https` profile binds `https://localhost:5101` (plus `http://localhost:5100`); the `http` profile binds `http://localhost:5100` only. `src/StarterKit.WebMvc/appsettings.Development.json` already points `Api:Identity:BaseUrl`/`Api:Notifications:BaseUrl` at `http://localhost:5000/api/v1/`, `IdentityWeb:BaseUrl` at `http://localhost:5000` (co-hosted `Identity.Web`), and `SignalR:HubUrl` at `http://localhost:5000/signalr-hub`, and lists `super` as a super-admin username. The front-end libraries in `libman.json` are restored into `wwwroot/lib/` on build.
 
-`StarterKit.WebApi` needs two local settings for it (e.g. in `src/StarterKit.WebApi/appsettings.Development.json` or user secrets), neither of which is present by default:
+`StarterKit.WebApi` already carries the two settings WebMvc depends on — keep them in sync if WebMvc's ports change, and remember user secrets override them:
 
-- `ExternalLoginRelay:AllowedRedirectUris` must include `https://localhost:5101/Account/ExternalCallback` (exact match; use `http://localhost:5100/Account/ExternalCallback` when running the `http` profile) for Microsoft sign-in.
-- `CorsOrigins` must include `https://localhost:5101` (or `http://localhost:5100`) — the browser opens the SignalR hub connection directly against the API.
+- `ExternalLoginRelay:AllowedRedirectUris` (`appsettings.Development.json`) lists `https://localhost:5101/Account/ExternalCallback` and `http://localhost:5100/Account/ExternalCallback`. The match is exact (scheme, host, port, case) — a missing entry makes Microsoft sign-in fail with a 400 from `/Account/ExternalLoginStart`.
+- `CorsOrigins` (`appsettings.json`) lists `https://localhost:5101` and `http://localhost:5100` — the browser opens the SignalR hub connection directly against the API.
 
 Host structure, session/auth flow, and configuration sections: [../architecture/webmvc.md](../architecture/webmvc.md).
 
