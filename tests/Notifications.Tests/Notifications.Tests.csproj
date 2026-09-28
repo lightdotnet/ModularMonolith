@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\ModuleTests.props" />
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Notifications.Api\Notifications.Api.csproj" />
+    <ProjectReference Include="..\..\src\Notifications.Contracts\Notifications.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Shared\Shared.csproj" />
+  </ItemGroup>
+
+</Project>

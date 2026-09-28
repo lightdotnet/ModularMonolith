@@ -1,3 +1,4 @@
+using FluentValidation;
 using StarterKit.Notifications.Contracts.Services;
 using StarterKit.Notifications.Contracts.SystemNotifications;
 
@@ -5,6 +6,14 @@ namespace StarterKit.Notifications.Api.Application.Notifications.Queries;
 
 internal sealed record SearchNotificationsQuery(NotificationLookup Lookup)
     : IQuery<PagedResult<NotificationDto>>;
+
+internal sealed class SearchNotificationsQueryValidator : AbstractValidator<SearchNotificationsQuery>
+{
+    public SearchNotificationsQueryValidator()
+    {
+        RuleFor(x => x.Lookup).SetValidator(new NotificationLookupValidator());
+    }
+}
 
 internal class SearchNotificationsQueryHandler(INotificationService notificationService)
     : IQueryHandler<SearchNotificationsQuery, PagedResult<NotificationDto>>

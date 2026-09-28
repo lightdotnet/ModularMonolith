@@ -12,7 +12,11 @@ public interface INotificationService
 
     Task MarkAsReadAsync(string userId, string id);
 
-    Task ReadAllAsync(string userId);
+    /// <summary>
+    /// Marks every unread (<see cref="NotificationStatus.None"/>) notification of the user as read;
+    /// archived entries are left untouched. Returns the number of entries changed.
+    /// </summary>
+    Task<int> ReadAllAsync(string userId);
 
     Task SaveAsync(string fromUserId, string? fromName, string toUserId, SystemMessage message);
 

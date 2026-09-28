@@ -34,4 +34,11 @@ public class UserNotificationController(ICurrentUser currentUser) : VersionedApi
     {
         return Ok(await Mediator.Send(new CountUnreadNotificationsQuery(_currentUserId)));
     }
+
+    /// <summary>Marks all of the current user's unread notifications as read; returns how many were changed.</summary>
+    [HttpPost("read_all")]
+    public async Task<IActionResult> ReadAll()
+    {
+        return Ok(await Mediator.Send(new ReadAllNotificationsCommand(_currentUserId)));
+    }
 }
