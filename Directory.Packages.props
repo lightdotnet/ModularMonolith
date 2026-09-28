@@ -43,7 +43,7 @@
     <PackageVersion Include="AspNetCore.HealthChecks.UI.Client" Version="9.0.0" />
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
-    <PackageVersion Include="Mapster" Version="10.0.12" />
+    <PackageVersion Include="Mapster" Version="10.0.13" />
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
     <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
   </ItemGroup>

@@ -66,6 +66,7 @@
     <Project Path="src/Migrations/Sqlite/Sqlite.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <File Path="tests/ModuleTests.props" />
     <Project Path="tests/Approval.Tests/Approval.Tests.csproj" />
     <Project Path="tests/Catalog.Tests/Catalog.Tests.csproj" />
     <Project Path="tests/Currency.Tests/Currency.Tests.csproj" />
