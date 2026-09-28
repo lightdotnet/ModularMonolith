@@ -23,7 +23,7 @@ tools: Glob, Grep, Read
 
 ## What to Inspect
 
-- Existing module structure and naming conventions directly under `src/` (via `.csproj`/`.sln`, not assumption).
+- Existing module structure and naming conventions directly under `src/` (via `.csproj`/`.slnx`, not assumption).
 - `Directory.Build.props`/`Directory.Packages.props` if present, for shared build conventions.
 - Existing module shapes for consistency (do sibling modules follow the same internal layering?).
 - `src/CLAUDE.md` and `src/docs/architecture/architecture.md` for already-verified structural facts.

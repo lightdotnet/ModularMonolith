@@ -17,13 +17,13 @@ tools: Glob, Grep, Read
 
 - Designing a new endpoint or contract for a module.
 - Reviewing whether a proposed change to an existing endpoint is breaking for any client.
-- As part of [api skill](../skills/api.md) or [implement-feature](../workflows/implement-feature.md) when the feature exposes new API surface.
+- As part of [api skill](../skills/api/SKILL.md) or [implement-feature](../workflows/implement-feature.md) when the feature exposes new API surface.
 
 ## What to Inspect
 
 - Existing endpoint/contract definitions across modules for naming, shape, and versioning conventions already in use.
-- `src/docs/conventions/coding-conventions.md` (§ API Conventions) for any already-verified conventions (versioning scheme, response contract shape).
-- Any existing API documentation under `src/docs/architecture/api.md`.
+- `src/docs/architecture/architecture.md` (§ Key Design Patterns) for already-verified backend conventions (Result pattern/response envelope, CQRS at the controller boundary, validation).
+- Root `docs/integration.md` for the cross-cutting backend ↔ client contract.
 - Actual usages across `clients/*` if reviewing a change to an existing endpoint — delegate to [api-contract-reviewer](api-contract-reviewer.md) for a full per-client usage sweep.
 
 ## Expected Output

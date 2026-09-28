@@ -9,20 +9,23 @@ layering and patterns are in [architecture.md](architecture.md), the project-ref
 
 ## Modules
 
+Which module consumes which seam is recorded only in
+[dependency-graph.md § Cross-Module Boundary Violations](dependency-graph.md#cross-module-boundary-violations-backend-only).
+
 | Module | Projects | Responsibility | Status |
 |---|---|---|---|
 | Identity | `src/Identity.Api` + `.Contracts` + `src/Identity.Web` | Users, roles, claims; API token issuance (password/AD), refresh, sessions; interactive cookie login + Microsoft Entra ID (OIDC) external login (`Identity.Web`); SignalR hub handshake token; permission catalog | Built, tested. Internal layering still informal — [known-debt.md](../known-debt.md) D1 |
-| Notifications | `src/Notifications.Api` + `.Contracts` | Notification storage + real-time SignalR push; admin + self-service surfaces over one table; owns the welcome-mail handlers reacting to Identity's integration events | Built, no tests yet. No "mark all read", nothing sets `Archived` |
-| Organization | `src/Organization.Api` + `.Contracts` | Companies, a self-referencing department/team hierarchy (`OrgUnit`), company-scoped employee levels, employees (membership history + optional Identity-login link) | Built, tested. Also exposes `IOrgDirectoryService`, a cross-module seam consumed by LeaveManagement and Purchasing |
-| Approval | `src/Approval.Api` + `.Contracts` | A generic, reusable multi-level approval engine — the caller resolves the approver chain and drives the workflow via `IApprovalService`; not tied to any request type. Module-owned request types are reserved and cannot be created over HTTP | Built, tested. Consumed by LeaveManagement and Purchasing |
-| LeaveManagement | `src/LeaveManagement.Api` + `.Contracts` | Self-service CRUD for employee leave requests; delegates the entire approval workflow to Approval via `IApprovalService`, resolves approvers/names via Organization's `IOrgDirectoryService` — no decide endpoint of its own | Built, tested |
-| Location | `src/Location.Api` + `.Contracts` | Self-referencing physical-location hierarchy (`Location`: Store/Warehouse/Terminal/Bin or any other data-driven type) plus a data-driven `LocationType` catalog (allowed-parent-type rules, not a hardcoded enum) | Built, tested. Also exposes `ILocationDirectoryService`, a cross-module seam consumed by Orders, Inventory, Transfers, and Purchasing |
-| Catalog | `src/Catalog.Api` + `.Contracts` | Self-referencing product-category tree (`Category`) plus `Product` CRUD/search/activate-deactivate/image management, priced via the shared `Money`/`VatPercentage` value objects in any active currency | Built, tested. Also exposes `ICatalogPricingService`, a cross-module seam consumed by Orders, Transfers, and Purchasing. Consumer of Currency's `ICurrencyService` |
-| Currency | `src/Currency.Api` + `.Contracts` | The currencies the system can hold amounts in (exactly one is the base currency) and an append-only exchange-rate history "1 unit = N units of base" | Built, tested. Exposes `ICurrencyService`, a cross-module seam consumed by Orders and Catalog |
-| Orders | `src/Orders.Api` + `.Contracts` | Owns the sale lifecycle — draft cart through placement, payment reconciliation, fulfillment, or cancellation — via the `Order` aggregate and a separate `Payment` aggregate sharing one `OrdersDbContext`, plus a data-driven `OrderType` catalog; an order lives in the base currency and converts foreign-priced products when a line is added | Built, tested. Consumer of Catalog's `ICatalogPricingService`, Location's `ILocationDirectoryService`, Currency's `ICurrencyService`, and (synchronously, not via an event) Inventory's `IInventoryService`; runs an orphaned-stock reconciliation sweep |
-| Inventory | `src/Inventory.Api` + `.Contracts` | Tracks on-hand stock and its moving-average value (base currency) per product per location via a `StockLevel` running total plus an immutable `StockAdjustment` ledger, coordinated in one commit by the internal `StockLedger` service; enforces strict no-oversell | Built, tested. Consumes Location's `ILocationDirectoryService`. Exposes `IInventoryService`, called synchronously and in-process by Orders, Transfers, and Purchasing — deliberately not via an integration event, see [modules/Inventory.md](modules/Inventory.md) |
-| Transfers | `src/Transfers.Api` + `.Contracts` | Stock transfers between two locations with an in-transit phase: dispatch issues stock at the source, receipts land it at the destination at the frozen cost, close writes off the remainder | Built, tested. Consumer of Inventory's `IInventoryService`, Location's `ILocationDirectoryService`, and Catalog's `ICatalogPricingService`; runs a posting reconciliation sweep |
-| Purchasing | `src/Purchasing.Api` + `.Contracts` | Suppliers and purchasing documents: purchase orders (approved through the Approval module), goods receipts, and purchase returns; stock moves through Inventory's seam | Built, tested. Consumer of Approval, Organization, Inventory, Location, and Catalog contracts; runs an approval and a posting reconciliation sweep |
+| Notifications | `src/Notifications.Api` + `.Contracts` | Notification storage + real-time SignalR push; admin + self-service surfaces over one table; owns the welcome-mail handlers reacting to Identity's integration events | Built. No "mark all read", nothing sets `Archived` |
+| Organization | `src/Organization.Api` + `.Contracts` | Companies, a self-referencing department/team hierarchy (`OrgUnit`), company-scoped employee levels, employees (membership history + optional Identity-login link) | Built, tested. Exposes the `IOrgDirectoryService` seam |
+| Approval | `src/Approval.Api` + `.Contracts` | A generic, reusable multi-level approval engine — the caller resolves the approver chain and drives the workflow via `IApprovalService`; not tied to any request type. Module-owned request types are reserved and cannot be created over HTTP | Built, tested. Exposes the `IApprovalService` seam |
+| LeaveManagement | `src/LeaveManagement.Api` + `.Contracts` | Self-service CRUD for employee leave requests; delegates the entire approval workflow to Approval — no decide endpoint of its own | Built, tested |
+| Location | `src/Location.Api` + `.Contracts` | Self-referencing physical-location hierarchy (`Location`: Store/Warehouse/Terminal/Bin or any other data-driven type) plus a data-driven `LocationType` catalog (allowed-parent-type rules, not a hardcoded enum) | Built, tested. Exposes the `ILocationDirectoryService` seam |
+| Catalog | `src/Catalog.Api` + `.Contracts` | Self-referencing product-category tree (`Category`) plus `Product` CRUD/search/activate-deactivate/image management, priced via the shared `Money`/`VatPercentage` value objects in any active currency | Built, tested. Exposes the `ICatalogPricingService` seam |
+| Currency | `src/Currency.Api` + `.Contracts` | The currencies the system can hold amounts in (exactly one is the base currency) and an append-only exchange-rate history "1 unit = N units of base" | Built, tested. Exposes the `ICurrencyService` seam |
+| Orders | `src/Orders.Api` + `.Contracts` | Owns the sale lifecycle — draft cart through placement, payment reconciliation, fulfillment, or cancellation — via the `Order` aggregate and a separate `Payment` aggregate sharing one `OrdersDbContext`, plus a data-driven `OrderType` catalog; an order lives in the base currency and converts foreign-priced products when a line is added | Built, tested. Runs an orphaned-stock reconciliation sweep |
+| Inventory | `src/Inventory.Api` + `.Contracts` | Tracks on-hand stock and its moving-average value (base currency) per product per location via a `StockLevel` running total plus an immutable `StockAdjustment` ledger, coordinated in one commit by the internal `StockLedger` service; enforces strict no-oversell | Built, tested. Exposes `IInventoryService`, called synchronously and in-process — deliberately not via an integration event, see [modules/Inventory.md](modules/Inventory.md) |
+| Transfers | `src/Transfers.Api` + `.Contracts` | Stock transfers between two locations with an in-transit phase: dispatch issues stock at the source, receipts land it at the destination at the frozen cost, close writes off the remainder | Built, tested. Runs a posting reconciliation sweep |
+| Purchasing | `src/Purchasing.Api` + `.Contracts` | Suppliers and purchasing documents: purchase orders (approved through the Approval module), goods receipts, and purchase returns; stock moves through Inventory's seam | Built, tested. Runs an approval and a posting reconciliation sweep |
 
 ## Shared / Host Projects
 
@@ -33,6 +36,7 @@ layering and patterns are in [architecture.md](architecture.md), the project-ref
 | `src/Persistence` | EF Core provider config, `BaseDbContext`, audit/soft-delete tracking + domain-event dispatch (meant to run inside each module's `SaveChangesAsync`), paging/result helpers, the provider-aware `HasProviderFilter` index helper, migration-time support, and an opt-in `Repositories/ICacheRepository<T>` whole-table cache-repository wrapper for small reference/lookup tables (zero adopters today — see [known-debt.md](../known-debt.md)). → `Shared` |
 | `src/StarterKit.WebApi` | Composition-root host — the primary executable. Wires all twelve modules, co-hosts `Identity.Web`'s login Razor Pages, and owns the API authentication composition (`Authentication/ApiAuthenticationExtensions`). → all twelve modules + Identity.Web, Infrastructure, Shared |
 | `src/Identity.Web` | Razor Pages login host inside the Identity module (cookie login + Microsoft OIDC). Co-hosted by `StarterKit.WebApi` and also runnable standalone (login-only). → `Identity.Api`, `Infrastructure` |
+| `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | Design-time EF Core migration projects, one per relational provider; each references the migrated modules' `.Api` projects and runs their context initialisers — workflow and per-provider sets in [../conventions/migrations.md](../conventions/migrations.md) |
 
 ## Dependency Graph
 
@@ -40,14 +44,9 @@ One-way throughout: `Api`/`Contracts` → `Infrastructure`/`Persistence` → `Sh
 `Identity.Web → Identity.Api` (intra-module); and `StarterKit.WebApi` → all twelve business modules
 plus `Identity.Web`. `Shared` is the only true leaf. Nineteen compliant
 business-module-to-business-module dependencies exist, each reaching only the target's `Contracts`
-seam. `Orders` consumes `Location`'s `ILocationDirectoryService`, `Catalog`'s `ICatalogPricingService`,
-`Currency`'s `ICurrencyService`, and (synchronously, not via an event) `Inventory`'s `IInventoryService`;
-`Catalog` consumes `Currency`; `Inventory` itself consumes `Location`'s `ILocationDirectoryService`;
-`Transfers` consumes `Inventory`, `Location`, and `Catalog`; `Purchasing` consumes `Approval`,
-`Organization`, `Inventory`, `Location`, and `Catalog`. `Location` and `Currency` have no outgoing
-dependency of their own, and `Inventory` has no outgoing dependency on `Orders`, `Transfers`, or
-`Purchasing`. The full list and the project-reference diagram are
-in [dependency-graph.md](dependency-graph.md). No circular references or boundary violations.
+seam; `Location` and `Currency` have no outgoing cross-module dependency. The full edge list and the
+project-reference diagram are in [dependency-graph.md](dependency-graph.md). No circular references or
+boundary violations.
 
 ## Entry Points
 
@@ -85,8 +84,9 @@ sets per provider are in [../conventions/migrations.md](../conventions/migration
 
 - **`Lightsoft.*` (namespace `Light.*`)** — private vendor family: `.Mediator`/`.Contracts`, `.Result`,
   `.SharedKernel`, `.AspNetCore.Authorization`, `.AspNetCore.Modularity`, `.AspNetCore.Extensions`,
-  `.AspNetCore.Swagger`, `.EntityFrameworkCore`, `.Caching`, `.Serilog`, `.SmtpMail`,
-  `.ActiveDirectory` (Identity only). Suspected-dead: `.EventBus`, `.FileGenerator` — see
+  `.AspNetCore.Swagger`, `.EntityFrameworkCore`, `.Caching`, `.Serilog`, `.SmtpMail`, `.FileGenerator`
+  (registered by the host via `AddFileGenerator()`, declared only by `Infrastructure`),
+  `.ActiveDirectory` (Identity only). Suspected-dead: `.EventBus` — see
   [known-debt.md](../known-debt.md).
 - **EF Core providers** (`Persistence`) — InMemory / Sqlite / SqlServer / Npgsql.
 - **`Microsoft.AspNetCore.Identity.EntityFrameworkCore`**, **`Microsoft.Extensions.Identity.Core`**
@@ -114,4 +114,4 @@ for which modules the client currently covers.
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-21_
+_Last synced: 2026-09-28_

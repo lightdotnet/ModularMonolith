@@ -22,9 +22,9 @@ Always assume, until verified otherwise for the specific task at hand:
 ## Context-Loading Strategy
 
 1. **Task scoping first.** Before reading code, identify the minimum module/project/client app the task actually touches. If ambiguous — including "which client app" once `clients/` has more than one — ask the user rather than reading broadly to disambiguate yourself.
-2. **Index before content.** Use `Glob`/`Grep` to locate relevant `.csproj`/`.sln`/namespaces (backend) or `package.json`/route folders (a client app) before opening files. Don't open files "to see what's there."
+2. **Index before content.** Use `Glob`/`Grep` to locate relevant `.csproj`/`.slnx`/namespaces (backend) or `package.json`/route folders (a client app) before opening files. Don't open files "to see what's there."
 3. **Read incrementally.** Open only the files needed for the current step of the task. Re-scope and read more only when a genuine dependency is found (e.g., a referenced project, a shared building block, an API route a client calls).
-4. **No repo-wide scans without an explicit request.** "Analyze this folder" means that folder. "Analyze this module" means that module and its direct dependencies — not sibling modules. "Analyze the frontend" without a named app means all of `clients/` (see [skills/analyze-frontend.md](skills/analyze-frontend.md)); a named app means just that one (see [skills/analyze-client.md](skills/analyze-client.md)).
+4. **No repo-wide scans without an explicit request.** "Analyze this folder" means that folder. "Analyze this module" means that module and its direct dependencies — not sibling modules. "Analyze the frontend" without a named app means all of `clients/` (see [skills/analyze-frontend/SKILL.md](skills/analyze-frontend/SKILL.md)); a named app means just that one (see [skills/analyze-client/SKILL.md](skills/analyze-client/SKILL.md)).
 5. **Cache findings in the right place.** Verified facts about structure go into the scoped project doc — `src/CLAUDE.md`/`src/docs/` for backend, `clients/<app-name>/CLAUDE.md`/`clients/<app-name>/docs/` for that client app, or the root `docs/` for genuinely cross-cutting facts — only when a sync/generate step is explicitly requested. Not into ad hoc notes that vanish at session end.
 
 ## Token Efficiency Rules
@@ -78,6 +78,6 @@ These don't replace the rest of this file — a compaction summary can silently 
 ## Full-Stack Safety Rules
 
 - Before changing an API route/DTO shape, check every client app under `clients/*` for actual usages (fetch calls, typed client, route handlers) — don't assume only one client is affected, and don't assume any client is unaffected without checking.
-- Before changing a module's public contract (its `Api`/exposed `Application` interfaces), check for other backend modules or the composition-root host that depend on it.
+- Before changing a module's public contract (its `<Module>.Contracts` project), check for other backend modules or the composition-root host that depend on it.
 - Cross-module or cross-stack (backend+client in the same change) refactors require explicit user confirmation before starting (see `CLAUDE.md` §2.7).
 - Treat the shared/building-blocks backend project as higher-risk to change — every module may depend on it.

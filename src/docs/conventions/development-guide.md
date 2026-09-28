@@ -21,7 +21,7 @@ The default `http` launch profile binds plain HTTP on `http://localhost:5000`, w
 
 `src/StarterKit.WebApi/Program.cs` boots the host: configures Serilog, calls `ConfigureServices`, wires MVC/JSON options, then `ConfigurePipelines()` + `MapEndpoints(...)`. By default (`appsettings.json`) `DbProvider` is `MSSQL`, pointing `ConnectionStrings:DefaultConnection` at a local `(localdb)\mssqllocaldb` instance — switch to `InMemory`/`Sqlite`/`PostgreSQL` via `IConfiguration["DbProvider"]` (and matching `ConnectionStrings:DefaultConnection`, commented-out examples for PostgreSQL/Sqlite are already present in `appsettings.json`) if you don't have SQL Server LocalDB available. `AllowAnonymous` is `false` by default in `appsettings.json` (`appsettings.Development.json` does not override it) — requests need a valid JWT unless the endpoint is explicitly anonymous.
 
-A database migrated on the old incremental MSSQL-only migration chain for `Location`/`Catalog`/`Orders`/`Inventory`/`Transfers`/`Purchasing` has different migration ids than the current baselines — drop and recreate it, or reset `__EFMigrationsHistory`, before running against the current schema. See [migrations.md § Resetting a developer database](migrations.md#resetting-a-developer-database).
+An existing developer database that no longer matches the current migration ids must be reset first — see [migrations.md § Resetting a developer database](migrations.md#resetting-a-developer-database).
 
 ## Running Tests
 
@@ -40,20 +40,27 @@ dotnet test tests/Transfers.Tests/Transfers.Tests.csproj
 dotnet test tests/Purchasing.Tests/Purchasing.Tests.csproj
 ```
 
-No special setup needed — all current tests are unit tests using EF Core's InMemory/Sqlite providers directly (no external database/services required). `Framework.Tests` covers `Shared`, `Infrastructure`, and `Persistence`; each module's own `<Module>.Tests` project covers that module's `<Module>.Api`. `Notifications` has no dedicated test project yet.
+No special setup needed — all current tests are unit tests using EF Core's InMemory/Sqlite providers directly (no external database/services required). `Framework.Tests` covers `Shared`, `Infrastructure`, and `Persistence`; each module's own `<Module>.Tests` project covers that module's `<Module>.Api`. Coverage gaps are tracked in [../known-debt.md § Test coverage](../known-debt.md#test-coverage). If `dotnet test` refuses the legacy VSTest path on the .NET 10 SDK, see [../../CLAUDE.md § Testing](../../CLAUDE.md#testing).
 
 ## Local Setup
 
 - Default `DbProvider` is `MSSQL` (`src/StarterKit.WebApi/appsettings.json`) with a `(localdb)\mssqllocaldb` connection string checked into `appsettings.json` as a starter-template default — replace for real use, do not treat as a production secret.
 - JWT signing (`Jwt:SecretKey`, `Jwt:Issuer`, token lifetimes) and Basic Auth (`BasicAuth: "super:123"`) values in `appsettings.json` are template placeholders, not production secrets — replace before any real deployment.
-- `UserSecretsId` is set on `StarterKit.WebApi.csproj` for local `dotnet user-secrets` overrides if preferred over editing `appsettings.Development.json` directly.
+- `UserSecretsId` is set on `StarterKit.WebApi.csproj` for local `dotnet user-secrets` overrides if preferred over editing `appsettings.Development.json` directly — e.g. the Microsoft Entra ID client secret:
+
+  ```
+  dotnet user-secrets set "Authentication:Microsoft:ClientSecret" "<SECRET_VALUE>" --project src/StarterKit.WebApi/StarterKit.WebApi.csproj
+  dotnet user-secrets list --project src/StarterKit.WebApi/StarterKit.WebApi.csproj
+  dotnet user-secrets remove "Authentication:Microsoft:ClientSecret" --project src/StarterKit.WebApi/StarterKit.WebApi.csproj
+  ```
+
 - Background reconciliation sweeps bind their options from a per-module section (`LeaveManagement:Reconciliation`, `Orders:StockReconciliation`, `Transfers:PostingReconciliation`, `Purchasing:PostingReconciliation`, `Purchasing:ApprovalReconciliation`). Only `LeaveManagement:Reconciliation` has an `appsettings.json` entry; the others keep every default in code, so a section is only needed to override interval/batch/grace values or disable a sweep.
 
 ## Common Tasks
 
 | Task | How |
 |---|---|
-| Add a backend migration | `dotnet ef migrations add <Name> --project src/Migrations/<Provider>/<Provider>.csproj --context <Module>DbContext --output-dir <Module>` where `<Provider>` is `MSSQL`, `PostgreSQL`, or `Sqlite` — run once per provider (design-time EF migration projects live under top-level `src/Migrations/{MSSQL,PostgreSQL,Sqlite}`). See [migrations.md](migrations.md) for the current migration set per module/provider and the full EF CLI cheat sheet. |
+| Add a backend migration | `dotnet ef migrations add <Name> --project src/Migrations/<Provider>/<Provider>.csproj --context <Module>DbContext --output-dir <Module>` where `<Provider>` is `MSSQL`, `PostgreSQL`, or `Sqlite` (design-time EF migration projects live under top-level `src/Migrations/{MSSQL,PostgreSQL,Sqlite}`). See [migrations.md](migrations.md) for the migration workflow (which providers to update when), the current migration set per module/provider, and the full EF CLI cheat sheet. |
 | Run local infra (Postgres, Redis, pgAdmin) via Docker | See [docker-cli.md](docker-cli.md). |
 | Run the API locally | `dotnet run --project src/StarterKit.WebApi/StarterKit.WebApi.csproj` |
 | Run the backend test suite | Run each module's `dotnet test tests/<Module>.Tests/<Module>.Tests.csproj` in turn — see § Running Tests. |
@@ -77,11 +84,11 @@ No special setup needed — all current tests are unit tests using EF Core's InM
 - Transfers module (stock transfers with an in-transit phase): `src/Transfers.Api/` (the `StockTransfer` aggregate in `Domain/StockTransfers/`, DbContext in `Data/`, CQRS handlers + `TransferPosting` + the `TransfersPostingReconciliationService` sweep in `Application/StockTransfers/`, controllers in `Controllers/`); public DTOs/requests/permissions in `src/Transfers.Contracts/`. Deep-dive doc: [../architecture/modules/Transfers.md](../architecture/modules/Transfers.md).
 - Purchasing module (suppliers, purchase orders, goods receipts, purchase returns): `src/Purchasing.Api/` (aggregates in `Domain/{Suppliers,PurchaseOrders,GoodsReceipts,PurchaseReturns}/`, DbContext in `Data/`, CQRS handlers in `Application/<Feature>/{Commands,Queries}`, approval coordinator/handler/sweep in `Application/PurchaseOrders/`, posting + sweep in `Application/Posting/`, controllers in `Controllers/`); public DTOs/requests/permissions in `src/Purchasing.Contracts/`. Deep-dive doc: [../architecture/modules/Purchasing.md](../architecture/modules/Purchasing.md).
 - Host wiring/startup (`Program.cs`, `appsettings*.json`): `src/StarterKit.WebApi/`.
-- Tests: `tests/Framework.Tests/<ProjectName>/...` (mirrors `Shared/`, `Infrastructure/`, `Persistence/`) and `tests/<Module>.Tests/<Area>/...` for each module (mirrors that module's own `<Module>.Api` folder structure, plus a `TestSupport/` folder for shared test infrastructure). No test project yet for `Notifications`.
+- Tests: `tests/Framework.Tests/<ProjectName>/...` (mirrors `Shared/`, `Infrastructure/`, `Persistence/`) and `tests/<Module>.Tests/<Area>/...` for each module (mirrors that module's own `<Module>.Api` folder structure, plus a `TestSupport/` folder for shared test infrastructure).
 
 ## Notes
 
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-21_
+_Last synced: 2026-09-28_

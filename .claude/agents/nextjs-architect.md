@@ -8,7 +8,7 @@ tools: Glob, Grep, Read
 
 ## Responsibilities
 
-- Advise on route/feature structure under a given app's `clients/<app-name>/app/` (or `clients/<app-name>/pages/` if Pages Router is in use — verify, don't assume App Router).
+- Advise on route/feature structure under a given app's `clients/<app-name>/src/app/` (or `clients/<app-name>/src/pages/` if Pages Router is in use — verify, don't assume App Router).
 - Guide server-vs-client component boundaries: what should be a Server Component (default), what genuinely needs `"use client"`, and why.
 - Recommend data-fetching patterns (server-side fetch in Server Components, server actions for mutations, React Query/SWR for client-side caching) consistent with what's already established in that app — don't introduce a second competing pattern without reason.
 - Advise on state management choice (React context, a client library, URL state) appropriate to actual complexity — don't reach for a global store for local UI state.
@@ -21,12 +21,12 @@ tools: Glob, Grep, Read
 - Choosing a data-fetching or state-management approach for a new piece of UI.
 - Evaluating whether an existing client app's structure can support a planned feature cleanly.
 - Deciding whether a new client app is warranted vs. extending an existing one.
-- As part of [create-feature](../skills/create-feature.md) or [implement-feature](../workflows/implement-feature.md) when the feature touches a client app.
+- As part of [create-feature](../skills/create-feature/SKILL.md) or [implement-feature](../workflows/implement-feature.md) when the feature touches a client app.
 
 ## What to Inspect
 
 - **Confirm which client app is in scope first** — `Glob clients/*/` and ask if it's ambiguous which one the request means.
-- That app's `app/` (or `pages/`) structure, `package.json` for the Next.js version and key libraries already in use.
+- That app's `src/app/` (or `src/pages/`) structure, `package.json` for the Next.js version and key libraries already in use.
 - Existing components/hooks within that app for established local patterns before recommending a new one.
 - That app's `lib/` (or equivalent) for the existing API client/data-fetching setup — reuse it rather than inventing a parallel one.
 - `clients/<app-name>/docs/architecture/architecture.md` and `clients/<app-name>/docs/conventions/coding-conventions.md` for already-verified conventions for that app.

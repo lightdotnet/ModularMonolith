@@ -17,10 +17,10 @@ Handle API design/review tasks (REST contracts, DTOs, error shape) for a specifi
 ## Workflow
 
 1. **Scope**: confirm the target module and whether this is new design or review of a change.
-2. **Delegate**: invoke [api-designer](../agents/api-designer.md) with the scoped contract/API.
+2. **Delegate**: invoke [api-designer](../../agents/api-designer.md) with the scoped contract/API.
 3. **Classify changes**: for any change to an existing endpoint, explicitly classify as additive or breaking before proceeding.
-4. **Check conventions**: compare against existing conventions across modules (naming, versioning, error shape) via `src/docs/conventions/coding-conventions.md` (§ API Conventions) if populated.
-5. **Check frontend impact**: for changes to an existing endpoint, delegate to [api-contract-reviewer](../agents/api-contract-reviewer.md) to find actual frontend call sites affected.
+4. **Check conventions**: compare against existing conventions across modules (naming, versioning, error shape) via `src/docs/architecture/architecture.md` (§ Key Design Patterns) and root `docs/integration.md`.
+5. **Check frontend impact**: for changes to an existing endpoint, delegate to [api-contract-reviewer](../../agents/api-contract-reviewer.md) to find actual frontend call sites affected.
 6. **Report**: proposed/reviewed contract with rationale and explicit breaking-change flags, including what each affected client app needs to change if breaking.
 
 ## Expected Outputs

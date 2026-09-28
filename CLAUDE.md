@@ -12,7 +12,7 @@ This file is the entry point for every Claude Code session in this repository. R
 
 This repository is a **starter template monorepo for a full-stack application**: a C#/.NET backend and one or more frontend clients, meant to be cloned/forked as the starting point for new projects.
 
-- **Backend** — `src/` — ASP.NET Core Web API, **C#**, organized as a **Modular Monolith**. One solution (`.sln`/`.slnx`), one deployable process. See [src/CLAUDE.md](src/CLAUDE.md) for module structure, stack, and backend-specific rules.
+- **Backend** — `src/` — ASP.NET Core Web API, **C#**, organized as a **Modular Monolith**. One solution (`StarterKit.slnx`), one deployable process. See [src/CLAUDE.md](src/CLAUDE.md) for module structure, stack, and backend-specific rules.
 - **Clients** — `clients/` — one or more frontend apps, each in its own subfolder (e.g. `clients/admin/`, the current admin console). Each client consumes the backend exclusively over HTTP as a JSON API — the backend's MVC controllers are **API-only** (no server-rendered Razor views). See [clients/admin/CLAUDE.md](clients/admin/CLAUDE.md) for that app's stack and rules.
 - **Integration** — the only contract between backend and any client is the HTTP API surface (routes, DTOs, status/error shapes). No side reaches into another's internals; there is no shared DB access or shared source between `src/` and `clients/*`. See [docs/integration.md](docs/integration.md) for the cross-cutting integration contract.
 
@@ -33,11 +33,11 @@ Consequences of this:
 6. **Ask before assuming structure.** If it's unclear which module or which client app (once `clients/` has more than one) a request applies to, ask rather than guessing.
 7. **No destructive or wide-blast-radius edits without confirmation.** Changes to the shared kernel/building blocks, cross-module refactors, changes to an API contract that one or more clients depend on, or dependency bumps touching both `src/` and `clients/*` require explicit user confirmation first.
 8. **Language**: see [§0 Language Convention](#0-language-convention) — Vietnamese input is normal; everything written to the repo is English.
-9. **Code-change workflow gate.** For any request to add code, modify existing code, or add a feature: always produce a plan first and present it for the user's review — do not write any code until the user explicitly approves the plan. Once approved, implement it, delegating to the relevant agents/skills/workflows (§4–§6) wherever they apply. When implementation is complete, present the changed code back to the user for review before doing anything further — don't chain straight into testing or docs. **Running the automated test suite and updating documentation each require a separate, explicit follow-up instruction** from the user; never trigger either automatically right after implementing, even if the approved plan mentioned adding tests or docs. See [implement-feature](.claude/workflows/implement-feature.md) and [create-feature](.claude/skills/create-feature.md).
+9. **Code-change workflow gate.** For any request to add code, modify existing code, or add a feature: always produce a plan first and present it for the user's review — do not write any code until the user explicitly approves the plan. Once approved, implement it, delegating to the relevant agents/skills/workflows (§4–§6) wherever they apply. When implementation is complete, present the changed code back to the user for review before doing anything further — don't chain straight into testing or docs. **Running the automated test suite and updating documentation each require a separate, explicit follow-up instruction** from the user; never trigger either automatically right after implementing, even if the approved plan mentioned adding tests or docs. See [implement-feature](.claude/workflows/implement-feature.md) and [create-feature](.claude/skills/create-feature/SKILL.md).
 
 ## 3. Where Things Live
 
-- **`.claude/`** — Claude development infrastructure only: reusable agents, skills, workflows, commands, doc-generation templates, and this project's own working-rules/meta-maintenance docs (`AI_CONTEXT.md`, `ROT.md`, `WORKFLOWS.md`). Nothing project-specific belongs here — see [.claude/AI_CONTEXT.md](.claude/AI_CONTEXT.md) for detailed working rules.
+- **`.claude/`** — Claude development infrastructure only: reusable agents, skills, workflows, doc-generation templates, and this project's own working-rules/meta-maintenance docs (`AI_CONTEXT.md`, `ROT.md`, `WORKFLOWS.md`). Nothing project-specific belongs here — see [.claude/AI_CONTEXT.md](.claude/AI_CONTEXT.md) for detailed working rules.
 - **`src/CLAUDE.md` + `src/docs/`** — everything specific to the backend solution: module/architecture detail, conventions, known debt. See [src/CLAUDE.md](src/CLAUDE.md).
 - **`clients/<app-name>/CLAUDE.md` + `clients/<app-name>/docs/`** — everything specific to that client app. See [clients/admin/CLAUDE.md](clients/admin/CLAUDE.md).
 - **`docs/`** (repo root) — genuinely cross-cutting knowledge that spans both backend and clients (the integration boundary itself), not owned by either project. See [docs/integration.md](docs/integration.md).
@@ -71,15 +71,15 @@ Rule of thumb: if a task maps cleanly to one row above, delegate to that agent i
 
 ## 5. Skill Usage
 
-Reusable playbooks live in [.claude/skills/](.claude/skills/) — see each file for purpose, inputs, workflow, and best practices:
+Skills live in [.claude/skills/](.claude/skills/) as `<name>/SKILL.md` — each is invocable as `/<name>`, and Claude also loads one automatically when its `description` matches the task. See each file for purpose, inputs, workflow, and best practices:
 
-- [create-feature](.claude/skills/create-feature.md) — full-stack feature (backend module change + client UI + contract), [refactor](.claude/skills/refactor.md)
-- [ddd-modeling](.claude/skills/ddd-modeling.md) — tactical domain model for a backend module, [clean-architecture-split](.claude/skills/clean-architecture-split.md) — the (as-yet-unused) single-project → 4-project module split
-- [review-code](.claude/skills/review-code.md), [review-architecture](.claude/skills/review-architecture.md)
-- [generate-docs](.claude/skills/generate-docs.md), [sync-docs](.claude/skills/sync-docs.md)
-- [analyze-solution](.claude/skills/analyze-solution.md) (backend), [analyze-module](.claude/skills/analyze-module.md), [analyze-project](.claude/skills/analyze-project.md)
-- [analyze-frontend](.claude/skills/analyze-frontend.md) (all of `clients/`), [analyze-client](.claude/skills/analyze-client.md) (one client app)
-- [efcore](.claude/skills/efcore.md), [api](.claude/skills/api.md), [nextjs](.claude/skills/nextjs.md), [testing](.claude/skills/testing.md), [performance](.claude/skills/performance.md)
+- [create-feature](.claude/skills/create-feature/SKILL.md) — full-stack feature (backend module change + client UI + contract), [refactor](.claude/skills/refactor/SKILL.md)
+- [ddd-modeling](.claude/skills/ddd-modeling/SKILL.md) — tactical domain model for a backend module, [clean-architecture-split](.claude/skills/clean-architecture-split/SKILL.md) — the (as-yet-unused) single-project → 4-project module split
+- [review-code](.claude/skills/review-code/SKILL.md), [review-architecture](.claude/skills/review-architecture/SKILL.md)
+- [generate-docs](.claude/skills/generate-docs/SKILL.md), [sync-docs](.claude/skills/sync-docs/SKILL.md)
+- [analyze-solution](.claude/skills/analyze-solution/SKILL.md) (backend), [analyze-module](.claude/skills/analyze-module/SKILL.md), [analyze-project](.claude/skills/analyze-project/SKILL.md)
+- [analyze-frontend](.claude/skills/analyze-frontend/SKILL.md) (all of `clients/`), [analyze-client](.claude/skills/analyze-client/SKILL.md) (one client app)
+- [efcore](.claude/skills/efcore/SKILL.md), [api](.claude/skills/api/SKILL.md), [nextjs](.claude/skills/nextjs/SKILL.md), [testing](.claude/skills/testing/SKILL.md), [performance](.claude/skills/performance/SKILL.md)
 
 ## 6. Workflow Usage
 
@@ -103,7 +103,7 @@ Session- and task-level workflows live in [.claude/workflows/](.claude/workflows
 
 ## 8. Documentation Synchronization Rules
 
-- Sync is **explicit and pull-based**: it happens only when the user runs a sync/generate request (see [sync-documentation](.claude/workflows/sync-documentation.md), [sync-docs skill](.claude/skills/sync-docs.md)).
+- Sync is **explicit and pull-based**: it happens only when the user runs a sync/generate request (see [sync-documentation](.claude/workflows/sync-documentation.md), [sync-docs skill](.claude/skills/sync-docs/SKILL.md)).
 - Sync must diff current docs against current code, update what changed, remove what's stale, and leave manually-authored content untouched.
 - Never sync as a side effect of an unrelated task (e.g., don't "helpfully" update docs while implementing a feature unless asked).
 
@@ -113,21 +113,21 @@ Session- and task-level workflows live in [.claude/workflows/](.claude/workflows
 |---|---|
 | "Scaffold the project" / "set up the initial structure" | [.claude/workflows/scaffold-project.md](.claude/workflows/scaffold-project.md) |
 | "Analyze the backend/solution" | [.claude/workflows/analyze-solution.md](.claude/workflows/analyze-solution.md) |
-| "Analyze this module" | [.claude/skills/analyze-module.md](.claude/skills/analyze-module.md) |
-| "Analyze this project" | [.claude/skills/analyze-project.md](.claude/skills/analyze-project.md) |
-| "Analyze all the clients/frontends" | [.claude/skills/analyze-frontend.md](.claude/skills/analyze-frontend.md) |
-| "Analyze the admin client / this client app" | [.claude/skills/analyze-client.md](.claude/skills/analyze-client.md) |
+| "Analyze this module" | [.claude/skills/analyze-module/SKILL.md](.claude/skills/analyze-module/SKILL.md) |
+| "Analyze this project" | [.claude/skills/analyze-project/SKILL.md](.claude/skills/analyze-project/SKILL.md) |
+| "Analyze all the clients/frontends" | [.claude/skills/analyze-frontend/SKILL.md](.claude/skills/analyze-frontend/SKILL.md) |
+| "Analyze the admin client / this client app" | [.claude/skills/analyze-client/SKILL.md](.claude/skills/analyze-client/SKILL.md) |
 | "Analyze this folder" | [.claude/workflows/analyze-folder.md](.claude/workflows/analyze-folder.md) |
-| "Generate documentation" | [.claude/skills/generate-docs.md](.claude/skills/generate-docs.md) |
+| "Generate documentation" | [.claude/skills/generate-docs/SKILL.md](.claude/skills/generate-docs/SKILL.md) |
 | "Sync documentation" | [.claude/workflows/sync-documentation.md](.claude/workflows/sync-documentation.md) |
-| "Review architecture" | [.claude/skills/review-architecture.md](.claude/skills/review-architecture.md) |
-| "Review code" | [.claude/skills/review-code.md](.claude/skills/review-code.md) |
-| "Design a domain model / aggregate" / "where should this rule live" | [.claude/skills/ddd-modeling.md](.claude/skills/ddd-modeling.md) |
-| "Split a module into Clean Architecture layers" | [.claude/skills/clean-architecture-split.md](.claude/skills/clean-architecture-split.md) |
+| "Review architecture" | [.claude/skills/review-architecture/SKILL.md](.claude/skills/review-architecture/SKILL.md) |
+| "Review code" | [.claude/skills/review-code/SKILL.md](.claude/skills/review-code/SKILL.md) |
+| "Design a domain model / aggregate" / "where should this rule live" | [.claude/skills/ddd-modeling/SKILL.md](.claude/skills/ddd-modeling/SKILL.md) |
+| "Split a module into Clean Architecture layers" | [.claude/skills/clean-architecture-split/SKILL.md](.claude/skills/clean-architecture-split/SKILL.md) |
 | "Implement a feature" | [.claude/workflows/implement-feature.md](.claude/workflows/implement-feature.md) |
-| "Update CLAUDE documentation" | [.claude/skills/sync-docs.md](.claude/skills/sync-docs.md), scoped to `.claude/` docs only |
+| "Update CLAUDE documentation" | [.claude/skills/sync-docs/SKILL.md](.claude/skills/sync-docs/SKILL.md), scoped to `.claude/` docs only |
 | "Run a ROT review of .claude" / "check for stale agents/skills" | [.claude/ROT.md](.claude/ROT.md) |
-| "Load backend/frontend/full context" | `/context-backend`, `/context-frontend`, or `/context-full` ([.claude/commands/](.claude/commands/)) |
+| "Load backend/frontend/full context" | `/context-backend`, `/context-frontend`, or `/context-full` ([.claude/skills/](.claude/skills/)) |
 
 ---
 _Last synced: 2026-09-07_

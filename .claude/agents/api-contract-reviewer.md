@@ -17,13 +17,13 @@ tools: Glob, Grep, Read
 
 - Before or after a backend API change, to confirm every client that calls the affected endpoint still matches.
 - User asks "will this break the frontend/a client" or "is client X in sync with the API."
-- As part of [create-feature](../skills/create-feature.md) when a feature spans both `src/` and one or more client apps, or [review-repository](../workflows/review-repository.md).
+- As part of [create-feature](../skills/create-feature/SKILL.md) when a feature spans both `src/` and one or more client apps, or [review-repository](../workflows/review-repository.md).
 
 ## What to Inspect
 
 - The relevant module's `Api` project (routes, DTOs, `[HttpGet]`/`[HttpPost]`/etc. attributes, response types).
 - **Every** client app under `clients/*` that plausibly calls the affected endpoint — don't check just one and assume the others are unaffected once more than one exists.
-- Each client's API client/wrapper layer (commonly `clients/<app-name>/lib/api/` or similar) and direct call sites using it.
+- Each client's API client/wrapper layer (e.g. `clients/<app-name>/src/modules/*/api/<feature>.api.ts` over the named clients in `src/lib/server/backend-api.ts`, or similar) and direct call sites using it.
 - Any OpenAPI/Swagger spec or generated client, if a project uses one, to check it matches current controller code.
 - Root `docs/integration.md` for the documented client-generation strategy per app.
 

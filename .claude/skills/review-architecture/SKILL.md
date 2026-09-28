@@ -17,10 +17,10 @@ Assess the structural health of a specific backend module (or the whole backend 
 ## Workflow
 
 1. **Scope**: confirm the exact module/solution/frontend area to review.
-2. **Delegate**: invoke [architecture-reviewer](../agents/architecture-reviewer.md) for backend scope, or [nextjs-architect](../agents/nextjs-architect.md) for frontend scope.
-3. **Verify, don't assume**: the agent should build its dependency picture from actual `.csproj`/`.sln` references (backend) or actual imports/route structure (frontend), not folder-name conventions.
+2. **Delegate**: invoke [architecture-reviewer](../../agents/architecture-reviewer.md) for backend scope, or [nextjs-architect](../../agents/nextjs-architect.md) for frontend scope.
+3. **Verify, don't assume**: the agent should build its dependency picture from actual `.csproj`/`.slnx` references (backend) or actual imports/route structure (frontend), not folder-name conventions.
 4. **Report**: present findings ranked by severity, each tied to a concrete file/reference.
-5. **Optionally persist**: if the user asks to update documentation with the findings, hand off to [sync-docs](sync-docs.md) — do not update `src/docs/architecture/architecture.md`/`clients/<app-name>/docs/architecture/architecture.md` automatically.
+5. **Optionally persist**: if the user asks to update documentation with the findings, hand off to [sync-docs](../sync-docs/SKILL.md) — do not update `src/docs/architecture/architecture.md`/`clients/<app-name>/docs/architecture/architecture.md` automatically.
 
 ## Expected Outputs
 

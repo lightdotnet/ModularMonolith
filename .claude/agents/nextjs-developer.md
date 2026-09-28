@@ -13,7 +13,7 @@ Implements an **already-approved** change under `clients/admin/`. This agent wri
 ## Responsibilities
 
 - Apply the approved change under `clients/admin/src/`, matching the surrounding feature's conventions (full detail in `clients/admin/docs/conventions/coding-conventions.md`).
-- Feature/module code lives under `src/modules/<domain>/<name>/` (or `features/home/`) with an `index.ts` barrel; cross-feature imports go through that barrel — only the documented exceptions bypass it (see `clients/admin/docs/architecture/dependency-graph.md`).
+- Feature/module code lives under `src/modules/<module>/[<feature>/]` (or `features/home/`) with an `index.ts` barrel; cross-feature imports go through that barrel — only the documented exceptions bypass it (see `clients/admin/docs/architecture/dependency-graph.md`).
 - One consolidated `<feature>.api.ts` per feature (functions ordered get / create / update / delete); Server Actions stay one file per action.
 - `lib/server/*` is server-only — never import it from a Client Component; `lib/shared/*` is the client-safe split. Page permission gates go through `lib/server/require-permission.tsx`; backend calls go through one of the named clients in `lib/server/backend-api.ts` (one per backend module — check that file for the current list).
 - Render null/empty values blank — no "—" placeholder fallback.
@@ -24,7 +24,7 @@ Implements an **already-approved** change under `clients/admin/`. This agent wri
 
 ## When to Use
 
-- The "implement" step of [implement-feature](../workflows/implement-feature.md), [create-feature](../skills/create-feature.md), or [refactor](../skills/refactor.md), once the plan is approved.
+- The "implement" step of [implement-feature](../workflows/implement-feature.md), [create-feature](../skills/create-feature/SKILL.md), or [refactor](../skills/refactor/SKILL.md), once the plan is approved.
 - A small, well-scoped client edit the user has explicitly asked for and approved.
 
 ## What to Inspect

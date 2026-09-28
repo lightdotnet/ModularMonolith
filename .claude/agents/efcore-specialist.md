@@ -18,7 +18,7 @@ tools: Glob, Grep, Read, Bash
 
 - User asks to review or design an entity, `DbContext`, or migration for a module.
 - User reports slow queries or asks about EF Core performance.
-- As part of [efcore skill](../skills/efcore.md) or when [implement-feature](../workflows/implement-feature.md) touches data access.
+- As part of [efcore skill](../skills/efcore/SKILL.md) or when [implement-feature](../workflows/implement-feature.md) touches data access.
 
 ## What to Inspect
 

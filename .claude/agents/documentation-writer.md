@@ -14,7 +14,7 @@ tools: Glob, Grep, Read, Write, Edit
 
 ## When to Use
 
-- Only when explicitly invoked via [generate-docs](../skills/generate-docs.md) or [sync-docs](../skills/sync-docs.md) skills, or the [sync-documentation](../workflows/sync-documentation.md) workflow.
+- Only when explicitly invoked via [generate-docs](../skills/generate-docs/SKILL.md) or [sync-docs](../skills/sync-docs/SKILL.md) skills, or the [sync-documentation](../workflows/sync-documentation.md) workflow.
 - Never invoke proactively as a side effect of an unrelated code change.
 
 ## What to Inspect

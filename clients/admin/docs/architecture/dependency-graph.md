@@ -9,7 +9,7 @@ The full dependency/devDependency list with exact versions lives in `clients/adm
 - **Theming/toast**: `next-themes` (light/dark/system switching; also drives `components/toast/toaster.tsx`'s toast theme), `sonner` (toast notifications, wrapped by `components/toast/`, never imported directly by feature/module code), `tw-animate-css` (animation utility classes).
 - **Feature-specific**: `qrcode` (QR code on `/user-profile`), `@microsoft/signalr` (real-time push client, used only by `modules/notifications/hooks/use-notifications.ts`).
 - **Positioning/virtualization**: `@floating-ui/react` (the Command Palette — reachable in the app via the topbar `SearchBox` — plus the surviving `components/foundation/{use-listbox,floating-overlay}`), `@tanstack/react-virtual` (headless list virtualization behind `components/foundation/use-virtual-list.ts`, used by the DataTable's `"virtualized"`/`"infinite"` modes and the Command Palette's result list).
-- **Server-only guard**: `server-only` — compile-time marker forcing a build error if a `lib/server/*` module is ever imported into a Client Component; present in all 18 files under `lib/server/` (the 17 flat files plus `http-handlers/bearer-token-handler.ts`).
+- **Server-only guard**: `server-only` — compile-time marker forcing a build error if a `lib/server/*` module is ever imported into a Client Component; every file under `lib/server/` (including `http-handlers/`) starts with `import "server-only"`.
 - **Styling toolchain** (devDependencies): `tailwindcss` + `@tailwindcss/postcss` (Tailwind v4), `shadcn` (CLI that generated `components/ui/*`; also imported at runtime for `shadcn/tailwind.css`), `prettier` + `prettier-plugin-tailwindcss` (no config file/`format` script found — see [coding-conventions.md](../conventions/coding-conventions.md)).
 - **Tooling** (devDependencies): `eslint` + `eslint-config-next` (pinned to match `next`'s version), `typescript`, `@types/*`.
 
@@ -38,7 +38,6 @@ None found among internal module imports. `components/ui/*` is not an absolutely
 | `modules/identity/users/components/users-data-table.tsx` | `modules/identity/user-profile/components/user-status-badge` | Component not re-exported by the `user-profile` barrel |
 | `modules/notifications/components/user-select.tsx` | `modules/identity/users/api/search-users-action` | Server Action, never barrel-exported |
 | `modules/organization/employees/components/user-select.tsx` | `modules/identity/users/api/search-users-action` | Same as above — second duplicate consumer |
-| `modules/approvals/components/approver-select.tsx` | `modules/identity/users/api/search-users-action` | Same as above — third duplicate consumer |
 | `product-select.tsx` in `modules/orders`, `modules/inventory`, `modules/transfers`, `modules/purchasing/purchase-orders` | `modules/catalog/api/search-products-action` | Server Action, never barrel-exported by `catalog` |
 | `modules/organization/employees/components/employee-login-tab.tsx` | `modules/identity/users/api/get-user-detail-action` | Server Action, never barrel-exported |
 | `modules/organization/departments/components/company-filter.tsx` | `modules/organization/companies/components/company-select` | Component not re-exported by the `companies` barrel |
@@ -52,6 +51,7 @@ None found among internal module imports. `components/ui/*` is not an absolutely
 | `constants/nav-items.ts` | Every nav-bearing module's `constants/nav-item.ts` (21 files: `features/home`, `identity/{users,roles}`, `notifications`, `organization/{companies,departments,employees}`, `location`, `catalog`, `orders`, `inventory` (two: `nav-item` + `valuation-nav-item`), `transfers`, `purchasing/{suppliers,purchase-orders,goods-receipts,purchase-returns}`, `currency/{currencies,exchange-rates}`, `approvals`, `leave-requests`) | Each module's `NavItem` constant, plus that barrel's Server Component |
 | `components/layout/topbar.tsx` | `modules/notifications/components/notification-bell` | `NotificationBell` is in the `notifications` barrel |
 | `modules/organization/employees/components/edit-employee-dialog.tsx` | `modules/organization/departments/api/{get-org-unit-tree-action,get-employee-levels-action}` | Both are in the `departments` barrel |
+| `modules/approvals/components/approver-select.tsx` | `modules/organization/employees/api/search-employees-action` | `searchEmployeesAction` is in the `employees` barrel (the `EmployeeDto` type is imported through the barrel, type-only) |
 
 Two Server-Component (non-client) call sites import a barrel-exported function directly anyway, for consistency rather than necessity (no client-bundle risk, since neither is `"use client"`): `modules/organization/employees/components/employees-page.tsx` and `modules/organization/departments/components/departments-page.tsx` both call `searchCompanies` from `modules/organization/companies/api/companies.api` directly rather than via the `companies` barrel (which does export it); `features/home/components/home-page.tsx` similarly imports `modules/notifications/components/notification-inbox`'s `NotificationInbox` directly even though the `notifications` barrel also re-exports it (its sibling import, `get-my-notifications-action`, falls under reason (A) — that one genuinely isn't barrel-exported).
 
@@ -78,4 +78,4 @@ Not applicable — this is a client-app dependency graph, not backend.
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-21_
+_Last synced: 2026-09-28_

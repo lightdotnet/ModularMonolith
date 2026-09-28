@@ -1,6 +1,6 @@
 <!--
 Template: Solution Overview (Backend)
-Used by: skills/analyze-solution.md, workflows/analyze-solution.md
+Used by: skills/analyze-solution/SKILL.md, workflows/analyze-solution.md
 Output location: src/docs/architecture/overview.md
 Do not populate this file itself — copy its structure into the generated output.
 -->

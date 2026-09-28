@@ -1,4 +1,5 @@
 ---
+name: context-backend
 description: Load backend-only context (root CLAUDE.md + src/CLAUDE.md, plus src/docs/ as needed)
 ---
 

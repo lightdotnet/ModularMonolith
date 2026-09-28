@@ -38,7 +38,7 @@
 - `Framework.Tests` uses hand-written fakes/test doubles (`RecordingPublisher : IPublisher`, `TestCurrentUser : CurrentUserBase`). The module test projects use `Moq` — but only for **cross-module seam interfaces or internal types that need a test double** (`Identity.Tests` mocks `UserManager<User>`/`IMediator`; `Organization.Tests` mocks `IUserService`; `LeaveManagement.Tests` mocks `IOrgDirectoryService` + `IApprovalService`; `Location.Tests` mocks the module-internal `ILocationTypeCache`; `Catalog.Tests` mocks `ICurrencyService`; `Orders.Tests`, `Transfers.Tests`, and `Purchasing.Tests` mock the seams they consume — `ICatalogPricingService`, `ILocationDirectoryService`, `IInventoryService`, `ICurrencyService` (Orders only), plus `IApprovalService`/`IOrgDirectoryService` for Purchasing) — everything else runs against a real Sqlite in-memory DbContext via a per-module `TestHost` (`IdentityTestHost`, `OrganizationTestHost`, `LocationTestHost`, `OrdersTestHost`, `CurrencyTestHost`, …).
 - **Mocking an `internal` interface with Moq needs a second `InternalsVisibleTo` grant, to `"DynamicProxyGenAssembly2"`.** The usual `InternalsVisibleTo("<Module>.Tests")` is enough to let the test project *reference* an internal type, but Moq's Castle DynamicProxy builds its proxy in a dynamically generated assembly named `DynamicProxyGenAssembly2`, which separately needs visibility to implement an `internal interface`. First needed by `Location.Api.csproj` (mocking `ILocationTypeCache` in `Location.Tests`). A module hitting the same issue adds the same `<InternalsVisibleTo Include="DynamicProxyGenAssembly2" />` line rather than making the interface `public`.
 - Test project layout mirrors the module's own folder structure under `tests/<Module>.Tests/<Area>/`, plus a `TestSupport/` folder. `InternalsVisibleTo` is set on each `<Module>.Api.csproj` (and `Shared`/`Infrastructure`/`Persistence` for `Framework.Tests`) so tests reach the `internal` command/query types and handlers.
-- **Coverage**: `tests/Framework.Tests` plus one `tests/<Module>.Tests` project per module except `Notifications`, which has **no dedicated test project yet** and which `Framework.Tests` doesn't reference — the module is currently untested ([../known-debt.md](../known-debt.md)).
+- **Coverage**: `tests/Framework.Tests` plus one `tests/<Module>.Tests` project per module; open coverage gaps are tracked in [../known-debt.md § Test coverage](../known-debt.md#test-coverage).
 
 ## Deviations From Norms Elsewhere in the Repo
 
@@ -54,4 +54,4 @@ Module-specific deviations live in each module doc's § Notable Conventions ([..
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-21_
+_Last synced: 2026-09-28_

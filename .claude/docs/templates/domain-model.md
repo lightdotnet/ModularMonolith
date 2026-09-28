@@ -1,6 +1,6 @@
 <!--
 Template: Domain Model / Aggregate Map
-Used by: agents/ddd-modeler.md, skills/ddd-modeling.md (the shape ddd-modeler fills when returning an
+Used by: agents/ddd-modeler.md, skills/ddd-modeling/SKILL.md (the shape ddd-modeler fills when returning an
   aggregate map). Also referenced by docs/templates/module-overview.md for the split-module case.
 Output: normally a report handed back — fold it into the target module's own doc (§ Internal Layering /
   § Notable Conventions) or the implementation plan; do NOT create a standalone per-module file for a

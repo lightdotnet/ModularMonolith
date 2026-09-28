@@ -10,9 +10,10 @@ How to set up, run, and make common changes to `clients/admin`. Architectural ba
   `@types/node` is `^26.5.1`.
 - **pnpm**: required (`pnpm-lock.yaml` is the only lockfile). Version not pinned (no `packageManager`).
 - **A reachable backend**: login, profile, notifications, and every feature page make real HTTP calls.
-  All twelve `*_API_BASE_URL` vars must point at a running instance (currently one co-hosted backend).
-  SignalR notifications additionally need the backend reachable **directly from the browser**
-  (`SIGNALR_HUB_URL` resolvable + backend CORS allowing the admin origin).
+  Every `*_API_BASE_URL` var (see [Environment](#environment)) must point at a running instance
+  (currently one co-hosted backend). SignalR notifications additionally need the backend reachable
+  **directly from the browser** (`SIGNALR_HUB_URL` resolvable + backend CORS allowing the admin
+  origin), and the Microsoft login relay needs `IDENTITY_WEB_BASE_URL` browser-reachable.
 
 ## Scripts
 
@@ -27,17 +28,44 @@ Local dev talks to the backend over plain HTTP (`http://localhost:5000`): the ba
 HTTPS redirection in Development, so the server-side `fetch` calls in `lib/server/*` reach it
 directly without tripping over the untrusted self-signed ASP.NET dev certificate. The backend's
 `https` launch profile still exposes `https://localhost:5001` for anyone who needs it. Set the
-`*_API_BASE_URL` / `SIGNALR_HUB_URL` vars to match (see `.env.example`). The `next dev` bundler is
-not pinned (no `--turbopack` flag, no config override).
+URL vars below to match (see `.env.example`). The `next dev` bundler is not pinned (no
+`--turbopack` flag, no config override).
 
 ## Environment
 
 `.gitignore` ignores `.env*` except the committed `.env.example`, which is the template. All vars are
-server-only (never `NEXT_PUBLIC_`):
+server-only (never `NEXT_PUBLIC_`); the app-read ones go through `lib/server/config.ts`, which throws
+on a missing value.
+
+### Backend module base URLs
+
+One named backend client per backend module: `lib/server/api-clients.ts` names it,
+`lib/server/config.ts` maps it to its env var, and `lib/server/backend-api.ts` exports its
+ready-to-use, bearer-token-wired instance. Each base URL must include the full path prefix (e.g.
+`api/v1/`) — `lib/server/http.ts` prepends nothing; a missing trailing slash is appended by
+`getApiBaseUrl()`. The vars are configured independently even though they currently share one host.
+This table is the complete list:
+
+| Var | `backend-api.ts` instance | Backend module |
+|---|---|---|
+| `IDENTITY_API_BASE_URL` | `identityApi` | `Identity.Api` |
+| `NOTIFICATIONS_API_BASE_URL` | `notificationsApi` | `Notifications.Api` |
+| `ORGANIZATION_API_BASE_URL` | `organizationApi` | `Organization.Api` |
+| `APPROVAL_API_BASE_URL` | `approvalApi` | `Approval.Api` |
+| `LEAVE_MANAGEMENT_API_BASE_URL` | `leaveManagementApi` | `LeaveManagement.Api` |
+| `LOCATION_API_BASE_URL` | `locationApi` | `Location.Api` |
+| `CATALOG_API_BASE_URL` | `catalogApi` | `Catalog.Api` |
+| `ORDERS_API_BASE_URL` | `ordersApi` | `Orders.Api` |
+| `INVENTORY_API_BASE_URL` | `inventoryApi` | `Inventory.Api` |
+| `TRANSFERS_API_BASE_URL` | `transfersApi` | `Transfers.Api` |
+| `PURCHASING_API_BASE_URL` | `purchasingApi` | `Purchasing.Api` |
+| `CURRENCY_API_BASE_URL` | `currencyApi` | `Currency.Api` |
+
+### Other vars
 
 | Var | Purpose |
 |---|---|
-| `IDENTITY_API_BASE_URL`, `NOTIFICATIONS_API_BASE_URL`, `ORGANIZATION_API_BASE_URL`, `LOCATION_API_BASE_URL`, `APPROVAL_API_BASE_URL`, `LEAVE_MANAGEMENT_API_BASE_URL`, `CATALOG_API_BASE_URL`, `ORDERS_API_BASE_URL`, `INVENTORY_API_BASE_URL`, `TRANSFERS_API_BASE_URL`, `PURCHASING_API_BASE_URL`, `CURRENCY_API_BASE_URL` | Base URL per backend module. Must include the full path prefix (e.g. `api/v1/`) and a trailing slash — `lib/server/http.ts` prepends nothing. Configured independently even though they currently share one host. |
+| `IDENTITY_WEB_BASE_URL` | Absolute, **browser-reachable** origin of `Identity.Web`. The `/login/microsoft/start` Route Handler redirects the browser there (`/Account/ExternalLoginStart`) for the Microsoft login relay — unlike `IDENTITY_API_BASE_URL` (server-to-server only, may be internal-only). Required by `lib/server/config.ts`. |
 | `TOKEN_ENCRYPTION_KEY` | 32-byte base64 key (`openssl rand -base64 32`). AES-256-GCM key for the `admin_session` cookie. `lib/server/config.ts` throws if unset; read on every request. |
 | `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | Base64 AES key Next.js uses at **build time** to salt Server Action IDs. Not read by app code. If unset, a fresh key per build ⇒ every deploy breaks open tabs with "Failed to find Server Action". Optional locally; must be set and **constant forever** on deployed servers. |
 | `SIGNALR_HUB_URL` | Absolute URL to the backend SignalR hub. Read server-side and handed to the browser at connect time by a Server Action (not inlined), so it's a runtime setting — change it by editing the server `.env` and restarting, no rebuild. |
@@ -65,11 +93,11 @@ None — no test runner installed, no `*.test.*`/`*.spec.*` files.
 
 | Task | How |
 |---|---|
-| Run the dev server | `cd clients/admin && pnpm install && pnpm dev` (copy `.env.example` → `.env.local` and fill the base URLs + `TOKEN_ENCRYPTION_KEY` first) |
+| Run the dev server | `cd clients/admin && pnpm install && pnpm dev` (copy `.env.example` → `.env.local` and fill the URLs + `TOKEN_ENCRYPTION_KEY` first) |
 | Deploy | Run `clients/deploy-nssm.ps1` (or `deploy-pm2.ps1`) from a prepared Windows host; ensure `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` is in the deployed `standalone/.env` first |
 | Add a backend endpoint call | Add a function to the feature/module's `<name>.api.ts` (create it if missing), wrapping `requestJson`/`requestVoid` from the right `lib/server/backend-api.ts` instance via a `call-guard.ts` helper; export it from `index.ts` |
-| Add a feature/module | Create `src/modules/<domain>/<name>/` with `api/`, optional `components/`/`types/`/`constants/`, and an `index.ts` barrel; add a re-export `page.tsx` under `src/app/`. Don't add new `src/features/*` |
-| Add a new backend client | Add an entry to `lib/server/api-clients.ts`, its `*_API_BASE_URL` name to `lib/server/config.ts`, a `createBackendApiClient(...)` instance in `lib/server/backend-api.ts`, and the var to `.env.example` |
+| Add a feature/module | Create `src/modules/<domain>/<name>/` with `api/`, optional `components/`/`types/`/`constants/`, and an `index.ts` barrel; add a `page.tsx` under `src/app/` (see [architecture.md § Layering](../architecture/architecture.md#layering) for its shape). Don't add new `src/features/*` |
+| Add a new backend client | Add an entry to `lib/server/api-clients.ts`, its `*_API_BASE_URL` name to `lib/server/config.ts`, a `createBackendApiClient(...)` instance in `lib/server/backend-api.ts`, the var to `.env.example`, and a row to the [base-URL table](#backend-module-base-urls) above |
 | Gate a page on a permission | `requirePermission(permission)` at the top, then `if (denied) return denied;` before the data fetch — see `users-page.tsx` |
 | Hide a field/action by a secondary permission | `hasPermission(session, PERMISSION)` from `lib/server/authorization.ts` in the (server) page, passed down as a boolean prop — see `inventory-page.tsx` (`canViewCost`) |
 | Add a list/table page | Reuse `components/shared/data-table` (`DataTable<TData>`). Reference wirings: `users` (server-driven URL-param search), `roles` (client-side filter, no backend search), `notifications` (`customSearch` multi-field filter), the `approvals` tabs / `leave-requests` (pre-fetched array, minimal pagination) |
@@ -108,4 +136,4 @@ and the auth flow in [§ Auth Flow](../architecture/overview.md#auth-flow). Beyo
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-21_
+_Last synced: 2026-09-28_

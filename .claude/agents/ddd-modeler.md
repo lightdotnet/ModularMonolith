@@ -20,13 +20,13 @@ tools: Glob, Grep, Read
 - Designing the `Domain/<Feature>/` folder of a new module or feature.
 - Deciding where a new business rule or invariant should live.
 - Reviewing an existing module's domain model for aggregate leaks or anemia — often handed off from architecture-reviewer, which flags the smell but defers the redesign here.
-- As part of [ddd-modeling](../skills/ddd-modeling.md) or [implement-feature](../workflows/implement-feature.md).
+- As part of [ddd-modeling](../skills/ddd-modeling/SKILL.md) or [implement-feature](../workflows/implement-feature.md).
 
 ## What to Inspect
 
 - The module's `Domain/` (or Identity's older flat `Entities/`) folder — entity classes, their public surface, and how state changes are exposed (methods vs. public setters).
 - `src/docs/known-debt.md` for the domain-event dispatch bypass (P6) and the denormalized cross-module label trade-off (D5) — both accepted current-state, not bugs to re-flag.
-- Sibling modules (`Approval`, `Organization`, `LeaveManagement`) for the folder layout, event shape, and Specification usage already in play.
+- Sibling modules for the folder layout, event shape, and Specification usage already in play — see `src/CLAUDE.md § Design Approach` for which modules are the reference pattern.
 - `<Module>.Contracts` to check the domain language matches the exposed one.
 
 ## Expected Output
@@ -37,7 +37,7 @@ tools: Glob, Grep, Read
 
 ## Things to Avoid
 
-- Do not propose splitting the module into `<Module>.{Domain,Application,Infrastructure,Api}` projects — that's dotnet-architect / [clean-architecture-split](../skills/clean-architecture-split.md).
+- Do not propose splitting the module into `<Module>.{Domain,Application,Infrastructure,Api}` projects — that's dotnet-architect / [clean-architecture-split](../skills/clean-architecture-split/SKILL.md).
 - Do not design the EF Core mapping — describe the model; efcore-specialist maps it.
 - Do not push every enum into a value-object class — match the repo's pragmatism (`Status`, `OrganizationStatus`, `AssignmentType` are plain enums).
 - Do not modify code — this agent is advisory only.

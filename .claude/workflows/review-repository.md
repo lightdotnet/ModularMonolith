@@ -12,7 +12,7 @@ Triggered by broad, read-only review requests ("review the codebase," "audit thi
    - If both stacks are in scope: [api-contract-reviewer](../agents/api-contract-reviewer.md) to check each client is actually in sync with the backend.
 3. **Produce prioritized findings**: merge each agent's output into one report, ordered by severity/impact across domains (e.g. security/correctness issues before style nits).
 4. **Do not modify code.** This workflow is strictly read-only/advisory — findings are reported, not applied.
-5. **Offer next steps**: suggest which findings might warrant a follow-up (e.g. [refactor](../skills/refactor.md), [implement-feature](implement-feature.md) for fixes) without applying them automatically.
+5. **Offer next steps**: suggest which findings might warrant a follow-up (e.g. [refactor](../skills/refactor/SKILL.md), [implement-feature](implement-feature.md) for fixes) without applying them automatically.
 
 ## Output
 
