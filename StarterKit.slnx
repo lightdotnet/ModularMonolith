@@ -5,6 +5,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/StarterKit.WebApi/StarterKit.WebApi.csproj" />
+    <Project Path="src/StarterKit.WebMvc/StarterKit.WebMvc.csproj" />
   </Folder>
   <Folder Name="/src/approval-module/">
     <Project Path="src/Approval.Api/Approval.Api.csproj" />
@@ -75,9 +76,11 @@
     <Project Path="tests/Inventory.Tests/Inventory.Tests.csproj" />
     <Project Path="tests/LeaveManagement.Tests/LeaveManagement.Tests.csproj" />
     <Project Path="tests/Location.Tests/Location.Tests.csproj" />
+    <Project Path="tests/Notifications.Tests/Notifications.Tests.csproj" />
     <Project Path="tests/Orders.Tests/Orders.Tests.csproj" />
     <Project Path="tests/Organization.Tests/Organization.Tests.csproj" />
     <Project Path="tests/Purchasing.Tests/Purchasing.Tests.csproj" />
+    <Project Path="tests/StarterKit.WebMvc.Tests/StarterKit.WebMvc.Tests.csproj" />
     <Project Path="tests/Transfers.Tests/Transfers.Tests.csproj" />
   </Folder>
 </Solution>

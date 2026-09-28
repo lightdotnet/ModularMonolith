@@ -1,0 +1,64 @@
+@model StarterKit.WebMvc.Pages.Identity.Users.IndexModel
+@{
+    var row = new DataTableRow<UserDto>();
+    var canUpdate = PermissionChecker.HasPermission(User, IdentityPermissions.Users.Update);
+}
+<data-table id="users"
+            source="Model.Table"
+            row="row"
+            search-placeholder="Search users..."
+            export="true"
+            export-name="users"
+            empty-icon="people"
+            empty-title="No users found"
+            empty-description="Try adjusting your search.">
+    <dt-action href="@Url.Page("Create")" icon="person-plus" permission="@IdentityPermissions.Users.Create">Create user</dt-action>
+    @* Sortable keys map to backend sort fields in DataTableSortMaps.Users. *@
+    <dt-column key="user" header="Username" sortable="true" hideable="false">
+        <div class="d-flex flex-column min-w-0">
+            @if (canUpdate)
+            {
+                <a class="fw-semibold text-break" asp-page="Edit" asp-route-id="@row.Item.Id">@row.Item.UserName</a>
+            }
+            else
+            {
+                <span class="fw-semibold text-break">@row.Item.UserName</span>
+            }
+        </div>
+    </dt-column>
+    <dt-column key="name" header="Full name" sortable="true">@string.Join(' ', new[] { row.Item.FirstName, row.Item.LastName }.Where(part => !string.IsNullOrWhiteSpace(part)))</dt-column>
+    <dt-column key="email" header="Email" field="Email" sortable="true" css="text-break" />
+    <dt-column key="phone" header="Phone" field="PhoneNumber" css="text-nowrap" />
+    <dt-column key="status" header="Status" sortable="true"><status-badge value="@row.Item.Status" /></dt-column>
+    <dt-column key="roles" header="Roles">
+        <div class="d-flex flex-wrap gap-1">
+            @foreach (var role in row.Item.Roles)
+            {
+                <span class="badge text-bg-light border">@role</span>
+            }
+        </div>
+    </dt-column>
+    <dt-column key="actions" actions="true" permission="@($"{IdentityPermissions.Users.Update},{IdentityPermissions.Users.Delete}")">
+        <a class="btn btn-sm btn-outline-secondary"
+           asp-page="Edit"
+           asp-route-id="@row.Item.Id"
+           asp-permission="@IdentityPermissions.Users.Update"
+           title="Edit"
+           aria-label="Edit @row.Item.UserName"><icon name="pencil" /></a>
+        <a class="btn btn-sm btn-outline-secondary"
+           asp-page="Password"
+           asp-route-id="@row.Item.Id"
+           asp-permission="@IdentityPermissions.Users.Update"
+           title="Force password"
+           aria-label="Force password for @row.Item.UserName"><icon name="key" /></a>
+        <confirm-button asp-page-handler="Delete"
+                        asp-route-id="@row.Item.Id"
+                        asp-permission="@IdentityPermissions.Users.Delete"
+                        title="Delete user"
+                        message="@($"Delete user \"{row.Item.UserName}\"? This cannot be undone.")"
+                        confirm-text="Delete"
+                        variant="danger"
+                        icon="trash"
+                        icon-only="true">Delete @row.Item.UserName</confirm-button>
+    </dt-column>
+</data-table>

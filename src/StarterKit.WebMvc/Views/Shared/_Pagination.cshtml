@@ -1,0 +1,59 @@
+@using StarterKit.WebMvc.Web.DataTables
+@model DataTablePager
+@*
+    Data-table footer: "x–y of N", page-size selector, page jump and page links. Links are real
+    URLs (no-JS fallback / open in new tab); data-table.js intercepts them ([data-dt-nav]).
+*@
+<div class="dt-pager d-flex flex-column flex-md-row align-items-center justify-content-between gap-2 mt-2">
+    <div class="d-flex flex-wrap align-items-center justify-content-center gap-2 small text-body-secondary">
+        @* data-dt-summary: read by data-table.js for the screen-reader status announcement. *@
+        <span class="text-nowrap" data-dt-summary>
+            <strong class="text-body">@Model.FirstRecord.ToString("#,##0")–@Model.LastRecord.ToString("#,##0")</strong>
+            of <strong class="text-body">@Model.TotalRecords.ToString("#,##0")</strong>
+        </span>
+        <label class="d-flex align-items-center gap-1 text-nowrap">
+            <span>Rows</span>
+            <select class="form-select form-select-sm w-auto" data-dt-page-size aria-label="Rows per page" asp-items="Model.PageSizeItems"></select>
+        </label>
+        <label class="d-flex align-items-center gap-1 text-nowrap">
+            <span>Page</span>
+            <input type="number"
+                   class="form-control form-control-sm dt-page-input"
+                   min="1"
+                   max="@Model.TotalPages"
+                   value="@Model.Page"
+                   data-dt-page-input
+                   aria-label="Page number" />
+            <span>of @Model.TotalPages.ToString("#,##0")</span>
+        </label>
+    </div>
+
+    @if (Model.TotalPages > 1)
+    {
+        <nav aria-label="Pagination">
+            <ul class="pagination pagination-sm mb-0 flex-wrap justify-content-center">
+                <li class="page-item @(Model.Page <= 1 ? "disabled" : null)">
+                    <a class="page-link" href="@Model.PageUrl(Model.Page - 1)" data-dt-nav aria-label="Previous page"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
+                </li>
+                @foreach (var pageNumber in Model.PageWindow())
+                {
+                    if (pageNumber is null)
+                    {
+                        <li class="page-item disabled d-none d-sm-block"><span class="page-link">…</span></li>
+                    }
+                    else if (pageNumber == Model.Page)
+                    {
+                        <li class="page-item active" aria-current="page"><span class="page-link">@pageNumber</span></li>
+                    }
+                    else
+                    {
+                        <li class="page-item d-none d-sm-block"><a class="page-link" href="@Model.PageUrl(pageNumber.Value)" data-dt-nav>@pageNumber</a></li>
+                    }
+                }
+                <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : null)">
+                    <a class="page-link" href="@Model.PageUrl(Model.Page + 1)" data-dt-nav aria-label="Next page"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+                </li>
+            </ul>
+        </nav>
+    }
+</div>

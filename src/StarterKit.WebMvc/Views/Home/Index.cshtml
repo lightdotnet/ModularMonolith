@@ -1,0 +1,43 @@
+@model HomeIndexViewModel
+
+<page-header title="Dashboard" subtitle="@($"Welcome back, {Model.DisplayName}")" />
+
+<div class="row g-3">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <div class="text-body-secondary small mb-1">Signed in as</div>
+                <div class="fs-5 fw-semibold text-truncate">@Model.UserName</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <a class="card h-100 shadow-sm text-decoration-none" asp-controller="MyNotifications" asp-action="Index">
+            <div class="card-body">
+                <div class="text-body-secondary small mb-1">Unread notifications</div>
+                <div class="fs-5 fw-semibold text-body"><number value="@Model.UnreadNotificationCount" format="#,##0" /></div>
+            </div>
+        </a>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <div class="text-body-secondary small mb-1">Permissions</div>
+                <div class="fs-5 fw-semibold"><number value="@Model.PermissionCount" format="#,##0" /></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <div class="text-body-secondary small mb-2">Roles</div>
+                <div class="d-flex flex-wrap gap-1">
+                    @foreach (var role in Model.Roles)
+                    {
+                        <span class="badge text-bg-secondary">@role</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

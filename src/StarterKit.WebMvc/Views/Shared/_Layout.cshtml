@@ -1,0 +1,97 @@
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    var antiforgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    @* Read by site.js: antiforgery token for fetch/confirm posts + where to send an expired session. *@
+    <meta name="request-verification-token" content="@antiforgeryToken" />
+    <meta name="login-url" content="@Url.Page("/Account/Login")" />
+    <title>@ViewData["Title"] - StarterKit</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="app-body">
+    <nav class="navbar bg-body border-bottom sticky-top app-navbar">
+        <div class="container-fluid flex-nowrap">
+            <button class="btn btn-link text-body d-lg-none me-1 px-1"
+                    type="button"
+                    data-bs-toggle="offcanvas"
+                    data-bs-target="#app-sidebar"
+                    aria-controls="app-sidebar"
+                    aria-label="Open navigation">
+                <i class="bi bi-list fs-4" aria-hidden="true"></i>
+            </button>
+            <a class="navbar-brand fw-semibold text-truncate me-auto" asp-controller="Home" asp-action="Index">StarterKit</a>
+
+            <div class="d-flex align-items-center gap-1 gap-sm-2">
+                <div id="notification-bell-slot" class="d-flex align-items-center">
+                    @if (isAuthenticated)
+                    {
+                        <vc:notification-bell />
+                    }
+                    @await RenderSectionAsync("NavbarActions", required: false)
+                </div>
+                @if (isAuthenticated)
+                {
+                    <partial name="_UserMenu" />
+                }
+            </div>
+        </div>
+    </nav>
+
+    <div class="app-shell">
+        <aside class="offcanvas-lg offcanvas-start app-sidebar border-end bg-body"
+               tabindex="-1"
+               id="app-sidebar"
+               aria-labelledby="app-sidebar-title">
+            <div class="offcanvas-header border-bottom d-lg-none">
+                <h2 class="offcanvas-title h5" id="app-sidebar-title">Menu</h2>
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="offcanvas"
+                        data-bs-target="#app-sidebar"
+                        aria-label="Close"></button>
+            </div>
+            <div class="offcanvas-body p-0">
+                @if (isAuthenticated)
+                {
+                    <vc:sidebar-nav />
+                }
+            </div>
+        </aside>
+
+        <main class="app-main" id="main-content">
+            @RenderBody()
+        </main>
+    </div>
+
+    @* Toast host used by toast.js; flash messages from TempData are handed over by the Toasts component. *@
+    <div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3" aria-live="polite" aria-atomic="true"></div>
+    <vc:toasts />
+    <partial name="_ConfirmModal" />
+
+    @* Used by notifications.js when the hub pushes a force-logout for this user. *@
+    @if (isAuthenticated)
+    {
+        <form id="session-logout-form" method="post" asp-page="/Account/Logout" class="d-none"></form>
+    }
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/aspnet-client-validation/dist/aspnet-validation.min.js"></script>
+    <script type="module" src="~/js/site.js" asp-append-version="true"></script>
+    @if (isAuthenticated)
+    {
+        @* Deferred classic + module scripts run in document order after parsing: SignalR is ready before notifications.js. *@
+        <script src="~/lib/microsoft-signalr/dist/browser/signalr.min.js" defer></script>
+        <script type="module" src="~/js/notifications.js" asp-append-version="true"></script>
+    }
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

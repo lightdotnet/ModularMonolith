@@ -1,0 +1,88 @@
+@page "/identity/users/{id}/edit"
+@model StarterKit.WebMvc.Pages.Identity.Users.EditModel
+@using StarterKit.WebMvc.Pages.Identity
+
+<page-header title="Edit user" subtitle="@Model.EditedUser.UserName">
+    <breadcrumb-item href="@Url.Content("~/")">Home</breadcrumb-item>
+    <breadcrumb-item href="@Url.Page("Index")">Users</breadcrumb-item>
+    <breadcrumb-item>Edit</breadcrumb-item>
+    <page-actions>
+        <a class="btn btn-outline-secondary" asp-page="Password" asp-route-id="@Model.EditedUser.Id"><icon name="key" css="me-2" />Force password</a>
+    </page-actions>
+</page-header>
+
+<form method="post" data-loading-form novalidate>
+    <partial name="_ValidationSummary" />
+    @* Claims are not posted: the page model reloads the user and keeps them server-side. *@
+
+    <fieldset class="row g-4">
+        <div class="col-12 col-lg-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h2 class="h6 mb-3">Profile</h2>
+                    <div class="row">
+                        <form-field asp-for="Input.FirstName" label="First name" css="col-12 col-md-6 mb-3" />
+                        <form-field asp-for="Input.LastName" label="Last name" css="col-12 col-md-6 mb-3" />
+                    </div>
+                    <div class="row">
+                        <form-field asp-for="Input.Email" label="Email" type="email" css="col-12 col-md-6 mb-3" />
+                        <form-field asp-for="Input.PhoneNumber" label="Phone" type="tel" css="col-12 col-md-6 mb-3" />
+                    </div>
+                    <div class="row">
+                        <form-select asp-for="Input.Status" asp-items="IdentityOptions.Statuses(Model.Input.Status)" label="Status" css="col-12 col-md-6 mb-3" />
+                        <form-select asp-for="Input.AuthProvider" asp-items="IdentityOptions.AuthProviders(Model.Input.AuthProvider)" label="Auth provider" css="col-12 col-md-6 mb-3" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h2 class="h6 mb-3">Roles</h2>
+                    @if (Model.AvailableRoles.Count == 0)
+                    {
+                        <p class="small text-body-secondary mb-0">No roles available.</p>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-column gap-2 role-list">
+                            @for (var i = 0; i < Model.AvailableRoles.Count; i++)
+                            {
+                                var role = Model.AvailableRoles[i];
+                                var roleId = $"role-{i}";
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="Input.Roles"
+                                           id="@roleId"
+                                           value="@role"
+                                           checked="@Model.Input.Roles.Contains(role, StringComparer.OrdinalIgnoreCase)" />
+                                    <label class="form-check-label" for="@roleId">@role</label>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    @if (Model.EditedUser.Claims.Count > 0)
+                    {
+                        <h2 class="h6 mt-4 mb-2">Claims</h2>
+                        <ul class="list-unstyled small mb-0">
+                            @foreach (var claim in Model.EditedUser.Claims)
+                            {
+                                <li class="text-break"><span class="text-body-secondary">@claim.Type:</span> @claim.Value</li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="d-flex flex-column flex-sm-row gap-2">
+                <submit-button icon="check-lg">Save changes</submit-button>
+                <a class="btn btn-outline-secondary" asp-page="Index">Cancel</a>
+            </div>
+        </div>
+    </fieldset>
+</form>

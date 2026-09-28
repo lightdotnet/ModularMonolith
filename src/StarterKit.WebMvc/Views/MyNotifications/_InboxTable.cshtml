@@ -1,0 +1,41 @@
+@model MyNotificationsIndexViewModel
+@{
+    var row = new DataTableRow<NotificationDto>();
+}
+<data-table id="inbox"
+            source="Model.Table"
+            row="row"
+            row-css="@(() => row.Item.Status == NotificationStatus.None ? "dt-row-unread" : null)"
+            searchable="false"
+            export="true"
+            export-name="inbox"
+            empty-icon="bell"
+            empty-title="No notifications"
+            empty-description="You're all caught up.">
+    <dt-filters>
+        <select name="status" class="form-select" aria-label="Filter by status" asp-items="NotificationDisplay.StatusOptions(Model.Status)">
+            <option value="">All statuses</option>
+        </select>
+    </dt-filters>
+    <dt-column key="title" header="Title" sortable="true" hideable="false">
+        <a class="d-inline-flex align-items-center gap-2 text-reset" asp-action="Detail" asp-route-id="@row.Item.Id">
+            @if (row.Item.Status == NotificationStatus.None)
+            {
+                <span class="unread-dot" aria-hidden="true"></span>
+                <span class="visually-hidden">Unread:</span>
+            }
+            <span>@row.Item.Title</span>
+        </a>
+    </dt-column>
+    <dt-column key="message" header="Message" css="text-truncate dt-col-wide">@row.Item.Message</dt-column>
+    <dt-column key="from" header="From" sortable="true">@row.Item.FromName</dt-column>
+    <dt-column key="created" header="Received" field="Created" sortable="true" css="text-nowrap" />
+    <dt-column key="status" header="Status" sortable="true">
+        <status-badge value="@row.Item.Status" text="@NotificationDisplay.Text(row.Item.Status)" variant="@NotificationDisplay.Variant(row.Item.Status)" />
+    </dt-column>
+    <dt-column key="actions" actions="true">
+        <a class="btn btn-sm btn-outline-secondary" asp-action="Detail" asp-route-id="@row.Item.Id" title="Open" aria-label="@($"Open {row.Item.Title}")">
+            <icon name="box-arrow-up-right" />
+        </a>
+    </dt-column>
+</data-table>

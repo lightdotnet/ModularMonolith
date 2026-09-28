@@ -1,0 +1,54 @@
+@page
+@model StarterKit.WebMvc.Pages.Account.LoginModel
+@{
+    ViewData["Title"] = "Sign in";
+    Layout = "/Views/Shared/_AuthLayout.cshtml";
+}
+
+<div class="card shadow-sm auth-card w-100">
+    <div class="card-body p-4">
+        <h1 class="h4 mb-1">Sign in</h1>
+        <p class="text-body-secondary small mb-4">Enter your credentials to access the admin dashboard.</p>
+
+        @if (!string.IsNullOrEmpty(Model.Error))
+        {
+            <div class="alert alert-danger py-2" role="alert">@Model.Error</div>
+        }
+
+        <form method="post" data-loading-form novalidate>
+            <input type="hidden" asp-for="ReturnUrl" />
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+
+            <fieldset>
+                <div class="mb-3">
+                    <label asp-for="Input.UserName" class="form-label"></label>
+                    <input asp-for="Input.UserName" class="form-control" autocomplete="username" autofocus />
+                    <span asp-validation-for="Input.UserName" class="invalid-feedback d-block"></span>
+                </div>
+                <div class="mb-4">
+                    <label asp-for="Input.Password" class="form-label"></label>
+                    <input asp-for="Input.Password" class="form-control" autocomplete="current-password" />
+                    <span asp-validation-for="Input.Password" class="invalid-feedback d-block"></span>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">
+                    <span class="spinner-border spinner-border-sm me-2 d-none" aria-hidden="true" data-loading-indicator></span>
+                    Sign in
+                </button>
+            </fieldset>
+        </form>
+
+        @if (Model.ShowMicrosoftLogin)
+        {
+            <div class="d-flex align-items-center gap-3 my-4">
+                <hr class="flex-grow-1 m-0" />
+                <span class="text-body-secondary small">OR</span>
+                <hr class="flex-grow-1 m-0" />
+            </div>
+
+            @* Plain top-level navigation: the start page issues a redirect that is itself redirected cross-origin to Microsoft. *@
+            <a class="btn btn-outline-secondary w-100" asp-page="/Account/ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl">
+                <i class="bi bi-microsoft me-2" aria-hidden="true"></i>Continue with Microsoft
+            </a>
+        }
+    </div>
+</div>

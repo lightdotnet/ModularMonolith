@@ -1,0 +1,39 @@
+@model NotificationsAdminIndexViewModel
+@{
+    var row = new DataTableRow<NotificationDto>();
+}
+@* The backend lookup has no free-text search — only status/recipient filters; sortable keys map in DataTableSortMaps.Notifications. *@
+<data-table id="notifications"
+            source="Model.Table"
+            row="row"
+            searchable="false"
+            export="true"
+            export-name="notifications"
+            empty-icon="bell"
+            empty-title="No notifications"
+            empty-description="Try adjusting the filters.">
+    <dt-action href="@Url.Action("Send")" icon="send" permission="@NotificationPermissions.Send">Send notification</dt-action>
+    <dt-filters>
+        <select name="status" class="form-select" aria-label="Filter by status" asp-items="NotificationDisplay.StatusOptions(Model.Status)">
+            <option value="">All statuses</option>
+        </select>
+        <input type="text"
+               name="toUserId"
+               class="form-control"
+               value="@Model.ToUserId"
+               placeholder="Recipient user ID"
+               aria-label="Filter by recipient user ID"
+               autocomplete="off"
+               list="notifications-user-lookup"
+               data-user-lookup="@Url.Action("UserLookup")" />
+        <datalist id="notifications-user-lookup"></datalist>
+    </dt-filters>
+    <dt-column key="title" header="Title" sortable="true" field="Title" hideable="false" />
+    <dt-column key="message" header="Message" css="text-truncate dt-col-wide">@row.Item.Message</dt-column>
+    <dt-column key="from" header="From" sortable="true">@row.Item.FromName</dt-column>
+    <dt-column key="to" header="Recipient" field="ToUserId" css="text-break" />
+    <dt-column key="status" header="Status" sortable="true">
+        <status-badge value="@row.Item.Status" text="@NotificationDisplay.Text(row.Item.Status)" variant="@NotificationDisplay.Variant(row.Item.Status)" />
+    </dt-column>
+    <dt-column key="created" header="Created" field="Created" sortable="true" css="text-nowrap" />
+</data-table>

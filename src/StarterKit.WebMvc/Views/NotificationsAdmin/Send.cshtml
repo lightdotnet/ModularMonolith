@@ -1,0 +1,62 @@
+@model SendNotificationInput
+
+<page-header title="Send notification" subtitle="Push a notification to one user.">
+    <breadcrumb-item href="@Url.Content("~/")">Home</breadcrumb-item>
+    <breadcrumb-item href="@Url.Action("Index")">All notifications</breadcrumb-item>
+    <breadcrumb-item>Send</breadcrumb-item>
+</page-header>
+
+<div class="row g-4">
+    <div class="col-12 col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="post" asp-action="Send" data-loading-form novalidate>
+                    <partial name="_ValidationSummary" />
+                    <fieldset>
+                        <form-field asp-for="ToUserId"
+                                    label="Recipient user ID"
+                                    help="Type at least 3 characters of a name to look up the user."
+                                    autocomplete="off"
+                                    input-attr-list="send-user-lookup"
+                                    input-attr-data-user-lookup="@Url.Action("UserLookup")" />
+                        <form-field asp-for="Message.Title" label="Title" />
+                        <form-field asp-for="Message.Message" label="Message" type="textarea" rows="4" />
+                        <form-field asp-for="Message.Url" label="Link" placeholder="/path or https://…" help="Optional page to open from the notification." />
+                        <div class="d-flex flex-column flex-sm-row gap-2">
+                            <submit-button icon="send">Send</submit-button>
+                            <a class="btn btn-outline-secondary" asp-action="Index" asp-permission="@NotificationPermissions.Read">Cancel</a>
+                        </div>
+                    </fieldset>
+                </form>
+                <datalist id="send-user-lookup"></datalist>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-5">
+        <div class="card shadow-sm border-danger-subtle">
+            <div class="card-body">
+                <h2 class="h6">Force logout</h2>
+                <p class="small text-body-secondary">Signs the user out of every open session in the browser.</p>
+                <form id="force-logout-form" method="post" asp-action="ForceLogout">
+                    <input type="hidden" name="returnUrl" value="@Url.Action("Send")" />
+                    <label for="force-logout-user" class="form-label">User ID</label>
+                    <input id="force-logout-user"
+                           name="userId"
+                           class="form-control mb-3"
+                           autocomplete="off"
+                           required
+                           list="force-logout-user-lookup"
+                           data-user-lookup="@Url.Action("UserLookup")" />
+                    <datalist id="force-logout-user-lookup"></datalist>
+                    <confirm-button form="force-logout-form"
+                                    title="Force logout"
+                                    message="Sign this user out of every open session?"
+                                    confirm-text="Force logout"
+                                    variant="danger"
+                                    icon="box-arrow-right">Force logout</confirm-button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

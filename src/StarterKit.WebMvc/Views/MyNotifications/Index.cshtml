@@ -1,0 +1,16 @@
+@model MyNotificationsIndexViewModel
+
+<page-header title="Inbox" subtitle="Notifications sent to you.">
+    <breadcrumb-item href="@Url.Content("~/")">Home</breadcrumb-item>
+    <breadcrumb-item>Inbox</breadcrumb-item>
+    <page-actions>
+        <form method="post" asp-action="MarkAllRead" data-loading-form>
+            @* site.js refreshes data-current-url on submit (the table may have changed the query string). *@
+            <input type="hidden" name="returnUrl" value="@($"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}")" data-current-url />
+
+            <submit-button variant="outline-secondary" icon="check2-all">Mark all read</submit-button>
+        </form>
+    </page-actions>
+</page-header>
+
+<partial name="_InboxTable" model="Model" />

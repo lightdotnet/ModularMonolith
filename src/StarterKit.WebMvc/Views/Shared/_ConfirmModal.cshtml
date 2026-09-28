@@ -1,0 +1,22 @@
+@*
+    The one confirm dialog per layout, driven by confirm.js for every <confirm-button>.
+    Texts are filled with textContent (never as HTML).
+*@
+<div class="modal fade" id="confirm-modal" tabindex="-1" aria-labelledby="confirm-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="confirm-modal-title" data-confirm-modal-title>Are you sure?</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" data-confirm-modal-message></div>
+            <div class="modal-footer flex-column-reverse flex-sm-row">
+                <button type="button" class="btn btn-outline-secondary w-100 w-sm-auto" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger w-100 w-sm-auto" data-confirm-modal-accept>
+                    <span class="spinner-border spinner-border-sm me-2 d-none" aria-hidden="true" data-loading-indicator></span>
+                    <span data-confirm-modal-accept-text>Confirm</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

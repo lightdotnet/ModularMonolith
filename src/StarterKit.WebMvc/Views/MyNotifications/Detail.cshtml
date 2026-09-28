@@ -1,0 +1,37 @@
+@model NotificationDto
+
+<page-header title="@Model.Title">
+    <breadcrumb-item href="@Url.Content("~/")">Home</breadcrumb-item>
+    <breadcrumb-item href="@Url.Action("Index")">Inbox</breadcrumb-item>
+    <breadcrumb-item>Notification</breadcrumb-item>
+    <page-actions>
+        <a class="btn btn-outline-secondary" asp-action="Index"><icon name="arrow-left" css="me-2" />Back to inbox</a>
+    </page-actions>
+</page-header>
+
+<div class="row">
+    <div class="col-12 col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-sm-3 text-body-secondary fw-normal">From</dt>
+                    <dd class="col-sm-9">@Model.FromName</dd>
+                    <dt class="col-sm-3 text-body-secondary fw-normal">Received</dt>
+                    <dd class="col-sm-9"><local-datetime value="@Model.Created" /></dd>
+                    <dt class="col-sm-3 text-body-secondary fw-normal">Status</dt>
+                    <dd class="col-sm-9"><status-badge value="@Model.Status" text="@NotificationDisplay.Text(Model.Status)" variant="@NotificationDisplay.Variant(Model.Status)" /></dd>
+                </dl>
+                @if (!string.IsNullOrWhiteSpace(Model.Message))
+                {
+                    <hr />
+                    <p class="mb-0 text-break notification-message">@Model.Message</p>
+                }
+                @if (NotificationDisplay.IsSafeLink(Model.Url))
+                {
+                    <hr />
+                    <a class="btn btn-primary" href="@Model.Url" rel="noopener noreferrer"><icon name="link-45deg" css="me-2" />Open link</a>
+                }
+            </div>
+        </div>
+    </div>
+</div>

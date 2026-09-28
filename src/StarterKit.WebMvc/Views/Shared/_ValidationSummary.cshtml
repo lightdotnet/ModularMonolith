@@ -1,0 +1,8 @@
+@*
+    Model-level errors (backend failures without field errors) as a Bootstrap alert. Field errors
+    render next to their inputs, so only ModelOnly errors are listed here. Hidden when empty.
+*@
+@if (!ViewData.ModelState.IsValid && ViewData.ModelState[string.Empty]?.Errors.Count > 0)
+{
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+}

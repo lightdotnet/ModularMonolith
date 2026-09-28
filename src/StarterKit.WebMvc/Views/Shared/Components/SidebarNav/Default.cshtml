@@ -1,0 +1,24 @@
+@using StarterKit.WebMvc.ViewComponents
+@model IReadOnlyList<SidebarNavSectionViewModel>
+<nav class="p-2" aria-label="Main navigation">
+    @foreach (var navSection in Model)
+    {
+        @if (!string.IsNullOrEmpty(navSection.Title))
+        {
+            <div class="sidebar-section-title text-uppercase small fw-semibold text-body-secondary px-2 pt-3 pb-1">@navSection.Title</div>
+        }
+        <ul class="nav nav-pills flex-column gap-1">
+            @foreach (var item in navSection.Items)
+            {
+                <li class="nav-item">
+                    <a class="nav-link d-flex align-items-center gap-2 @(item.IsActive ? "active" : "text-body")"
+                       href="@item.Url"
+                       aria-current="@(item.IsActive ? "page" : null)">
+                        <i class="bi bi-@item.Icon" aria-hidden="true"></i>
+                        <span>@item.Title</span>
+                    </a>
+                </li>
+            }
+        </ul>
+    }
+</nav>

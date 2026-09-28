@@ -1,0 +1,19 @@
+@page
+@model StarterKit.WebMvc.Pages.ErrorModel
+@{
+    ViewData["Title"] = Model.Title;
+    Layout = "/Views/Shared/_AuthLayout.cshtml";
+}
+
+<div class="card shadow-sm auth-card w-100 text-center">
+    <div class="card-body p-4">
+        <i class="bi bi-exclamation-triangle display-5 text-warning" aria-hidden="true"></i>
+        <h1 class="h4 mt-3">@Model.Title</h1>
+        <p class="text-body-secondary">@Model.Description</p>
+        @if (!string.IsNullOrEmpty(Model.RequestId))
+        {
+            <p class="small text-body-secondary mb-4">Request ID: <code>@Model.RequestId</code></p>
+        }
+        <a class="btn btn-primary" href="~/">Back to home</a>
+    </div>
+</div>

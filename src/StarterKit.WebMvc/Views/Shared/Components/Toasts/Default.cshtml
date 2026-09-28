@@ -1,0 +1,5 @@
+@model string?
+@if (!string.IsNullOrEmpty(Model))
+{
+    <script type="application/json" id="flash-messages">@Html.Raw(Model)</script>
+}

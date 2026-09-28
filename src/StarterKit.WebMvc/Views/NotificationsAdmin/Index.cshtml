@@ -1,0 +1,8 @@
+@model NotificationsAdminIndexViewModel
+
+<page-header title="All notifications" subtitle="Notifications sent to every user.">
+    <breadcrumb-item href="@Url.Content("~/")">Home</breadcrumb-item>
+    <breadcrumb-item>All notifications</breadcrumb-item>
+</page-header>
+
+<partial name="_NotificationsTable" model="Model" />

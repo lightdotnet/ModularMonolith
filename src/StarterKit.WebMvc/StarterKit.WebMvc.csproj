@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+	<RootNamespace>StarterKit.WebMvc</RootNamespace>
+	<AssemblyName>StarterKit.WebMvc</AssemblyName>
+	<UserSecretsId>StarterKit.WebMvc</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<InternalsVisibleTo Include="StarterKit.WebMvc.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<PackageReference Include="Lightsoft.Serilog" />
+	<!-- Restores the libman.json front-end libraries into wwwroot/lib on build. -->
+	<PackageReference Include="Microsoft.Web.LibraryManager.Build" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!--
+    This host is an HTTP client of StarterKit.WebApi (like clients/admin), not an in-process
+    module host: it may reference module Contracts only (DTOs, permission constants), never
+    a module's .Api, Identity.Web, Infrastructure or Persistence.
+  -->
+  <ItemGroup>
+	<ProjectReference Include="..\Identity.Contracts\Identity.Contracts.csproj" />
+	<ProjectReference Include="..\Notifications.Contracts\Notifications.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

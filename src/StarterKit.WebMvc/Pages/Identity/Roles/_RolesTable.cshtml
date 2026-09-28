@@ -1,0 +1,42 @@
+@model StarterKit.WebMvc.Pages.Identity.Roles.IndexModel
+@{
+    var row = new DataTableRow<RoleDto>();
+    var canManage = PermissionChecker.HasPermission(User, IdentityPermissions.Roles.Manage);
+}
+<data-table id="roles"
+            source="Model.Table"
+            row="row"
+            search-placeholder="Search roles..."
+            export="true"
+            export-name="roles"
+            empty-icon="shield-lock"
+            empty-title="No roles found"
+            empty-description="Try adjusting your search.">
+    <dt-action href="@Url.Page("Create")" icon="plus-lg" permission="@IdentityPermissions.Roles.Manage">Create role</dt-action>
+    <dt-column key="name" header="Name" sortable="true" hideable="false">
+        @if (canManage)
+        {
+            <a class="fw-semibold text-break" asp-page="Edit" asp-route-id="@row.Item.Id">@row.Item.Name</a>
+        }
+        else
+        {
+            <span class="fw-semibold text-break">@row.Item.Name</span>
+        }
+    </dt-column>
+    <dt-column key="description" header="Description" field="Description" sortable="true" css="text-break" />
+    <dt-column key="actions" actions="true" permission="@IdentityPermissions.Roles.Manage">
+        <a class="btn btn-sm btn-outline-secondary"
+           asp-page="Edit"
+           asp-route-id="@row.Item.Id"
+           title="Edit"
+           aria-label="Edit @row.Item.Name"><icon name="pencil" /></a>
+        <confirm-button asp-page-handler="Delete"
+                        asp-route-id="@row.Item.Id"
+                        title="Delete role"
+                        message="@($"Delete role \"{row.Item.Name}\"? Users lose the permissions it grants.")"
+                        confirm-text="Delete"
+                        variant="danger"
+                        icon="trash"
+                        icon-only="true">Delete @row.Item.Name</confirm-button>
+    </dt-column>
+</data-table>

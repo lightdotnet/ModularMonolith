@@ -1,0 +1,28 @@
+@page "/identity/roles/create"
+@model StarterKit.WebMvc.Pages.Identity.Roles.CreateModel
+
+<page-header title="Create role">
+    <breadcrumb-item href="@Url.Content("~/")">Home</breadcrumb-item>
+    <breadcrumb-item href="@Url.Page("Index")">Roles</breadcrumb-item>
+    <breadcrumb-item>Create</breadcrumb-item>
+</page-header>
+
+<div class="row">
+    <div class="col-12 col-lg-8 col-xl-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="post" data-loading-form novalidate>
+                    <partial name="_ValidationSummary" />
+                    <fieldset>
+                        <form-field asp-for="Input.Name" label="Name" autocomplete="off" autofocus="true" />
+                        <form-field asp-for="Input.Description" label="Description" type="textarea" rows="3" />
+                        <div class="d-flex flex-column flex-sm-row gap-2">
+                            <submit-button icon="check-lg">Create role</submit-button>
+                            <a class="btn btn-outline-secondary" asp-page="Index">Cancel</a>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

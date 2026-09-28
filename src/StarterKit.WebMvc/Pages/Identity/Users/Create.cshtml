@@ -1,0 +1,45 @@
+@page "/identity/users/create"
+@model StarterKit.WebMvc.Pages.Identity.Users.CreateModel
+@using StarterKit.WebMvc.Pages.Identity
+
+<page-header title="Create user">
+    <breadcrumb-item href="@Url.Content("~/")">Home</breadcrumb-item>
+    <breadcrumb-item href="@Url.Page("Index")">Users</breadcrumb-item>
+    <breadcrumb-item>Create</breadcrumb-item>
+</page-header>
+
+<div class="row">
+    <div class="col-12 col-lg-8 col-xl-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="post" data-loading-form novalidate>
+                    <partial name="_ValidationSummary" />
+                    <fieldset>
+                        <form-field asp-for="Input.UserName" label="Username" autocomplete="off" autofocus="true" />
+                        <form-select asp-for="Input.AuthProvider"
+                                     asp-items="IdentityOptions.AuthProviders(Model.Input.AuthProvider)"
+                                     label="Auth provider"
+                                     help="Active Directory and Microsoft accounts sign in with their directory password." />
+                        <form-field asp-for="Input.Password"
+                                    label="Password"
+                                    type="password"
+                                    autocomplete="new-password"
+                                    help="Required for local accounts only." />
+                        <div class="row">
+                            <form-field asp-for="Input.FirstName" label="First name" css="col-12 col-md-6 mb-3" />
+                            <form-field asp-for="Input.LastName" label="Last name" css="col-12 col-md-6 mb-3" />
+                        </div>
+                        <div class="row">
+                            <form-field asp-for="Input.Email" label="Email" type="email" css="col-12 col-md-6 mb-3" />
+                            <form-field asp-for="Input.PhoneNumber" label="Phone" type="tel" css="col-12 col-md-6 mb-3" />
+                        </div>
+                        <div class="d-flex flex-column flex-sm-row gap-2">
+                            <submit-button icon="check-lg">Create user</submit-button>
+                            <a class="btn btn-outline-secondary" asp-page="Index">Cancel</a>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

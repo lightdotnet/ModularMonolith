@@ -1,0 +1,9 @@
+@page "/identity/users"
+@model StarterKit.WebMvc.Pages.Identity.Users.IndexModel
+
+<page-header title="Users" subtitle="Sign-in accounts and their roles.">
+    <breadcrumb-item href="@Url.Content("~/")">Home</breadcrumb-item>
+    <breadcrumb-item>Users</breadcrumb-item>
+</page-header>
+
+<partial name="_UsersTable" model="Model" />

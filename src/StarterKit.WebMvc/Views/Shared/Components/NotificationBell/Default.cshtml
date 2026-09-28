@@ -1,0 +1,42 @@
+@using System.Globalization
+@model int?
+@{
+    var unread = Model ?? 0;
+    // Kept in sync client-side by notifications.js (setUnreadCount).
+    var bellLabel = unread > 0 ? $"Notifications, {unread.ToString("#,##0", CultureInfo.InvariantCulture)} unread" : "Notifications";
+}
+@* signalr.min.js + notifications.js are loaded at the end of the layout body (deferred). *@
+<div class="dropdown notification-bell"
+     data-notification-bell
+     data-bell-items-url="@Url.Action("Bell", "MyNotifications")"
+     data-unread-count-url="@Url.Action("UnreadCount", "MyNotifications")"
+     data-hub-token-url="@Url.Action("HubToken", "MyNotifications")"
+     data-mark-all-read-url="@Url.Action("MarkAllRead", "MyNotifications")">
+    <button class="btn btn-link text-body position-relative px-2"
+            type="button"
+            data-bs-toggle="dropdown"
+            data-bs-auto-close="outside"
+            aria-expanded="false"
+            aria-label="@bellLabel"
+            data-bell-button>
+        <i class="bi bi-bell fs-5 @(unread > 0 ? "bell-ring" : null)" aria-hidden="true" data-bell-icon></i>
+        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-danger @(unread > 0 ? null : "d-none")"
+              aria-hidden="true"
+              data-bell-badge>@(unread > 99 ? "99+" : unread.ToString())</span>
+    </button>
+    <div class="dropdown-menu dropdown-menu-end shadow p-0 notification-menu">
+        <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom">
+            <span class="fw-semibold">Notifications</span>
+            <button type="button" class="btn btn-link btn-sm p-0" data-bell-mark-all>Mark all read</button>
+        </div>
+        <div class="notification-menu-items" data-bell-items>
+            <div class="text-center text-body-secondary small py-4">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <span class="visually-hidden">Loading</span>
+            </div>
+        </div>
+        <div class="border-top text-center py-2">
+            <a class="small" asp-controller="MyNotifications" asp-action="Index">View all</a>
+        </div>
+    </div>
+</div>
