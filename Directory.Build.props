@@ -1,0 +1,15 @@
+  <Project>
+    <PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+        <!-- Remove this to turn on warnings for missing XML Comments -->
+        <!--
+        <NoWarn>NU1803</NoWarn>
+        -->
+		<!-- Remove this to turn on warnings packages with vulnerabilities -->
+	    <NoWarn>NU1903</NoWarn>
+		<!-- Evaluation of this argument may be expensive and unnecessary if logging is disabled -->
+		<NoWarn>CA1873</NoWarn>
+    </PropertyGroup>
+  </Project>
