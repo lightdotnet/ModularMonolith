@@ -6,7 +6,7 @@
     <LightVersion>2.0.2-preview.1</LightVersion>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Core -->
+    <!-- Microsoft -->
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="$(AspnetVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="$(AspnetVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="$(AspnetVersion)" />
@@ -15,7 +15,6 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="$(AspnetVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(AspnetVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(AspnetVersion)" />
-    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="$(AspnetVersion)" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(AspnetVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="$(AspnetVersion)" />
@@ -31,8 +30,8 @@
     <PackageVersion Include="Lightsoft.Caching" Version="$(LightVersion)" />
     <PackageVersion Include="Lightsoft.EntityFrameworkCore" Version="$(LightVersion)" />
     <PackageVersion Include="Lightsoft.Extensions" Version="$(LightVersion)" />
-    <PackageVersion Include="Lightsoft.EventBus" Version="0.2.1" />
-    <PackageVersion Include="Lightsoft.EventBus.MassTransit.RabbitMQ" Version="0.2.1" />
+    <PackageVersion Include="Lightsoft.EventBus" Version="0.3.0-preview.1" />
+    <PackageVersion Include="Lightsoft.EventBus.MassTransit.RabbitMQ" Version="0.3.0-preview.1" />
     <PackageVersion Include="Lightsoft.FileGenerator" Version="$(LightVersion)" />
     <PackageVersion Include="Lightsoft.Mediator" Version="1.3.0" />
     <PackageVersion Include="Lightsoft.Result" Version="2.1.1" />
@@ -44,6 +43,7 @@
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageVersion Include="Mapster" Version="10.0.13" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
   </ItemGroup>
 </Project>
