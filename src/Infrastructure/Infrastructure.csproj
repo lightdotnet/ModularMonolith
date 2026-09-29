@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<RootNamespace>StarterKit.Infrastructure</RootNamespace>
+	<AssemblyName>StarterKit.Infrastructure</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Framework.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<PackageReference Include="AspNetCore.HealthChecks.UI.Client" />
+    <PackageReference Include="Lightsoft.AspNetCore.Extensions" />
+    <PackageReference Include="Lightsoft.AspNetCore.Modularity" />
+	<PackageReference Include="Lightsoft.Caching" />
+	<PackageReference Include="Lightsoft.FileGenerator" />
+	<PackageReference Include="Lightsoft.Serilog" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\Shared.csproj" />
+  </ItemGroup>
+
+</Project>
