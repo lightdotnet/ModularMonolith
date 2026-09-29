@@ -1,6 +1,6 @@
-using System.Diagnostics;
 using Light.Mediator;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace StarterKit.Shared;
 
