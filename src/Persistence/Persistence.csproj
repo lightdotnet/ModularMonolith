@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<RootNamespace>StarterKit.Persistence</RootNamespace>
+	<AssemblyName>StarterKit.Persistence</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Framework.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<PackageReference Include="Lightsoft.Caching" />
+	<PackageReference Include="Lightsoft.EntityFrameworkCore" />
+	<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+	<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+	<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+	<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+	<PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\Shared.csproj" />
+  </ItemGroup>
+
+</Project>
