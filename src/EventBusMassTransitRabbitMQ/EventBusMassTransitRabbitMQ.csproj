@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>StarterKit.EventBusMassTransitRabbitMQ</RootNamespace>
+    <AssemblyName>StarterKit.EventBusMassTransitRabbitMQ</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Lightsoft.AspNetCore.Modularity" />
+    <PackageReference Include="Lightsoft.EventBus.MassTransit.RabbitMQ" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\Shared.csproj" />
+  </ItemGroup>
+
+</Project>

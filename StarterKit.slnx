@@ -4,6 +4,7 @@
     <File Path="Directory.Packages.props" />
   </Folder>
   <Folder Name="/src/_framework/">
+    <Project Path="src/EventBusMassTransitRabbitMQ/EventBusMassTransitRabbitMQ.csproj" />
     <Project Path="src/Infrastructure/Infrastructure.csproj" />
     <Project Path="src/Persistence/Persistence.csproj" />
     <Project Path="src/Shared/Shared.csproj" />
