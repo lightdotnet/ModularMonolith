@@ -12,7 +12,7 @@ Implements an **already-approved** change under `src/` or `tests/`. This agent w
 
 - Apply the approved change to the target project, matching the surrounding code's conventions rather than importing external habits.
 - Implement to the approved DDD design where the change touches domain building blocks: rules go on the entity/aggregate, not in a handler/service. If the plan has no domain design and the change needs one, stop and get one from `ddd-modeler` first.
-- Keep dependency direction intact: `Infrastructure` and `Persistence` may reference `Shared`; `Shared` references no other solution project; no framework project references a business module.
+- Keep dependency direction intact: `Infrastructure`, `Persistence`, and `EventBusMassTransitRabbitMQ` may reference `Shared`; `Shared` references no other solution project; no framework project references a business module.
 - Follow the conventions in root `CLAUDE.md` § Framework Conventions — `Result`/`Result<T>` for expected failures, FluentValidation for input validation, DI via a `static class DependencyInjection` exposing `Add<Feature>`/`Use<Feature>`, vertical formatting, `HasIndex` right after `ToTable`, central package versions.
 - Build-sanity only: `dotnet build StarterKit.slnx` (or the specific `.csproj`) after each increment. Writing test *code* in `tests/Framework.Tests` is in scope if the approved plan called for it; **running `dotnet test` is not** — that is a separate, explicit user step.
 

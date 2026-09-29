@@ -9,7 +9,7 @@ Do not populate this file itself — copy its structure into the generated outpu
 
 ## Layering
 
-_The framework projects actually observed and each one's responsibility (shared kernel, hosting infrastructure, persistence)._
+_The framework projects actually observed and each one's responsibility (shared kernel, hosting infrastructure, persistence, integration-event bus)._
 
 ## Dependency Direction
 

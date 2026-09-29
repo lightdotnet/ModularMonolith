@@ -4,7 +4,7 @@ Triggered by requests to add/implement new functionality or change existing code
 
 ## Steps
 
-1. **Confirm scope.** Identify which project(s) the change belongs in (`Shared`, `Infrastructure`, `Persistence`, `tests/Framework.Tests`) and whether it belongs in the framework at all. Ask if ambiguous. Read only the files directly relevant (target project, its direct dependencies, similar existing types as reference).
+1. **Confirm scope.** Identify which project(s) the change belongs in (`Shared`, `Infrastructure`, `Persistence`, `EventBusMassTransitRabbitMQ`, `tests/Framework.Tests`) and whether it belongs in the framework at all. Ask if ambiguous. Read only the files directly relevant (target project, its direct dependencies, similar existing types as reference).
 2. **Use appropriate agents** for design questions before planning:
    - [dotnet-architect](../agents/dotnet-architect.md) for project placement, extension points, and library choices.
    - [ddd-modeler](../agents/ddd-modeler.md) for any change to DDD building blocks (entity bases, value objects, domain events).

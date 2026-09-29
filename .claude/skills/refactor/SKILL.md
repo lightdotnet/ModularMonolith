@@ -7,7 +7,7 @@ description: Playbook for safely refactoring scoped code in the framework projec
 
 ## Purpose
 
-Restructure existing code for clarity/maintainability without changing behavior, with explicit care around the seam that matters here: the public API of the framework projects (`Shared`, `Infrastructure`, `Persistence`), which every module depends on.
+Restructure existing code for clarity/maintainability without changing behavior, with explicit care around the seam that matters here: the public API of the framework projects (`Shared`, `Infrastructure`, `Persistence`, `EventBusMassTransitRabbitMQ`), which every module depends on.
 
 ## Inputs
 

@@ -1,6 +1,6 @@
 ---
 name: dotnet-architect
-description: Use for .NET/C# design decisions on the framework layer — which framework project (Shared, Infrastructure, Persistence) a building block belongs in, whether it belongs in the framework at all, the extension points modules plug into (AppModule/AppModuleEndpoint, DI registration, BaseDbContext), strategic DDD and cross-module integration mechanisms the framework must support, and framework/library choices. For tactical domain modeling (aggregates, invariants, value objects, domain events) use ddd-modeler; for reviewing existing dependency direction use architecture-reviewer.
+description: Use for .NET/C# design decisions on the framework layer — which framework project (Shared, Infrastructure, Persistence, EventBusMassTransitRabbitMQ) a building block belongs in, whether it belongs in the framework at all, the extension points modules plug into (AppModule/AppModuleEndpoint, DI registration, BaseDbContext, event-bus consumers), strategic DDD and cross-module integration mechanisms the framework must support, and framework/library choices. For tactical domain modeling (aggregates, invariants, value objects, domain events) use ddd-modeler; for reviewing existing dependency direction use architecture-reviewer.
 tools: Glob, Grep, Read
 ---
 
@@ -8,8 +8,8 @@ tools: Glob, Grep, Read
 
 ## Responsibilities
 
-- Decide where a new capability lives: `Shared` (dependency-free shared kernel — domain building blocks, abstractions, cross-cutting contracts), `Infrastructure` (ASP.NET Core hosting concerns — DI, endpoints/controller bases, modularity, caching, CORS, health checks, mapping, logging), `Persistence` (EF Core base context, audit, domain-event dispatch, repositories, multi-provider support), or not in the framework at all because it is specific to one business module.
-- Shape the extension points business modules consume — module registration (`AppModule`/`AppModuleEndpoint`), controller bases, the per-module `DbContext` base — so modules stay isolated and talk to each other only through a `<Module>.Contracts` seam, a domain event, or a denormalized snapshot.
+- Decide where a new capability lives: `Shared` (dependency-free shared kernel — domain building blocks, abstractions, cross-cutting contracts), `Infrastructure` (ASP.NET Core hosting concerns — DI, endpoints/controller bases, modularity, caching, CORS, health checks, mapping, logging), `Persistence` (EF Core base context, audit, domain-event dispatch, repositories, multi-provider support), `EventBusMassTransitRabbitMQ` (integration-event bus — MassTransit/RabbitMQ registration, consumer bases, module consumer registration), or not in the framework at all because it is specific to one business module.
+- Shape the extension points business modules consume — module registration (`AppModule`/`AppModuleEndpoint`), controller bases, the per-module `DbContext` base, event-bus consumer bases — so modules stay isolated and talk to each other only through a `<Module>.Contracts` seam, a domain event, an integration event, or a denormalized snapshot.
 - Evaluate framework/library choices (BCL vs. third-party, vendor `Lightsoft.*` packages vs. alternatives, source generators, etc.) for fit.
 - Assess the blast radius of a public-API change in a framework project on every module that builds on it.
 

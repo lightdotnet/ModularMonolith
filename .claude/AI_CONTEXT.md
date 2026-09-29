@@ -72,6 +72,6 @@ A cold `startup` doesn't need this: root `CLAUDE.md` loads fresh in that case.
 
 ## Framework Safety Rules
 
-- Treat every public type/member in `src/Shared`, `src/Infrastructure`, and `src/Persistence` as a contract: every module built on the framework depends on it. A change to it is potentially breaking — flag it and confirm first (see `CLAUDE.md` §2.7).
-- `Shared` is the highest-risk project — both other framework projects and every module depend on it.
+- Treat every public type/member in the framework projects under `src/` (`Shared`, `Infrastructure`, `Persistence`, `EventBusMassTransitRabbitMQ`) as a contract: every module built on the framework depends on it. A change to it is potentially breaking — flag it and confirm first (see `CLAUDE.md` §2.7).
+- `Shared` is the highest-risk project — every other framework project and every module depend on it.
 - Changes to central build files (`Directory.Build.props`, `Directory.Packages.props`, `tests/ModuleTests.props`) affect every project — confirm first.

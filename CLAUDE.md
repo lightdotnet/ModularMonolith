@@ -17,16 +17,17 @@ This branch (`dev/core`) holds the **framework/core layer of the StarterKit Modu
 
 | Project | Responsibility | References |
 |---|---|---|
-| `src/Shared` | Shared kernel: DDD building blocks (entity bases, `DomainEvent`, value objects), current-user/date-time abstractions, authorization policies, mediator pipeline behaviours, paging/search queries, shared constants | No solution project |
+| `src/Shared` | Shared kernel: DDD building blocks (entity bases, `DomainEvent`, value objects), the `IntegrationEvent` base, current-user/date-time abstractions, authorization policies, mediator pipeline behaviours, paging/search queries, shared constants | No solution project |
 | `src/Infrastructure` | ASP.NET Core hosting concerns: DI wiring, controller bases and endpoint attributes, module registration (`AppModule`/`AppModuleEndpoint`), caching, CORS, health checks, mapping, logging | `Shared` |
 | `src/Persistence` | EF Core: `BaseDbContext`, audit and domain-event dispatch on save, entity/index builder extensions, cache and dynamic-table repositories, multi-provider support (InMemory, PostgreSQL, MSSQL, Sqlite), migration support | `Shared` |
+| `src/EventBusMassTransitRabbitMQ` | Integration-event bus: `IEventBus` registration over MassTransit/RabbitMQ from configuration (no-op bus when disabled), consumer and consumer-definition bases, module consumer registration | `Shared` |
 
-- **Tests** — `tests/Framework.Tests` (folders mirror the three projects), configured by `tests/ModuleTests.props`.
+- **Tests** — `tests/Framework.Tests` (folders mirror the `src/` project layout), configured by `tests/ModuleTests.props`.
 
 Consequences:
 
 - The framework is consumed by business modules that live elsewhere. Every public type/member in these projects is a contract for those modules — a change to it is potentially breaking.
-- Dependency direction is fixed: `Infrastructure → Shared`, `Persistence → Shared`, `Shared` references no solution project, and no framework project references a business module. Modules built on the framework talk to each other only through a `<Module>.Contracts` seam, a domain event, or a denormalized snapshot — the framework must not force anything else.
+- Dependency direction is fixed: `Infrastructure → Shared`, `Persistence → Shared`, `EventBusMassTransitRabbitMQ → Shared`, `Shared` references no solution project, and no framework project references a business module. Modules built on the framework talk to each other only through a `<Module>.Contracts` seam, a domain event, an integration event, or a denormalized snapshot — the framework must not force anything else.
 - Keep the framework small: a building block belongs here only if it is genuinely reused across modules.
 
 ## 2. AI Operating Rules
@@ -43,7 +44,7 @@ Consequences:
 
 ## 3. Where Things Live
 
-- **`src/`** — the three framework projects (§1). **`tests/`** — their test project and shared test props.
+- **`src/`** — the framework projects (§1). **`tests/`** — their test project and shared test props.
 - **Root build files** — `StarterKit.slnx`, `Directory.Build.props` (target framework, nullable, implicit usings), `Directory.Packages.props` (central package versions — the version of record).
 - **`src/docs/`** — where generated documentation for the solution goes, created only through [generate-docs](.claude/skills/generate-docs/SKILL.md) on request.
 - **`.claude/`** — Claude development infrastructure only: agents, skills, workflows, doc templates, hooks/settings, and working-rules/meta-maintenance docs ([AI_CONTEXT.md](.claude/AI_CONTEXT.md), [ROT.md](.claude/ROT.md), [WORKFLOWS.md](.claude/WORKFLOWS.md)).
@@ -87,6 +88,7 @@ Workflows live in [.claude/workflows/](.claude/workflows/) — see [.claude/WORK
 - **Errors**: expected failures return `Result`/`Result<T>`, not exceptions. Input/format validation (required, length, range) is FluentValidation; domain types enforce domain rules only.
 - **API responses**: controllers derive from the `Infrastructure/Endpoints` bases, and responses returned through the base `Ok<T>()` are auto-wrapped in the response envelope — never hand-wrap.
 - **DDD**: behavior and invariants live on the entity/aggregate, not in handlers; domain events derive from `Shared`'s `DomainEvent` and are dispatched by `Persistence` on save.
+- **Domain vs. integration events**: a domain event stays in-process (dispatched through the mediator). A message that must cross a module or service boundary asynchronously is an integration event — a record deriving from `Shared`'s `IntegrationEvent`, published through `IEventBus` and consumed via the `EventBusMassTransitRabbitMQ` bases. See [EventBusMassTransitRabbitMQ](src/docs/architecture/EventBusMassTransitRabbitMQ.md).
 - **DI**: each area exposes a `static class DependencyInjection` with `Add<Feature>` (and `Use<Feature>` for middleware) extension methods.
 - **Formatting**: one parameter per line for records/constructors, base type on its own line, multi-argument calls broken out.
 - **EF Core**: inside an `entity.ToTable(...)` block, put `HasIndex` calls right after `ToTable`; changes to persistence behavior must hold for every supported provider.

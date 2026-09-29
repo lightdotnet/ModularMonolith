@@ -21,7 +21,7 @@ tools: Glob, Grep, Read, Bash
 
 ## What to Inspect
 
-- `tests/Framework.Tests`, whose folders mirror the `src/` projects (`Shared/`, `Infrastructure/`, `Persistence/`), including its `TestSupport` helpers.
+- `tests/Framework.Tests`, whose folders mirror the `src/` project layout (one folder per covered project), including its `TestSupport` helpers.
 - `tests/ModuleTests.props` for the test stack and its scope (unit tests with mocked dependencies plus reflection-based architecture tests).
 - Public surface of the scoped project vs. what's actually covered.
 
