@@ -1,6 +1,6 @@
 ---
 name: analyze-project
-description: Playbook for analyzing a single named project (.csproj) — e.g. src/Shared, src/Infrastructure, src/Persistence, or tests/Framework.Tests — its responsibility, public surface, and dependencies, without expanding scope to the whole solution.
+description: Playbook for analyzing a single named project (.csproj) — e.g. src/Shared, src/Infrastructure, src/Persistence, src/Host, src/Identity, tests/Framework.Tests, or tests/Identity.Tests — its responsibility, public surface, and dependencies, without expanding scope to the whole solution.
 ---
 
 # Skill: Analyze Project
@@ -16,10 +16,10 @@ Build (or refresh) an understanding of exactly one project: what it's responsibl
 ## Workflow
 
 1. **Locate the project**: find the `.csproj` file and its containing folder.
-2. **Read its references**: `<ProjectReference>` and `<PackageReference>` entries — delegate to [dependency-analyzer](../../agents/dependency-analyzer.md) if the graph is non-trivial, and flag any reference that breaks the framework's dependency direction for [architecture-reviewer](../../agents/architecture-reviewer.md).
+2. **Read its references**: `<ProjectReference>` and `<PackageReference>` entries — delegate to [dependency-analyzer](../../agents/dependency-analyzer.md) if the graph is non-trivial, and flag any reference that breaks the solution's dependency direction for [architecture-reviewer](../../agents/architecture-reviewer.md).
 3. **Read its public surface**: enumerate public types/members at a summary level (don't paste full file contents unless asked).
 4. **Identify responsibility**: infer the project's purpose from its actual contents (namespaces, key types), not its name alone.
-5. **Update docs, if requested**: write/update `src/docs/architecture/<ProjectName>.md` using the [project-overview template](../../docs/templates/project-overview.md). Only when explicitly asked.
+5. **Update docs, if requested**: write/update `docs/architecture/<ProjectName>.md` using the [project-overview template](../../docs/templates/project-overview.md). Only when explicitly asked.
 
 ## Expected Outputs
 

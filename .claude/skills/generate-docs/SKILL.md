@@ -20,12 +20,12 @@ Produce new documentation for a specific project or the solution that doesn't ye
 2. **Read the template**: load the matching file from `.claude/docs/templates/` for structure.
 3. **Delegate**: invoke [documentation-writer](../../agents/documentation-writer.md) with the scope and template.
 4. **Verify facts**: every claim must trace to actual code inspected for this scope — mark anything unverifiable as `unknown` rather than guessing.
-5. **Write output**: place the result as a flat file under `src/docs/architecture/<doc-type>.md` (overview, architecture, database, dependency-graph, per-project overviews) or `src/docs/conventions/<doc-type>.md` (coding-conventions, development-guide).
+5. **Write output**: place the result as a flat file under the root `docs/architecture/<doc-type>.md` (overview, architecture, database, dependency-graph, per-project overviews) or `docs/conventions/<doc-type>.md` (coding-conventions, development-guide).
 6. **Report**: summarize what was generated and flag any gaps found.
 
 ## Expected Outputs
 
-- A new markdown file under `src/docs/` following the template structure, populated only with verified facts.
+- A new markdown file under the root `docs/` folder following the template structure, populated only with verified facts.
 - A short summary of what was generated and any open questions.
 
 ## Best Practices

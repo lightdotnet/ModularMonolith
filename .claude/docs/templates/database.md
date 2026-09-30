@@ -1,7 +1,7 @@
 <!--
 Template: Database
 Used by: skills/generate-docs/SKILL.md, skills/sync-docs/SKILL.md
-Output location: src/docs/architecture/database.md
+Output location: docs/architecture/database.md
 Do not populate this file itself — copy its structure into the generated output.
 -->
 

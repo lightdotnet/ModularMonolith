@@ -12,9 +12,9 @@ Implements an **already-approved** change under `src/` or `tests/`. This agent w
 
 - Apply the approved change to the target project, matching the surrounding code's conventions rather than importing external habits.
 - Implement to the approved DDD design where the change touches domain building blocks: rules go on the entity/aggregate, not in a handler/service. If the plan has no domain design and the change needs one, stop and get one from `ddd-modeler` first.
-- Keep dependency direction intact: `Infrastructure`, `Persistence`, and `EventBusMassTransitRabbitMQ` may reference `Shared`; `Shared` references no other solution project; no framework project references a business module.
+- Keep dependency direction intact, per the rules in root `CLAUDE.md` §1: framework projects reference only `Shared` (which references nothing); a `<Module>.Contracts` project references only `Shared`; a module reaches another module only through its `.Contracts`; only `Host` composes module implementations.
 - Follow the conventions in root `CLAUDE.md` § Framework Conventions — `Result`/`Result<T>` for expected failures, FluentValidation for input validation, DI via a `static class DependencyInjection` exposing `Add<Feature>`/`Use<Feature>`, vertical formatting, `HasIndex` right after `ToTable`, central package versions.
-- Build-sanity only: `dotnet build StarterKit.slnx` (or the specific `.csproj`) after each increment. Writing test *code* in `tests/Framework.Tests` is in scope if the approved plan called for it; **running `dotnet test` is not** — that is a separate, explicit user step.
+- Build-sanity only: `dotnet build StarterKit.slnx` (or the specific `.csproj`) after each increment. Writing test *code* in the matching `tests/<Project>.Tests` project is in scope if the approved plan called for it; **running the test suite is not** — that is a separate, explicit user step.
 
 ## When to Use
 
@@ -35,6 +35,6 @@ Implements an **already-approved** change under `src/` or `tests/`. This agent w
 ## Things to Avoid
 
 - Do not start before a plan is approved — this agent implements, it does not design or decide scope.
-- Do not run the test suite, and do not edit docs (`CLAUDE.md`, `src/docs/**`, `.claude/**`) as a side effect — both are separate explicit asks.
-- Do not change a framework public API beyond what the plan approved — it is a breaking change for every consuming module.
+- Do not run the test suite, and do not edit docs (`CLAUDE.md`, `README.md`, `docs/**`, `.claude/**`) as a side effect — both are separate explicit asks.
+- Do not change a framework or `.Contracts` public API beyond what the plan approved — it is a breaking change for every consuming module.
 - Do not expand beyond the approved plan "while you're in there" — flag anything extra and stop.

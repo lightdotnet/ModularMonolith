@@ -1,7 +1,7 @@
 <!--
 Template: Solution Overview
 Used by: skills/analyze-solution/SKILL.md
-Output location: src/docs/architecture/overview.md
+Output location: docs/architecture/overview.md
 Do not populate this file itself — copy its structure into the generated output.
 -->
 

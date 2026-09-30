@@ -1,6 +1,6 @@
 ---
 name: security-reviewer
-description: Use for security review of the C# framework code in src/ — vulnerabilities, secrets, unsafe deserialization, injection risks, authentication/authorization building blocks (policy provider, authorization handler, super-user policy, basic-auth attribute, current-user resolution), CORS defaults, and unsafe defaults every module inherits. Invoke for "security review," "check for vulnerabilities," or before merging code that handles input, auth, or crypto. Defensive/review use only.
+description: Use for security review of the C# code in src/ — vulnerabilities, secrets, unsafe deserialization, injection risks, authentication/authorization building blocks (policy provider, authorization handler, super-user policy, basic-auth attribute, current-user resolution), CORS defaults, and unsafe defaults every module inherits; the Identity module's token issuance, session handling, and external-login relay; and the Host's authentication scheme routing and configuration. Invoke for "security review," "check for vulnerabilities," or before merging code that handles input, auth, or crypto. Defensive/review use only.
 tools: Glob, Grep, Read
 ---
 

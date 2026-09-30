@@ -1,7 +1,7 @@
 <!--
 Template: Dependency Graph
 Used by: agents/dependency-analyzer.md, skills/generate-docs/SKILL.md
-Output location: src/docs/architecture/dependency-graph.md
+Output location: docs/architecture/dependency-graph.md
 Do not populate this file itself — copy its structure into the generated output.
 -->
 

@@ -12,8 +12,8 @@ See `CLAUDE.md` §0. The user writes requests in Vietnamese — treat that as co
 
 ## Repository Shape Assumptions
 
-- **One .NET solution** (`StarterKit.slnx` at the repo root) holding the framework projects under `src/` and their tests under `tests/` — see `CLAUDE.md` §1 and §3.
-- **Business modules, hosts, and client apps are not part of this branch.** The framework is written to be consumed by modules, but don't describe or assume any specific module, host project, or client exists — verify with `Glob`/`Grep` first.
+- **One .NET solution** (`StarterKit.slnx` at the repo root) holding the framework projects, the `Host` composition root, and the Identity module under `src/`, and their tests under `tests/` — see `CLAUDE.md` §1 and §3.
+- **Identity is the only business module and there are no client apps on this branch.** Don't describe or assume any other module, host, or client exists — verify with `Glob`/`Grep` first. Code comments or configuration may mention modules or clients that live elsewhere (e.g. a Notifications module, an admin client); that is not evidence they exist here.
 
 ## Context-Loading Strategy
 
@@ -21,7 +21,7 @@ See `CLAUDE.md` §0. The user writes requests in Vietnamese — treat that as co
 2. **Index before content.** Use `Glob`/`Grep` to locate relevant `.csproj`/namespaces before opening files. Don't open files "to see what's there."
 3. **Read incrementally.** Open only the files needed for the current step. Expand only when a genuine dependency is found (a referenced project, a vendor base type).
 4. **No repo-wide scans without an explicit request.** "Analyze this folder" means that folder; "analyze this project" means that project and its direct references.
-5. **Cache findings in the right place.** Verified structural facts go into generated docs under `src/docs/` — only when a sync/generate step is explicitly requested. Not into ad hoc notes that vanish at session end.
+5. **Cache findings in the right place.** Verified structural facts go into generated docs under `docs/` — only when a sync/generate step is explicitly requested. Not into ad hoc notes that vanish at session end.
 
 ## Token Efficiency Rules
 
@@ -52,12 +52,12 @@ See `CLAUDE.md` §2.9. This is the standard lifecycle for any request that adds 
 1. **Plan → present → wait.** Write the plan, show it to the user, and stop. Do not edit production code before the user has explicitly said to proceed, even for changes that feel small.
 2. **Implement using the normal toolbox.** Once approved, delegate as `CLAUDE.md` §4–§6 describe — the code changes themselves go to `dotnet-developer`.
 3. **Present the result → wait again.** When the change is done, hand it back for review. Don't chain into running tests or updating docs.
-4. **Tests and docs are separate, explicit asks.** Running `dotnet test` and updating documentation each need their own follow-up instruction, even if the approved plan mentioned them — writing test *code* can be part of implementation if the plan called for it; *executing* the suite is a separate step.
+4. **Tests and docs are separate, explicit asks.** Running the test suite and updating documentation each need their own follow-up instruction, even if the approved plan mentioned them — writing test *code* can be part of implementation if the plan called for it; *executing* the suite is a separate step. How the suite is run is in `README.md` § Getting Started.
 5. **Basic build sanity is not "running tests."** Confirming the code compiles as you go is expected.
 
 ## Documentation Discipline
 
-- Never regenerate or rewrite root `CLAUDE.md`, `README.md`, or `src/docs/**` as a side effect of an unrelated task.
+- Never regenerate or rewrite root `CLAUDE.md`, `README.md`, or `docs/**` as a side effect of an unrelated task.
 - When a sync is requested, follow [workflows/sync-documentation.md](workflows/sync-documentation.md).
 - Templates in `docs/templates/` are structural skeletons — copy their structure into outputs; don't edit the templates during normal doc generation.
 
@@ -74,4 +74,8 @@ A cold `startup` doesn't need this: root `CLAUDE.md` loads fresh in that case.
 
 - Treat every public type/member in the framework projects under `src/` (`Shared`, `Infrastructure`, `Persistence`, `EventBusMassTransitRabbitMQ`) as a contract: every module built on the framework depends on it. A change to it is potentially breaking — flag it and confirm first (see `CLAUDE.md` §2.7).
 - `Shared` is the highest-risk project — every other framework project and every module depend on it.
+- A module's `.Contracts` project (`Identity.Contracts`) is the contract other modules build against — its public types, including integration-event shapes, get the same confirm-first treatment.
 - Changes to central build files (`Directory.Build.props`, `Directory.Packages.props`, `tests/ModuleTests.props`) affect every project — confirm first.
+
+---
+_Last synced: 2026-09-30_

@@ -1,6 +1,6 @@
 ---
 name: efcore-specialist
-description: Use for anything involving Entity Framework Core — the Persistence framework project (BaseDbContext, audit and domain-event dispatch, cache/dynamic repositories, multi-provider support, migration support), entity configuration conventions, migrations, and query performance. Invoke for "review this EF Core code," "why is this query slow," "review this migration," or when designing persistence building blocks. Each module owns its own DbContext derived from BaseDbContext; never assume a single repo-wide context.
+description: Use for anything involving Entity Framework Core — the Persistence framework project (BaseDbContext, audit and domain-event dispatch, cache/dynamic repositories, multi-provider support, migration support), entity configuration conventions, migrations, and query performance. Invoke for "review this EF Core code," "why is this query slow," "review this migration," or when designing persistence building blocks. Each module owns its own DbContext — typically derived from BaseDbContext; Identity's derives from the ASP.NET Core Identity context and reuses Persistence's audit/dispatch extensions — never assume a single repo-wide context.
 tools: Glob, Grep, Read, Bash
 ---
 

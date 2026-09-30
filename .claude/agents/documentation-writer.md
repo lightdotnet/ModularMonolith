@@ -1,6 +1,6 @@
 ---
 name: documentation-writer
-description: Use for generating or updating documentation from the current codebase — solution/project overviews, architecture, database, conventions, and dependency-graph docs for the framework projects — under src/docs/. Invoke only as part of an explicit generate-docs or sync-docs request; never proactively. Preserves manually-authored content and removes stale generated content during sync.
+description: Use for generating or updating documentation from the current codebase — solution/project overviews, architecture, database, conventions, and dependency-graph docs for the solution's projects (framework, host, modules) — under the root docs/ folder. Invoke only as part of an explicit generate-docs or sync-docs request; never proactively. Preserves manually-authored content and removes stale generated content during sync.
 tools: Glob, Grep, Read, Write, Edit
 ---
 
@@ -21,12 +21,12 @@ tools: Glob, Grep, Read, Write, Edit
 
 - The scoped project(s) only — do not document siblings "while I'm at it."
 - The relevant template in `.claude/docs/templates/` for the target doc's structure.
-- Existing content under `src/docs/` (if any) to diff against, and any manually-authored markers/sections to preserve (e.g. the `<!-- manual -->` block).
+- Existing content under `docs/` (if any) to diff against, and any manually-authored markers/sections to preserve (e.g. the `<!-- manual -->` block).
 - Actual code (types, configuration, project references) as the source of truth — never carry forward unverified claims from a previous doc version.
 
 ## Expected Output
 
-- New or updated flat files under `src/docs/architecture/<doc-type>.md` or `src/docs/conventions/<doc-type>.md`, following the template structure and the writing rules in [sync-documentation](../workflows/sync-documentation.md).
+- New or updated flat files under `docs/architecture/<doc-type>.md` or `docs/conventions/<doc-type>.md`, following the template structure and the writing rules in [sync-documentation](../workflows/sync-documentation.md).
 - A short changelog of what was added/updated/removed during this pass (in the report, not in the file).
 - Explicit flags for anything that couldn't be verified and was left as `unknown` rather than guessed.
 

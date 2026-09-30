@@ -1,7 +1,7 @@
 <!--
 Template: Project Overview
 Used by: skills/analyze-project/SKILL.md
-Output location: src/docs/architecture/<ProjectName>.md
+Output location: docs/architecture/<ProjectName>.md
 Do not populate this file itself — copy its structure into the generated output.
 -->
 

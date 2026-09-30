@@ -12,7 +12,7 @@ Assess the structural health of one framework project or the whole solution — 
 ## Inputs
 
 - The target scope: one project or the whole solution (ask if not specified).
-- Existing `src/docs/architecture/architecture.md`, if one has been generated, as a baseline.
+- Existing `docs/architecture/architecture.md` and `docs/architecture/dependency-graph.md`, if generated, as a baseline.
 
 ## Workflow
 

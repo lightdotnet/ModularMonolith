@@ -1,10 +1,10 @@
 # Workflow: Implement Feature
 
-Triggered by requests to add/implement new functionality or change existing code in the framework projects or their tests. This is the canonical procedure for any code change.
+Triggered by requests to add/implement new functionality or change existing code in the solution's projects — framework, host, or module — or their tests. This is the canonical procedure for any code change.
 
 ## Steps
 
-1. **Confirm scope.** Identify which project(s) the change belongs in (`Shared`, `Infrastructure`, `Persistence`, `EventBusMassTransitRabbitMQ`, `tests/Framework.Tests`) and whether it belongs in the framework at all. Ask if ambiguous. Read only the files directly relevant (target project, its direct dependencies, similar existing types as reference).
+1. **Confirm scope.** Identify which project(s) the change belongs in — framework (`Shared`, `Infrastructure`, `Persistence`, `EventBusMassTransitRabbitMQ`), host (`Host`), module (`Identity`, `Identity.Contracts`, `Identity.Web`), or tests (`tests/Framework.Tests`, `tests/Identity.Tests`) — and, for a new building block, whether it belongs in the framework at all or stays in the owning module. Ask if ambiguous. Read only the files directly relevant (target project, its direct dependencies, similar existing types as reference).
 2. **Use appropriate agents** for design questions before planning:
    - [dotnet-architect](../agents/dotnet-architect.md) for project placement, extension points, and library choices.
    - [ddd-modeler](../agents/ddd-modeler.md) for any change to DDD building blocks (entity bases, value objects, domain events).

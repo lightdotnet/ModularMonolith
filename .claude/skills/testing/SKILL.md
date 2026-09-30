@@ -1,6 +1,6 @@
 ---
 name: testing
-description: Playbook for reviewing or improving test coverage and quality of the framework projects (tests/Framework.Tests) using the testing-reviewer agent.
+description: Playbook for reviewing or improving test coverage and quality of the framework projects (tests/Framework.Tests) and the Identity module (tests/Identity.Tests) using the testing-reviewer agent.
 ---
 
 # Skill: Testing

@@ -106,7 +106,12 @@ Package versions: `Directory.Packages.props`.
 
 ## Depended On By
 
-No project in `StarterKit.slnx` references it, including `tests/Framework.Tests`. It is consumed by host applications and business modules outside this solution. Its only solution reference is `Shared`, which keeps the framework's dependency direction intact.
+| Project | Why |
+|---|---|
+| `Host` | Calls `AddEventBus` once with its module assembly list — see [Host](Host.md) |
+| `tests/Framework.Tests` | Unit tests of the registration, the no-op bus, the settings binding, and the consumer-definition policy |
+
+A module that only publishes does not reference this project: it injects `IEventBus`, which reaches it through `Shared` (the Identity module publishes this way — see [Identity](Identity.md)). A module that consumes integration events references it for the consumer bases. Its only solution reference is `Shared`, which keeps the framework's dependency direction intact.
 
 ## Notable Conventions
 

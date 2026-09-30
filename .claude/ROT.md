@@ -15,9 +15,9 @@ ROT review is **explicit and pull-based** — run it when the user asks, not as 
 | Cadence | Trigger | Scope |
 |---|---|---|
 | Monthly (or every ~4–6 weeks of active work) | Manual — user runs it | Full `.claude/` sweep |
-| After adding/removing/renaming a framework project or test project | Event-based | Root `CLAUDE.md` §1/§3, `AI_CONTEXT.md`, and any agent/skill/template naming projects or paths |
+| After adding/removing/renaming any project (framework, host, module, or test) | Event-based | Root `CLAUDE.md` §1/§3, `AI_CONTEXT.md`, and any agent/skill/template naming projects or paths |
 | After a stack/convention change (target framework, EF Core provider set, vendor `Lightsoft.*` package family, test stack, result/validation pattern) | Event-based | Root `CLAUDE.md` § Framework Conventions and the agents that bake in specifics (`dotnet-developer`, `ddd-modeler`, `efcore-specialist`, `api-designer`, `testing-reviewer`) |
-| When business modules, a host, or client apps are added to this branch | Event-based | Reintroduce only the agents/skills/workflows that the new code actually needs — don't pre-create them |
+| When client apps or further business modules are added to this branch | Event-based | Reintroduce only the agents/skills/workflows that the new code actually needs — don't pre-create them |
 | Before a release/milestone tag | Event-based | Full sweep, emphasis on Trivial |
 
 Track actual runs in the [Review Log](#review-log) below so the next review knows the baseline.
@@ -65,7 +65,7 @@ Ask Claude: *"Run a ROT review of `.claude/` per ROT.md"* (optionally scoped). E
 ### Doc templates (`docs/templates/*.md`)
 
 - [ ] Every template is used by at least one skill/agent/workflow, and its "Used by" header is accurate.
-- [ ] `Output location` comments match the `src/docs/{architecture,conventions}/` layout.
+- [ ] `Output location` comments match the root `docs/{architecture,conventions}/` layout.
 - [ ] No template duplicates another's structure.
 
 ### Hooks & settings (`settings.json`, `hooks/*.js`)
@@ -84,5 +84,7 @@ Ask Claude: *"Run a ROT review of `.claude/` per ROT.md"* (optionally scoped). E
 |---|---|---|---|---|
 | 2026-09-29 | Full `.claude/` + root `CLAUDE.md` + `README.md`, for the `dev/core` branch (framework projects + `tests/Framework.Tests` only; no modules, hosts, or clients) | Claude + user | Trivial: every agent/skill/workflow/template whose purpose was client apps, the MVC host, API-contract drift, full-stack features, business-module analysis/splitting, or project scaffolding. Outdated: remaining files pointed at `clients/`, module docs, `src/CLAUDE.md`/`src/docs/` content, and module-specific conventions absent here. Redundant: the analyze-solution workflow restated its skill. | Deleted the Trivial/Redundant files; rewrote the remaining agents, skills, workflows, templates, and core docs for the framework layer; inlined the essential conventions into root `CLAUDE.md` § Framework Conventions; reset this log to a `dev/core` baseline (earlier history lives in git on `main`). |
 
----
 _This file is itself subject to ROT review — if the schedule or checklist stops matching how the project works, update it during a review rather than letting it drift._
+
+---
+_Last synced: 2026-09-30_

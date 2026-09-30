@@ -4,7 +4,7 @@ Triggered by broad, read-only review requests ("review the codebase," "audit thi
 
 ## Steps
 
-1. **Confirm scope.** Even a "repository review" should be scoped to what's practical — confirm whether the user means one framework project, the tests, or the whole solution.
+1. **Confirm scope.** Even a "repository review" should be scoped to what's practical — confirm whether the user means one project (framework, host, or module), the tests, or the whole solution.
 2. **Use multiple agents**, each covering its domain, over the confirmed scope:
    - [architecture-reviewer](../agents/architecture-reviewer.md), [code-reviewer](../agents/code-reviewer.md), [dependency-analyzer](../agents/dependency-analyzer.md).
    - [efcore-specialist](../agents/efcore-specialist.md) if `Persistence` is in scope; [api-designer](../agents/api-designer.md) if the endpoint conventions are in scope; [ddd-modeler](../agents/ddd-modeler.md) if the DDD building blocks are in scope.

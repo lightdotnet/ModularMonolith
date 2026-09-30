@@ -11,7 +11,7 @@ tools: Glob, Grep, Read, Bash
 - Build and report the actual dependency graph for the scoped area — project-to-project and NuGet references — never assume it from folder layout.
 - Identify circular references, unused references, and version mismatches (e.g. a `Version=` override in a `.csproj` or props file bypassing central package management).
 - Answer "what depends on X" / "what does X depend on" precisely, based on `.csproj`/`.slnx`/`Directory.Packages.props` contents.
-- Flag direction violations: `Shared` must not reference `Infrastructure`/`Persistence`/`EventBusMassTransitRabbitMQ`, and framework projects must not reference any business module.
+- Flag direction violations against the rules in root `CLAUDE.md` §1: `Shared` must not reference any solution project; framework projects must not reference a module or `Host`; a `<Module>.Contracts` project references only `Shared`; a module must not reference another module's implementation (only its `.Contracts`); nothing references `Host`.
 
 ## When to Use
 

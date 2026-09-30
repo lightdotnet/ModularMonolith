@@ -3,7 +3,7 @@ Template: Domain Model / Aggregate Map
 Used by: agents/ddd-modeler.md, skills/ddd-modeling/SKILL.md (the shape ddd-modeler fills when returning a
   building-block design or an aggregate map).
 Output: normally a report handed back and folded into the implementation plan. Commit it as
-  src/docs/architecture/domain-model.md only when the user asks for the shared building blocks to be documented.
+  docs/architecture/domain-model.md only when the user asks for the shared building blocks to be documented.
 Do not populate this file itself — copy its structure into the output.
 -->
 

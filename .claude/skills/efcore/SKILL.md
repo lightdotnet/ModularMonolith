@@ -31,4 +31,4 @@ Handle EF Core tasks for `src/Persistence` and the conventions it gives every mo
 ## Best Practices
 
 - Never apply migrations to a real database without explicit confirmation.
-- Treat `BaseDbContext` and shared base entities as high-risk to change — every module's context inherits them.
+- Treat `BaseDbContext` and shared base entities as high-risk to change — module contexts inherit them or reuse their extensions (Identity's context derives from the ASP.NET Core Identity context and reuses Persistence's audit/dispatch extensions).

@@ -1,7 +1,7 @@
 <!--
 Template: Architecture
 Used by: skills/generate-docs/SKILL.md, skills/sync-docs/SKILL.md
-Output location: src/docs/architecture/architecture.md
+Output location: docs/architecture/architecture.md
 Do not populate this file itself — copy its structure into the generated output.
 -->
 
@@ -9,7 +9,7 @@ Do not populate this file itself — copy its structure into the generated outpu
 
 ## Layering
 
-_The framework projects actually observed and each one's responsibility (shared kernel, hosting infrastructure, persistence, integration-event bus)._
+_The framework, host, and module projects actually observed and each one's responsibility (shared kernel, hosting infrastructure, persistence, integration-event bus, composition root, module implementation/contracts/web)._
 
 ## Dependency Direction
 

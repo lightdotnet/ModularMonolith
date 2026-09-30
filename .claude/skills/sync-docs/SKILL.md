@@ -1,13 +1,13 @@
 ---
 name: sync-docs
-description: Playbook for updating existing documentation (generated docs under src/docs/, root CLAUDE.md, README.md, or .claude/ docs) to match the current codebase, preserving manual content and removing stale sections.
+description: Playbook for updating existing documentation (generated docs under the root docs/ folder, root CLAUDE.md, README.md, or .claude/ docs) to match the current codebase, preserving manual content and removing stale sections.
 ---
 
 # Skill: Sync Docs
 
 ## Purpose
 
-Bring existing documentation — generated docs under `src/docs/`, and, if requested, root `CLAUDE.md`, `README.md`, or the `.claude/` docs — up to date with the current code: additive, corrective, and stale-content-removing, never a blind rewrite.
+Bring existing documentation — generated docs under the root `docs/` folder, and, if requested, root `CLAUDE.md`, `README.md`, or the `.claude/` docs — up to date with the current code: additive, corrective, and stale-content-removing, never a blind rewrite.
 
 ## Inputs
 
