@@ -7,6 +7,11 @@ dotnet tool install --global dotnet-ef
 
 The migration commands below run from `src/Migrations/<Provider>` and use the global tool. The local tool manifest `src/StarterKit.WebApi/.config/dotnet-tools.json` (pinning `dotnet-ef`) applies only to commands run under `src/StarterKit.WebApi`.
 
+### Get Context list
+```
+dotnet ef dbcontext list
+```
+
 ### Add migrations
 ```
 dotnet ef migrations add CreateIdentitySchema --context IdentityDbContext --output-dir Identity

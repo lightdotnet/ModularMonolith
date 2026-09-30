@@ -1,3 +1,4 @@
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -43,7 +44,7 @@ namespace PostgreSQL.Identity
                     FirstName = table.Column<string>(type: "text", nullable: true),
                     LastName = table.Column<string>(type: "text", nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: false),
-                    AuthProvider = table.Column<string>(type: "text", nullable: true),
+                    AuthProvider = table.Column<int>(type: "integer", nullable: false),
                     Created = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     CreatedBy = table.Column<string>(type: "text", nullable: true),
                     LastModified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
@@ -245,6 +246,12 @@ namespace PostgreSQL.Identity
                 schema: "identity",
                 table: "Users",
                 column: "NormalizedEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_Created",
+                schema: "identity",
+                table: "Users",
+                column: "Created");
 
             migrationBuilder.CreateIndex(
                 name: "UserNameIndex",

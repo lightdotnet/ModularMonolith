@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using PostgreSQL;
+using StarterKit.Modules.Notifications.Persistence;
 
 // set Environment
 //Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Live");
@@ -16,3 +17,8 @@ var identityInitialiser = serviceProvider.GetRequiredService<IdentityContextInit
 await identityInitialiser.InitialiseAsync();
 
 await identityInitialiser.TrySeedAsync();
+
+// Notifications module
+var notificationInitialiser = serviceProvider.GetRequiredService<NotificationContextInitialiser>();
+
+await notificationInitialiser.InitialiseAsync();

@@ -4,8 +4,10 @@ using Microsoft.Extensions.DependencyInjection;
 using StarterKit.EventBusMassTransitRabbitMQ;
 using StarterKit.Infrastructure;
 using StarterKit.Modules.Identity;
+using StarterKit.Modules.Identity.Authorization;
 using StarterKit.Modules.Identity.Domain;
 using StarterKit.Modules.Identity.IntegrationEvents;
+using StarterKit.Modules.Identity.Services;
 using StarterKit.Persistence;
 using StarterKit.Persistence.MigrationSupport;
 using System.Reflection;
@@ -86,6 +88,10 @@ public static class DependencyInjection
             })
             .AddRoles<Role>()
             .AddEntityFrameworkStores<IdentityDbContext>();
+
+        services.AddTransient<IUserService, UserService>();
+        services.AddTransient<IRoleService, RoleService>();
+        services.AddScoped<PermissionGrantGuard>();
 
         // IdentityDbContext buffers integration events per scope and publishes them after a save.
         services.AddScoped<IntegrationEventCollector>();
