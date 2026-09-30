@@ -112,8 +112,6 @@ Package versions: `Directory.Packages.props`. Full reference graph: [dependency-
 | `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | `AddSharedInfrastructure` for `IDateTime` in the migrate-and-seed apps |
 | `tests/Framework.Tests` | Unit tests |
 
-Its only solution reference is `Shared`, which keeps the framework's dependency direction intact.
-
 ## Notable Conventions
 
 - Registration classes are named `DependencyInjection` per feature folder (`Caching`, `Cors`); `InfrastructureModule` and `HealthChecks.Configure` are the exceptions.

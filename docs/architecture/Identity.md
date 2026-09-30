@@ -20,7 +20,7 @@ The module owns users, roles, claims, and sessions, and issues the tokens the re
 
 ## Public Surface
 
-**`Identity.Contracts`** (references only `Shared`):
+**`Identity.Contracts`**:
 
 | Type | Role |
 |---|---|
@@ -36,7 +36,7 @@ The module owns users, roles, claims, and sessions, and issues the tokens the re
 | `DependencyInjection.AddIdentityServices` | Identity store over `IdentityDbContext`, Active Directory (a fake service unless `MemberOfDomain` is set and the OS is Windows), user/role/external-login services, the external-login code store, the integration-event collector, and `IIdentityModuleApi` |
 | `Endpoints/` | Controllers on `VersionedApiController`. `TokenController` (`api/v{version}/auth`) exposes `token/get`, `token/refresh`, `token/external` (anonymous) and `token/hub` (authenticated); the other controllers manage users, roles, permissions, and the current user's profile and sessions |
 
-Visibility inside `Identity`: the domain entities, the request/response models, `JwtOptions`, the external-login option/result types, and the service interfaces (`IUserService`, `IRoleService`, `IAuthenticationService`, `IUserSessionService`, `IExternalLoginService`, `IExternalLoginAuthCodeStore`) are `public`. Their implementations, `IdentityDbContext`, `IdentityContextInitialiser`, the JWT signing/issuing services, the `IIdentityModuleApi` implementation, the permission catalog, the CQRS commands/handlers, and the integration-event buffering are `internal`; `Identity.Tests`, `Identity.Web`, and the migration projects (`MSSQL`, `PostgreSQL`, `Sqlite`) see them through `InternalsVisibleTo`.
+Visibility inside `Identity`: the domain entities, request/response models, options and result types, and service interfaces are `public`; their implementations, `IdentityDbContext` and its initialiser, the token services, the `IIdentityModuleApi` implementation, the permission catalog, the CQRS commands/handlers, and the integration-event buffering are `internal`. `InternalsVisibleTo` grants `Identity.Tests`, `Identity.Web`, and the three migration projects.
 
 **`Identity.Web`**:
 
@@ -58,11 +58,11 @@ The connection string is the framework default (`DefaultConnection`). Section pl
 
 ## Design Notes
 
-- **Persistence**: `IdentityDbContext` derives from the ASP.NET Core Identity context, not `BaseDbContext`, and uses the schema `identity`. It reuses `Persistence`'s audit, domain-event dispatch, and Sqlite date-time extensions. An asynchronous save runs in this order: audit → dispatch domain events → commit → publish the integration events buffered in the scoped, module-local `IntegrationEventCollector` through `IEventBus`. A failed commit clears the buffer. There is no outbox: a publish failure after the commit is logged and the events of that save are lost, which the per-event `Version` makes recoverable by a later event. A synchronous save with buffered integration events throws.
+- **Persistence**: `IdentityDbContext` derives from the ASP.NET Core Identity context, not `BaseDbContext`, and uses the schema `identity`. It calls `Persistence`'s `AuditEntries`, `DispatchDomainEvents`, and `FixSqliteDateTimeOffset` directly. An asynchronous save runs in this order: audit → dispatch domain events → commit → publish the integration events buffered in the scoped, module-local `IntegrationEventCollector` through `IEventBus`. A failed commit clears the buffer. There is no outbox: a publish failure after the commit is logged and the events of that save are lost, which the per-event `Version` makes recoverable by a later event. A synchronous save with buffered integration events throws.
 - **Publishing without a bus dependency**: the module publishes through `IEventBus` (vendor abstraction reached through `Shared`) and does not reference `EventBusMassTransitRabbitMQ`; the host registers the bus.
-- **External-login relay**: the flow a separate-origin client uses is diagrammed in [README § Login Flow](../../README.md#login-flow-client--server). `ExternalLoginStart` accepts only the `Microsoft`/`EntraId` provider and an allow-listed `redirectUri`, then challenges Entra ID. `ExternalLoginRelay` resolves (links or provisions) the user, mints a token pair, stores it in the cache under a one-time code bound to the PKCE challenge (S256 of the verifier) with the configured TTL, and redirects to the client with `code` and `state`. `POST auth/token/external` consumes the code once with the verifier. The relay never sets an `Identity.Web` cookie. The relay pages and the exchange endpoint are rate-limited by the host's `external-login` policy.
+- **External-login relay**: the flow a separate-origin client uses is diagrammed in [README § Login Flow](../../README.md#login-flow-client--server). `ExternalLoginStart` accepts only the `Microsoft`/`EntraId` provider and an allow-listed `redirectUri`, then challenges Entra ID. `ExternalLoginRelay` resolves (links or provisions) the user, mints a token pair, stores it in the cache under a one-time code bound to the PKCE challenge (S256 of the verifier) with the configured TTL, and redirects to the client with `code` and `state`. `POST auth/token/external` consumes the code once with the verifier. The relay never sets an `Identity.Web` cookie. The relay pages and the exchange endpoint are rate-limited by the host's `external-login` policy — see [Host § Design Notes](Host.md#design-notes).
 - **Two hosting modes for `Identity.Web`**: co-hosted in `Host` (JSON API and pages in one process — see [Host](Host.md)), or standalone via its own `Program` (cookie-only, Identity assembly only). The standalone host does not register JWT token services, so the relay completes end-to-end only under `Host`. Whether the standalone host can resolve `IdentityDbContext` is unverified: the context requires `IEventBus`, and the standalone composition does not call `AddEventBus`.
-- **Schema creation and seed**: the module's migrations live in the migration projects `src/Migrations/{MSSQL,PostgreSQL,Sqlite}`, not in the module. Each migrator runs `IdentityContextInitialiser` — `InitialiseAsync` (migrate) then `TrySeedAsync` (seed roles and users); the host does not migrate at startup. See [migrations.md](../conventions/migrations.md).
+- **Schema creation and seed**: the module's migrations live in the migration projects, not in the module; `IdentityContextInitialiser` migrates and seeds roles and users — see [migrations.md § Migration sets](../conventions/migrations.md#migration-sets).
 
 ## Dependencies
 
@@ -86,11 +86,10 @@ The connection string is the framework default (`DefaultConnection`). Section pl
 | `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | `Identity` |
 | `tests/Identity.Tests` | `Identity`, `Shared` |
 
-No other module exists on this branch; a future module references only `Identity.Contracts`.
+No other module exists on this branch.
 
 ## Notable Conventions
 
-- The module's registration classes follow the framework's `static class DependencyInjection` convention in both `Identity` and `Identity.Web`.
 - `IntegrationEventCollector` is module-local; it becomes a `Persistence` building block only once a second module needs it.
 
 ## Notes

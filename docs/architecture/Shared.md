@@ -98,11 +98,10 @@ No project reference. Package versions: `Directory.Packages.props`. Full referen
 | `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | Composition of the migrate-and-seed apps |
 | `tests/Framework.Tests`, `tests/Identity.Tests` | Unit tests |
 
-`Host` reaches `Shared` transitively. `Shared` references no solution project, as the dependency rules in [CLAUDE.md § 1](../../CLAUDE.md#1-repository-purpose) require.
+`Host` reaches `Shared` transitively.
 
 ## Notable Conventions
 
-- Registration follows the `static class DependencyInjection` convention (`Authorization/DependencyInjection`).
 - The authorization handler and policy provider are `internal`; modules use only the registration methods and `ICurrentUser`.
 - `InternalsVisibleTo` grants only `Framework.Tests`.
 

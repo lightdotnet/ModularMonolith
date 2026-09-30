@@ -8,7 +8,7 @@
 - base consumer and consumer-definition types that fix the framework's delivery policy (concurrency, retries, outbox, per-module queues);
 - a base type for a module's consumer registration, discovered by assembly scanning.
 
-Integration events are the messages that cross module (or service) boundaries through the broker. They derive from `StarterKit.Shared.IntegrationEvent` (an abstract record implementing the vendor `IIntegrationEvent`, with a generated `Id` and a UTC `CreationDate`). Domain events (`DomainEvent`) are a separate mechanism: they stay in-process and are dispatched through the mediator by `Persistence` on save.
+The events it carries derive from `Shared`'s `IntegrationEvent` — see [Shared](Shared.md). When to use an integration event rather than a domain event is in [CLAUDE.md § 7](../../CLAUDE.md#7-framework-conventions).
 
 ## Public Surface
 
@@ -93,7 +93,7 @@ Publish by injecting `IEventBus` and calling `Publish(new OrderPlacedIntegration
 - **Failure logging**: the vendor consumer base logs an error on every failed attempt, so a message that exhausts its retries produces one error entry per attempt (five in total).
 - **Per-module queues**: without a prefix, every consumer of an event with a `[BindingName]` binds to one queue named after the binding name, so consumers compete (load-balancing). Passing a module prefix (e.g. `base("billing")`) yields `billing-<binding-name>`, giving each module its own copy of the event. Per the vendor base, the prefix applies only when the event type itself carries `[BindingName]` (the attribute is not inherited); prefixes may contain only letters, digits, `-`, `_`, `.`, `:`.
 - **Consumer discovery**: `AddEventBus` hands its assemblies to the vendor registration, which scans them for `ModuleConsumer` types, instantiates each (parameterless constructor) and calls `AddConsumers`.
-- **Disabled bus**: `NoOpEventBus` keeps publishers working with no broker (development, tests); events are not queued for later delivery.
+- **Disabled bus**: `NoOpEventBus` keeps publishers working with no broker (development, tests, migrators); events are not queued for later delivery.
 
 ## Dependencies
 
@@ -102,20 +102,20 @@ Publish by injecting `IEventBus` and calling `Publish(new OrderPlacedIntegration
 | `Shared` | project | `IntegrationEvent` base type (constraint on the consumer bases, excluded from topology); vendor `Lightsoft.EventBus` abstractions (`IEventBus`, `IIntegrationEvent`) flow through it |
 | `Lightsoft.EventBus.MassTransit.RabbitMQ` | package | `AddRabbitMQEventBus`, MassTransit/RabbitMQ transport, `Consumer<T>`/`ConsumerDefinition<TEvent, TConsumer>` bases, `ModuleConsumer` and its scanning |
 
-Package versions: `Directory.Packages.props`.
+Package versions: `Directory.Packages.props`. Full reference graph: [dependency-graph.md](dependency-graph.md).
 
 ## Depended On By
 
 | Project | Why |
 |---|---|
 | `Host` | Calls `AddEventBus` once with its module assembly list — see [Host](Host.md) |
+| `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | Call `AddEventBus` with no assemblies; their configuration has no `RabbitMQ` section, so they get `NoOpEventBus` |
 | `tests/Framework.Tests` | Unit tests of the registration, the no-op bus, the settings binding, and the consumer-definition policy |
 
-A module that only publishes does not reference this project: it injects `IEventBus`, which reaches it through `Shared` (the Identity module publishes this way — see [Identity](Identity.md)). A module that consumes integration events references it for the consumer bases. Its only solution reference is `Shared`, which keeps the framework's dependency direction intact.
+A module that only publishes does not reference this project: it injects `IEventBus`, which reaches it through `Shared` (the Identity module publishes this way — see [Identity](Identity.md)). A module that consumes integration events references it for the consumer bases.
 
 ## Notable Conventions
 
-- The registration entry point is `static class DependencyInjection` (`AddEventBus`), the name most framework feature folders use for their registration class.
 - `IEventBus` lifetime depends on configuration: singleton when disabled (`NoOpEventBus`), scoped when enabled (the vendor RabbitMQ bus).
 
 ## Notes

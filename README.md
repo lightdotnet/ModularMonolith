@@ -28,7 +28,7 @@ StarterKit.slnx
     └── tests/Identity.Tests                (Identity module)
 ```
 
-Other modules reach a module only through its `<Module>.Contracts` seam. `Identity.Web → Identity` is an intra-module reference (same bounded context), not a cross-module edge. Project responsibilities and the dependency rules are in [CLAUDE.md](CLAUDE.md#1-repository-purpose); the exact project references are in [docs/architecture/dependency-graph.md](docs/architecture/dependency-graph.md).
+Project responsibilities and the dependency rules are in [CLAUDE.md](CLAUDE.md#1-repository-purpose); the exact project references are in [docs/architecture/dependency-graph.md](docs/architecture/dependency-graph.md).
 
 ## Architecture Diagram
 
@@ -111,13 +111,13 @@ Access tokens are renewed through `POST api/v1/auth/token/refresh`. The client's
 | Layer | Stack |
 |---|---|
 | Runtime | ASP.NET Core (C#), `net10.0` |
-| Architecture | Modular Monolith — flat projects under `src/`: framework projects, the `Host` composition root, and the Identity module (`Identity` + `Identity.Contracts` + `Identity.Web`) |
+| Architecture | Modular Monolith — see [Structure](#structure) |
 | Data access | EF Core — provider-configurable via `DbProvider` (`InMemory` / `PostgreSQL` / `MSSQL` / `Sqlite`) |
 | Authentication | ASP.NET Core Identity; self-issued JWT (Bearer) for the API; cookie for the Razor Pages; optional Microsoft Entra ID (OIDC) external login |
 | Messaging | MassTransit over RabbitMQ for integration events; a no-op bus when disabled |
 | Vendor framework | `Lightsoft.*` package family (mediator, `Result`/`Paged` contracts, domain base types, ASP.NET Core authorization/modularity helpers, caching, Serilog, event bus, Active Directory) |
 | Validation / mapping | FluentValidation, Mapster |
-| Testing | xUnit v3 + Moq on Microsoft.Testing.Platform (via `tests/ModuleTests.props`) — `tests/Framework.Tests` and `tests/Identity.Tests`, with Sqlite in-memory DbContexts where persistence is exercised |
+| Testing | xUnit v3 + Moq on Microsoft.Testing.Platform (via `tests/ModuleTests.props`) |
 
 Package versions are managed centrally in [Directory.Packages.props](Directory.Packages.props).
 

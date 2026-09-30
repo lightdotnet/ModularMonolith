@@ -17,13 +17,13 @@ The solution is a modular monolith: reusable framework projects, business module
 
 ## Dependency Direction
 
-The dependency rules are defined in [CLAUDE.md § 1](../../CLAUDE.md#1-repository-purpose); the project-reference diagram and the checks against those rules (no circular references, no direction violations) are in [dependency-graph.md](dependency-graph.md). In short: the framework points toward `Shared`, modules point toward the framework and reach each other only through `.Contracts`, and only the composition roots (`Host`, the migrators) reference a module's implementation.
+The dependency rules are defined in [CLAUDE.md § 1](../../CLAUDE.md#1-repository-purpose); the project-reference diagram and the checks against those rules (no circular references, no direction violations) are in [dependency-graph.md](dependency-graph.md).
 
 ## Runtime Flows
 
 ### HTTP request pipeline
 
-The host builds one pipeline for the JSON API and the Identity Razor Pages ([Host § Public Surface](Host.md#public-surface)). In order:
+The host builds one pipeline for the JSON API and the Identity Razor Pages. In order:
 
 1. HTTPS redirection — outside `Development` only.
 2. Trace id — sets `HttpContext.TraceIdentifier` to a GUID v7; it becomes the `RequestId` of every response envelope and error body.
@@ -32,23 +32,23 @@ The host builds one pipeline for the JSON API and the Identity Razor Pages ([Hos
 5. Static files, routing, CORS (`AllowCors`), rate limiter, authentication, authorization, Swagger.
 6. Module middleware (`AppModule.Use`), then WebSockets.
 
-Endpoints: `/hc` (health), module endpoints (unversioned `AppModuleEndpoint.Map` at the root; `AppModule.Map` under `api/v{version:apiVersion}`), the Identity Razor Pages, and the MVC controllers. Controllers require an authenticated user unless `AllowAnonymous` is set or the endpoint carries `[AllowAnonymous]`.
+Endpoints: `/hc` (health), module endpoints (unversioned `AppModuleEndpoint.Map` at the root; `AppModule.Map` under `api/v{version:apiVersion}`), the Identity Razor Pages, and the MVC controllers, which are secure by default — see [Infrastructure § Design Notes](Infrastructure.md#design-notes).
 
 Responses and errors share one envelope, the vendor `Result`/`Result<T>`:
 
-- **Success and expected failure**: a controller returns through the base `Ok(...)`, which wraps the value (or passes a `Result` through) and derives the HTTP status from the result — see [Infrastructure § Design Notes](Infrastructure.md#design-notes). Handlers express expected failures as a failed `Result`, not an exception ([CLAUDE.md § 7](../../CLAUDE.md#7-framework-conventions)).
+- **Success and expected failure**: a controller returns through the base `Ok(...)` — see [Infrastructure § Design Notes](Infrastructure.md#design-notes).
 - **Invalid input**: model-binding errors are replaced by the vendor invalid-model-state response; FluentValidation failures raised by `ValidationBehaviour` throw the vendor `ValidationException`.
 - **Exceptions**: the vendor handler maps a vendor `ExceptionBase` (including `ValidationException`) to its own status code, `KeyNotFoundException` to 404, and anything else to 500 with the message hidden, and writes a `Result` body carrying the `RequestId`.
 
 ### Module composition
 
-The host keeps one **assembly scan list** (the host assembly plus each module assembly). From it the host registers FluentValidation validators, mediator handlers with the `LoggingBehaviour` → `ValidationBehaviour` pipeline, event-bus consumers, and the modules themselves:
+The host keeps one **assembly scan list** (the host assembly plus each module assembly), defined in its `ConfigureExtensions`. From it the host registers FluentValidation validators, mediator handlers with the `LoggingBehaviour` → `ValidationBehaviour` pipeline, event-bus consumers, and the modules themselves:
 
 - `AddModules<AppModule>` instantiates every `AppModule` in the list and calls its `Add` hooks — this is where a module registers its services and its `DbContext`;
 - `UseModules<AppModule>` calls each module's `Use` hook in the pipeline;
 - endpoint mapping calls `AppModuleEndpoint.Map` at the root and `AppModule.Map` inside the versioned route group.
 
-A module becomes part of the process by adding its assembly to that list — see [Host § Design Notes](Host.md#design-notes). MVC controllers are discovered by MVC from the assemblies the host references, not from the scan list. Controllers on `VersionedApiController` are routed at `api/v{version:apiVersion}/[controller]` with API version 1.0; controller names are lowercased by the host's MVC convention.
+A module becomes part of the process by adding its assembly to that list. MVC controllers are discovered by MVC from the assemblies the host references, not from the scan list.
 
 ### Persistence save path
 
@@ -61,18 +61,18 @@ flowchart LR
     C --> P["Publish buffered<br/>integration events<br/>(IEventBus)"]
 ```
 
-- Domain events are dispatched before the commit, sequentially, in the caller's DI scope — see [Persistence § Design Notes](Persistence.md#design-notes).
-- Integration events are buffered during the unit of work and published only after a successful commit; a failed commit discards them. There is no outbox: a publish failure after the commit is logged and the events of that save are lost, an accepted risk mitigated by versioned full-state events. The Identity module is the implementation of record — see [Identity § Design Notes](Identity.md#design-notes).
-- The schema comes from the migrators, never from the host at startup.
+- Domain-event dispatch semantics (timing, ordering, DI scope): [Persistence § Design Notes](Persistence.md#design-notes).
+- Integration-event buffering, publish-after-commit, and the no-outbox trade-off: [Identity § Design Notes](Identity.md#design-notes), the implementation of record.
+- The schema comes from the migrators — see [migrations.md](../conventions/migrations.md).
 
 ### Messaging
 
-Integration events derive from `Shared`'s `IntegrationEvent` and are published through `IEventBus`. The host registers the bus once: with `RabbitMQ:Enable` `true` it connects MassTransit to RabbitMQ and registers every `AppModuleConsumer` found in the scan list; otherwise a no-op bus logs and drops each event, so publishers work without a broker. The migrators' settings files have no `RabbitMQ` section, so they run on the no-op bus. Delivery policy, queues, and consumer registration: [EventBusMassTransitRabbitMQ](EventBusMassTransitRabbitMQ.md).
+Integration events are published through `IEventBus`; the host registers the bus once, with every `AppModuleConsumer` found in the scan list. Enabled vs. no-op behaviour, delivery policy, queues, and consumer registration: [EventBusMassTransitRabbitMQ](EventBusMassTransitRabbitMQ.md). The migrators' settings files have no `RabbitMQ` section, so they run on the no-op bus.
 
 ### Authentication and authorization
 
 - **Authentication** is the host's concern: Bearer tokens for `/api`, a hub-only Bearer scheme, and the Identity cookie for the Razor Pages, selected by request path — see [Host § Design Notes](Host.md#design-notes). Tokens are issued by the Identity module — see [Identity](Identity.md); the client-facing sign-in paths are diagrammed in [README § Login Flow](../../README.md#login-flow-client--server).
-- **Authorization** is permission-based and comes from `Shared`: an endpoint names a permission, and the handler checks the principal's `permission` claims, with the `super` user allowed everything — see [Shared § Design Notes](Shared.md#design-notes). Modules contribute their permission catalogs by registering a vendor `IPermissionDefinitionProvider`.
+- **Authorization** is permission-based and comes from `Shared` — see [Shared § Design Notes](Shared.md#design-notes). Modules contribute their permission catalogs by registering a vendor `IPermissionDefinitionProvider`.
 - **Current user**: code depends on `ICurrentUser`; the host binds it to the HTTP user (`ServerCurrentUser`), a migrator to a fixed `Migrator` identity.
 
 ## Key Design Patterns
@@ -81,7 +81,7 @@ Integration events derive from `Shared`'s `IntegrationEvent` and are published t
 - **Mediator (CQRS-style requests)** with logging and validation pipeline behaviours; domain events are mediator notifications.
 - **Domain events dispatched on save** and **integration events published after commit**, as described above.
 - **Module registration by assembly scanning** over the vendor modularity package, with separate hooks for services, middleware, and endpoints.
-- **Per-module `DbContext`** over one configurable provider, with the module's own default schema (`identity` for Identity).
+- **Per-module `DbContext`** over one configurable provider, with the module's own default schema.
 - **Vendor base types**: most framework types derive from a `Lightsoft.*` (`Light.*`) type that owns the core behaviour; the framework fixes the choices on top.
 
 ## Extension Points for Modules
@@ -99,9 +99,9 @@ Integration events derive from `Shared`'s `IntegrationEvent` and are published t
 
 | Finding | Severity | Notes |
 |---|---|---|
-| No transactional outbox for integration events | Medium | Accepted: a publish failure after commit loses that save's events; versioned full-state events let a later event supersede a lost one. See [Identity § Design Notes](Identity.md#design-notes) |
-| Hard-coded super user | Medium | `super` bypasses every permission check; the list is code, not configuration — see [Shared § Design Notes](Shared.md#design-notes) |
-| Save path wired per context | Low | `BaseDbContext` does not audit or dispatch; each module context must call the helpers itself, and none derives from `BaseDbContext` today |
+| No transactional outbox for integration events | Medium | Accepted — see [Identity § Design Notes](Identity.md#design-notes) |
+| Hard-coded super user | Medium | See [Shared § Design Notes](Shared.md#design-notes) |
+| Save path wired per context | Low | `BaseDbContext` does not audit or dispatch; each module context must call the helpers itself — see [Persistence § Design Notes](Persistence.md#design-notes) |
 
 ## Notes
 

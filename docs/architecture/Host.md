@@ -16,8 +16,8 @@ The host is an application, not a library; its surface is its composition.
 | Area | Role |
 |---|---|
 | `Program` | Configures Serilog, calls `ConfigureServices`, adds lowercase controllers and the default JSON / invalid-model-state handling, then `ConfigurePipelines` and endpoint mapping. `AllowAnonymous` (configuration) is passed to endpoint mapping. |
-| `ConfigureExtensions.ConfigureServices` | Registers, over one **assembly scan list** (the host assembly and the Identity module assembly): FluentValidation validators, the mediator with the logging and validation behaviours, the event bus (`AddEventBus`), and module registration (`AddModules<AppModule>`). Also adds the shared infrastructure (exception handler, API versioning, Swagger, caching, health checks, CORS, current user, permission policies), the rate limiter, `AddIdentityWeb`, and `AddApiAuthentication`. |
-| `ConfigureExtensions.ConfigurePipelines` | Middleware order: trace id → exception handler → request logging → static files → routing → CORS → rate limiter → authentication → authorization → Swagger; then health checks, `UseModules`, module endpoints (unversioned and under `api/v{version:apiVersion}`), and `UseIdentityWeb` (Razor Pages). |
+| `ConfigureExtensions.ConfigureServices` | Registers everything discovered from the **assembly scan list** ([architecture.md § Module composition](architecture.md#module-composition)), the shared infrastructure (exception handler, API versioning, Swagger, caching, health checks, CORS, current user, permission policies), the rate limiter, `AddIdentityWeb`, and `AddApiAuthentication`. |
+| `ConfigureExtensions.ConfigurePipelines` | Builds the middleware pipeline and maps health checks, module endpoints, and the Identity Razor Pages — order in [architecture.md § HTTP request pipeline](architecture.md#http-request-pipeline). |
 | `Authentication.ApiAuthenticationExtensions.AddApiAuthentication` | Co-host authentication: the Bearer scheme, a hub-only `HubBearer` scheme, and the `Identity.CookieOrBearer` policy scheme described under [Design Notes](#design-notes). |
 
 ## Configuration
@@ -36,7 +36,7 @@ Top-level sections the host reads directly or passes to the projects it composes
 | `BasicAuth` | [Infrastructure](Infrastructure.md) — `BasicAuthAttribute` credentials |
 | `Notifications:Hub:Path` | Host — hub path used by the authentication scheme routing |
 
-The `Development` settings do not override `DbProvider`, so the host uses the provider from `appsettings.json` (`MSSQL`, SQL Server LocalDB) unless it is overridden. The host does not migrate at startup: a relational database gets its schema from the migrator projects — see [migrations.md](../conventions/migrations.md). `RabbitMQ:Enable` is `false` by default, so no broker is needed. Local setup and provider switching: [development-guide.md](../conventions/development-guide.md).
+Default values and local provider switching: [development-guide.md § Running Locally](../conventions/development-guide.md#running-locally).
 
 ## Design Notes
 
@@ -47,7 +47,6 @@ The `Development` settings do not override `DbProvider`, so the host uses the pr
   Cookie login/access-denied redirects are turned into `401`/`403` for `/api` and hub requests. Both Bearer schemes copy the token expiry into the auth ticket.
 - **Hub path**: no project in this solution maps a SignalR hub; the `Notifications:Hub` section and `HubOptions` are a host-local stand-in that only drives scheme routing. Which module will own the hub is unknown on this branch.
 - **Rate limiting**: the `external-login` policy is a fixed window of 10 requests per minute per remote IP, with no queue. It guards the anonymous external-login relay pages and `POST auth/token/external`.
-- **Assembly scan list**: a new module becomes part of the process by adding its assembly to the list in `ConfigureExtensions`; validators, mediator handlers, modules, module endpoints, and event-bus consumers are all discovered from that one list.
 - **Standalone alternative**: `Identity.Web` can also run as its own cookie-only host; that host does not call `AddApiAuthentication` — see [Identity](Identity.md).
 
 ## Dependencies
