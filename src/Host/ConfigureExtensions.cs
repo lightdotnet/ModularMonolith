@@ -91,8 +91,8 @@ public static class ConfigureExtensions
     {
         app
             .UseGuidV7TraceId()
-            .UseLightRequestLogging()
             .UseLightExceptionHandler()
+            .UseLightRequestLogging()
             .UseStaticFiles()
             .UseRouting()
             .UseCorsPolicy() // must add before Auth
