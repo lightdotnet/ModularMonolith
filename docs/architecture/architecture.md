@@ -1,0 +1,114 @@
+# Architecture
+
+The solution is a modular monolith: reusable framework projects, business modules built on them, one host that composes the modules into a single process, and per-provider migrator apps that create and seed the schema. This document is the entry point to the architecture docs; each project's detail lives in its own overview, linked below.
+
+## Layering
+
+| Layer | Projects | Responsibility |
+|---|---|---|
+| Framework | [Shared](Shared.md) | Shared kernel: DDD building blocks, `IntegrationEvent`, `ICurrentUser`/`IDateTime`, permission authorization, mediator pipeline behaviours |
+| | [Infrastructure](Infrastructure.md) | ASP.NET Core hosting blocks: module registration bases, controller bases and response envelope, endpoint mapping, caching, CORS, health checks |
+| | [Persistence](Persistence.md) | EF Core blocks: provider selection, context base, audit and domain-event dispatch helpers, repositories, migration support |
+| | [EventBusMassTransitRabbitMQ](EventBusMassTransitRabbitMQ.md) | Integration-event bus over MassTransit/RabbitMQ (no-op when disabled) and consumer bases |
+| Module | [Identity](Identity.md) (`Identity.Contracts`, `Identity`, `Identity.Web`) | The one business module: users, roles, sessions, token issuance, login pages. Its `.Contracts` project is the only seam other modules may reference |
+| Host | [Host](Host.md) | Composition root and the only deployable: registers the framework and the modules, owns the HTTP pipeline and authentication schemes |
+| Migrators | `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | Console apps holding each module's migrations per provider; they migrate and seed — see [migrations.md](../conventions/migrations.md) |
+| Tests | `tests/Framework.Tests`, `tests/Identity.Tests` | Unit tests of the framework projects and of the Identity module — see [coding-conventions.md § Testing Conventions](../conventions/coding-conventions.md#testing-conventions) |
+
+## Dependency Direction
+
+The dependency rules are defined in [CLAUDE.md § 1](../../CLAUDE.md#1-repository-purpose); the project-reference diagram and the checks against those rules (no circular references, no direction violations) are in [dependency-graph.md](dependency-graph.md). In short: the framework points toward `Shared`, modules point toward the framework and reach each other only through `.Contracts`, and only the composition roots (`Host`, the migrators) reference a module's implementation.
+
+## Runtime Flows
+
+### HTTP request pipeline
+
+The host builds one pipeline for the JSON API and the Identity Razor Pages ([Host § Public Surface](Host.md#public-surface)). In order:
+
+1. HTTPS redirection — outside `Development` only.
+2. Trace id — sets `HttpContext.TraceIdentifier` to a GUID v7; it becomes the `RequestId` of every response envelope and error body.
+3. Request logging — when `RequestLogging:Enable` is set.
+4. Exception handler — the vendor middleware turns an exception into the error envelope described below.
+5. Static files, routing, CORS (`AllowCors`), rate limiter, authentication, authorization, Swagger.
+6. Module middleware (`AppModule.Use`), then WebSockets.
+
+Endpoints: `/hc` (health), module endpoints (unversioned `AppModuleEndpoint.Map` at the root; `AppModule.Map` under `api/v{version:apiVersion}`), the Identity Razor Pages, and the MVC controllers. Controllers require an authenticated user unless `AllowAnonymous` is set or the endpoint carries `[AllowAnonymous]`.
+
+Responses and errors share one envelope, the vendor `Result`/`Result<T>`:
+
+- **Success and expected failure**: a controller returns through the base `Ok(...)`, which wraps the value (or passes a `Result` through) and derives the HTTP status from the result — see [Infrastructure § Design Notes](Infrastructure.md#design-notes). Handlers express expected failures as a failed `Result`, not an exception ([CLAUDE.md § 7](../../CLAUDE.md#7-framework-conventions)).
+- **Invalid input**: model-binding errors are replaced by the vendor invalid-model-state response; FluentValidation failures raised by `ValidationBehaviour` throw the vendor `ValidationException`.
+- **Exceptions**: the vendor handler maps a vendor `ExceptionBase` (including `ValidationException`) to its own status code, `KeyNotFoundException` to 404, and anything else to 500 with the message hidden, and writes a `Result` body carrying the `RequestId`.
+
+### Module composition
+
+The host keeps one **assembly scan list** (the host assembly plus each module assembly). From it the host registers FluentValidation validators, mediator handlers with the `LoggingBehaviour` → `ValidationBehaviour` pipeline, event-bus consumers, and the modules themselves:
+
+- `AddModules<AppModule>` instantiates every `AppModule` in the list and calls its `Add` hooks — this is where a module registers its services and its `DbContext`;
+- `UseModules<AppModule>` calls each module's `Use` hook in the pipeline;
+- endpoint mapping calls `AppModuleEndpoint.Map` at the root and `AppModule.Map` inside the versioned route group.
+
+A module becomes part of the process by adding its assembly to that list — see [Host § Design Notes](Host.md#design-notes). MVC controllers are discovered by MVC from the assemblies the host references, not from the scan list. Controllers on `VersionedApiController` are routed at `api/v{version:apiVersion}/[controller]` with API version 1.0; controller names are lowercased by the host's MVC convention.
+
+### Persistence save path
+
+Each module owns its `DbContext`, registered through `Persistence`'s `AddConfiguredDbContext` for the configured provider. `Persistence` supplies the save-path steps; the module context wires them in its own `SaveChangesAsync`:
+
+```mermaid
+flowchart LR
+    A["Audit<br/>(AuditEntries)"] --> D["Dispatch domain events<br/>(mediator, in-process)"]
+    D --> C["Commit<br/>(EF SaveChanges)"]
+    C --> P["Publish buffered<br/>integration events<br/>(IEventBus)"]
+```
+
+- Domain events are dispatched before the commit, sequentially, in the caller's DI scope — see [Persistence § Design Notes](Persistence.md#design-notes).
+- Integration events are buffered during the unit of work and published only after a successful commit; a failed commit discards them. There is no outbox: a publish failure after the commit is logged and the events of that save are lost, an accepted risk mitigated by versioned full-state events. The Identity module is the implementation of record — see [Identity § Design Notes](Identity.md#design-notes).
+- The schema comes from the migrators, never from the host at startup.
+
+### Messaging
+
+Integration events derive from `Shared`'s `IntegrationEvent` and are published through `IEventBus`. The host registers the bus once: with `RabbitMQ:Enable` `true` it connects MassTransit to RabbitMQ and registers every `AppModuleConsumer` found in the scan list; otherwise a no-op bus logs and drops each event, so publishers work without a broker. The migrators' settings files have no `RabbitMQ` section, so they run on the no-op bus. Delivery policy, queues, and consumer registration: [EventBusMassTransitRabbitMQ](EventBusMassTransitRabbitMQ.md).
+
+### Authentication and authorization
+
+- **Authentication** is the host's concern: Bearer tokens for `/api`, a hub-only Bearer scheme, and the Identity cookie for the Razor Pages, selected by request path — see [Host § Design Notes](Host.md#design-notes). Tokens are issued by the Identity module — see [Identity](Identity.md); the client-facing sign-in paths are diagrammed in [README § Login Flow](../../README.md#login-flow-client--server).
+- **Authorization** is permission-based and comes from `Shared`: an endpoint names a permission, and the handler checks the principal's `permission` claims, with the `super` user allowed everything — see [Shared § Design Notes](Shared.md#design-notes). Modules contribute their permission catalogs by registering a vendor `IPermissionDefinitionProvider`.
+- **Current user**: code depends on `ICurrentUser`; the host binds it to the HTTP user (`ServerCurrentUser`), a migrator to a fixed `Migrator` identity.
+
+## Key Design Patterns
+
+- **Result pattern** for expected failures, with one response envelope for successes and errors.
+- **Mediator (CQRS-style requests)** with logging and validation pipeline behaviours; domain events are mediator notifications.
+- **Domain events dispatched on save** and **integration events published after commit**, as described above.
+- **Module registration by assembly scanning** over the vendor modularity package, with separate hooks for services, middleware, and endpoints.
+- **Per-module `DbContext`** over one configurable provider, with the module's own default schema (`identity` for Identity).
+- **Vendor base types**: most framework types derive from a `Lightsoft.*` (`Light.*`) type that owns the core behaviour; the framework fixes the choices on top.
+
+## Extension Points for Modules
+
+| A module… | Uses | Documented in |
+|---|---|---|
+| joins the host | an `AppModule` (and optionally an `AppModuleEndpoint`) in an assembly on the host's scan list | [Infrastructure](Infrastructure.md) |
+| exposes an API | controllers on `VersionedApiController` / `ApiControllerBase`, returning through `Ok(...)` | [Infrastructure](Infrastructure.md) |
+| persists data | its own context via `AddConfiguredDbContext`, optionally on `BaseDbContext`, calling `AuditEntries` and `DispatchDomainEvents` on save; migrations in each migrator project | [Persistence](Persistence.md), [migrations.md](../conventions/migrations.md) |
+| models its domain | `AuditableEntity`, `DomainEvent`, value objects | [Shared](Shared.md) |
+| protects endpoints | permission policies plus an `IPermissionDefinitionProvider` for its catalog | [Shared](Shared.md) |
+| talks to other modules | its `.Contracts` seam, or integration events through `IEventBus` and the consumer bases | [EventBusMassTransitRabbitMQ](EventBusMassTransitRabbitMQ.md), [Identity](Identity.md) |
+
+## Known Architectural Risks / Debt
+
+| Finding | Severity | Notes |
+|---|---|---|
+| No transactional outbox for integration events | Medium | Accepted: a publish failure after commit loses that save's events; versioned full-state events let a later event supersede a lost one. See [Identity § Design Notes](Identity.md#design-notes) |
+| Hard-coded super user | Medium | `super` bypasses every permission check; the list is code, not configuration — see [Shared § Design Notes](Shared.md#design-notes) |
+| Sensitive-data logging always on for PostgreSQL | Medium | `AddConfiguredDbContext` enables it regardless of environment — see [Persistence § Design Notes](Persistence.md#design-notes) |
+| Request logging registered before the exception handler | Low | The vendor request-logging middleware documents that the exception handler should be registered before it; the host registers it after |
+| Save path wired per context | Low | `BaseDbContext` does not audit or dispatch; each module context must call the helpers itself, and none derives from `BaseDbContext` today |
+| References to modules outside this solution | Low | `Shared`'s `InternalsVisibleTo` grants, `DbConnectionNames`, and some XML-doc references name modules that do not exist in this solution |
+
+## Notes
+
+<!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
+
+---
+_Last synced: 2026-09-30_

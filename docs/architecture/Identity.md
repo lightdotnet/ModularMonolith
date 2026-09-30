@@ -69,7 +69,7 @@ The connection string is the framework default (`DefaultConnection`). Section pl
 | Depends on | Type (project/package) | Why |
 |---|---|---|
 | `Shared` (via `Identity.Contracts`) | project | Kernel types, `IntegrationEvent`, `ICurrentUser`/`IDateTime`, `IEventBus` abstraction |
-| `Infrastructure` | project | `AppModule`, controller bases, caching |
+| `Infrastructure` | project | `AppModule`, controller bases |
 | `Persistence` | project | Configured DbContext registration, audit/dispatch extensions, provider support |
 | `Microsoft.AspNetCore.Identity.EntityFrameworkCore`, `Microsoft.Extensions.Identity.Core` | package | Identity store |
 | `Lightsoft.ActiveDirectory`, `Lightsoft.Caching`, `Lightsoft.SharedKernel` | package | AD lookups, cache for the external-login codes, vendor kernel types |

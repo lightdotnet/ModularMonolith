@@ -140,7 +140,7 @@ Database provider and schema setup, configuration, test filters, and migrations:
 ## Documentation
 
 - [CLAUDE.md](CLAUDE.md) — repository-wide entry point (project map, dependency direction, framework conventions, AI operating rules).
-- [docs/](docs/) — generated project documentation.
+- [docs/](docs/) — generated project documentation; start at [docs/architecture/architecture.md](docs/architecture/architecture.md) (layering, runtime flows, and links to each project's overview).
 - [docs/conventions/](docs/conventions/) — coding conventions, development guide, migrations, and local Docker infrastructure.
 - [.claude/](.claude/) — reusable Claude development infrastructure (agents, skills, workflows), not project documentation.
 

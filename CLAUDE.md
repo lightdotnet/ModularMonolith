@@ -17,17 +17,17 @@ This branch (`dev/core`) holds the **core of the StarterKit Modular Monolith tem
 
 | Project | Assembly | Responsibility |
 |---|---|---|
-| `src/Shared` | `StarterKit.Shared` | Shared kernel: DDD building blocks (entity bases, `DomainEvent`, value objects), the `IntegrationEvent` base, current-user/date-time abstractions, authorization policies, mediator pipeline behaviours, paging/search queries, shared constants |
-| `src/Infrastructure` | `StarterKit.Infrastructure` | ASP.NET Core hosting concerns: DI wiring, controller bases and endpoint attributes, module registration (`AppModule`/`AppModuleEndpoint`), caching, CORS, health checks, mapping, logging |
-| `src/Persistence` | `StarterKit.Persistence` | EF Core: `BaseDbContext`, audit and domain-event dispatch on save, entity/index builder extensions, cache and dynamic-table repositories, multi-provider support (InMemory, PostgreSQL, MSSQL, Sqlite), migration support |
-| `src/EventBusMassTransitRabbitMQ` | `StarterKit.EventBusMassTransitRabbitMQ` | Integration-event bus: `IEventBus` registration over MassTransit/RabbitMQ from configuration (no-op bus when disabled), consumer and consumer-definition bases, module consumer registration |
+| `src/Shared` | `StarterKit.Shared` | Shared kernel: DDD building blocks (entity bases, `DomainEvent`, value objects), the `IntegrationEvent` base, current-user/date-time abstractions, authorization policies, mediator pipeline behaviours, paging/search queries, shared constants — see [Shared](docs/architecture/Shared.md) |
+| `src/Infrastructure` | `StarterKit.Infrastructure` | ASP.NET Core hosting concerns: DI wiring, controller bases and endpoint attributes, module registration (`AppModule`/`AppModuleEndpoint`), caching, CORS, health checks, mapping, logging — see [Infrastructure](docs/architecture/Infrastructure.md) |
+| `src/Persistence` | `StarterKit.Persistence` | EF Core: `BaseDbContext`, audit and domain-event dispatch on save, entity/index builder extensions, cache and dynamic-table repositories, multi-provider support (InMemory, PostgreSQL, MSSQL, Sqlite), migration support — see [Persistence](docs/architecture/Persistence.md) |
+| `src/EventBusMassTransitRabbitMQ` | `StarterKit.EventBusMassTransitRabbitMQ` | Integration-event bus: `IEventBus` registration over MassTransit/RabbitMQ from configuration (no-op bus when disabled), consumer and consumer-definition bases, module consumer registration — see [EventBusMassTransitRabbitMQ](docs/architecture/EventBusMassTransitRabbitMQ.md) |
 | `src/Host` | `StarterKit.Host` | Composition root and the only deployable: co-hosts the JSON API and the Identity Razor Pages — see [Host](docs/architecture/Host.md) |
 | `src/Identity` | `StarterKit.Modules.Identity` | Identity module implementation: ASP.NET Core Identity store, self-issued JWT/refresh/session/hub tokens, external login, Active Directory, user/role endpoints — see [Identity](docs/architecture/Identity.md) |
 | `src/Identity.Contracts` | `StarterKit.Modules.Identity.Contracts` | Identity's cross-module seam: `IIdentityModuleApi`, `UserSummary`, integration events |
 | `src/Identity.Web` | `StarterKit.Modules.Identity.Web` | Identity's Razor Pages: login and the Microsoft external-login relay; co-hosted by `Host` or run standalone |
 
 - **Tests** — `tests/Framework.Tests` (framework projects; folders mirror those projects) and `tests/Identity.Tests` (folders mirror the module's folders), both configured by `tests/ModuleTests.props`.
-- **Project references** — the one canonical diagram is [dependency-graph.md](docs/architecture/dependency-graph.md).
+- **Project references** — the one canonical diagram is [dependency-graph.md](docs/architecture/dependency-graph.md); layering and runtime flows are in [architecture.md](docs/architecture/architecture.md).
 
 Consequences:
 

@@ -33,6 +33,7 @@ Top-level sections the host reads directly or passes to the projects it composes
 | `RabbitMQ` | [EventBusMassTransitRabbitMQ § Configuration](EventBusMassTransitRabbitMQ.md#configuration) |
 | `CorsOrigins`, `Caching`, `Swagger`, `RequestLogging`, `Serilog` | Framework infrastructure and vendor packages |
 | `AllowAnonymous` | Host — endpoint mapping |
+| `BasicAuth` | [Infrastructure](Infrastructure.md) — `BasicAuthAttribute` credentials |
 | `Notifications:Hub:Path` | Host — hub path used by the authentication scheme routing |
 
 The `Development` settings do not override `DbProvider`, so the host uses the provider from `appsettings.json` (`MSSQL`, SQL Server LocalDB) unless it is overridden. The host does not migrate at startup: a relational database gets its schema from the migrator projects — see [migrations.md](../conventions/migrations.md). `RabbitMQ:Enable` is `false` by default, so no broker is needed. Local setup and provider switching: [development-guide.md](../conventions/development-guide.md).
