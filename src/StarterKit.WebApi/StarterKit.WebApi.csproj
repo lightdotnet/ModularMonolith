@@ -22,6 +22,7 @@
     <ProjectReference Include="..\Identity\Identity.csproj" />
     <ProjectReference Include="..\Identity.Web\Identity.Web.csproj" />
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\Notifications\Notifications.csproj" />
     <ProjectReference Include="..\Persistence\Persistence.csproj" />
     <ProjectReference Include="..\StarterKit.ServiceDefaults\StarterKit.ServiceDefaults.csproj" />
   </ItemGroup>

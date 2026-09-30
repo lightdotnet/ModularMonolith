@@ -15,6 +15,7 @@ using StarterKit.Infrastructure.Modularity;
 using StarterKit.Infrastructure.Services;
 using StarterKit.Modules.Identity;
 using StarterKit.Modules.Identity.Web;
+using StarterKit.Modules.Notifications;
 using StarterKit.Shared;
 using StarterKit.Shared.Authorization;
 using System.Reflection;
@@ -28,6 +29,7 @@ public static class ConfigureExtensions
         [
             Assembly.GetExecutingAssembly(),
             typeof(IdentityModule).Assembly,
+            typeof(NotificationsModule).Assembly,
         ];
 
     public static IServiceCollection ConfigureServices(this IServiceCollection services, IConfiguration configuration)

@@ -20,6 +20,10 @@
     <Project Path="src/Identity/Identity.csproj" />
     <Project Path="src/Identity.Web/Identity.Web.csproj" />
   </Folder>
+  <Folder Name="/src/notifications-module/">
+    <Project Path="src/Notifications.Contracts/Notifications.Contracts.csproj" />
+    <Project Path="src/Notifications/Notifications.csproj" />
+  </Folder>
   <Folder Name="/src/_migrations/">
     <Project Path="src/Migrations/MSSQL/MSSQL.csproj" />
     <Project Path="src/Migrations/PostgreSQL/PostgreSQL.csproj" />
@@ -29,5 +33,6 @@
     <File Path="tests/ModuleTests.props" />
     <Project Path="tests/Framework.Tests/Framework.Tests.csproj" />
     <Project Path="tests/Identity.Tests/Identity.Tests.csproj" />
+    <Project Path="tests/Notifications.Tests/Notifications.Tests.csproj" />
   </Folder>
 </Solution>

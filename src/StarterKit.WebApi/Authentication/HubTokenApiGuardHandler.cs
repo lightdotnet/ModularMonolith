@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using StarterKit.Modules.Identity.Authentication.Jwt;
+using StarterKit.Modules.Notifications.Contracts.SystemNotifications;
 using System.IdentityModel.Tokens.Jwt;
 
 namespace StarterKit.WebApi.Authentication;
@@ -22,7 +23,7 @@ namespace StarterKit.WebApi.Authentication;
 internal sealed class HubTokenApiGuardHandler(
     IHttpContextAccessor httpContextAccessor,
     IOptions<JwtOptions> jwtOptions,
-    IOptions<HubOptions> hubOptions)
+    IOptions<NotificationHubOptions> hubOptions)
     : IAuthorizationHandler
 {
     private readonly string _hubAudience = jwtOptions.Value.HubAudience;

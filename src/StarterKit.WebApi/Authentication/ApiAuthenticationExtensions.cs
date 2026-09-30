@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using StarterKit.Modules.Identity.Authentication.Jwt;
+using StarterKit.Modules.Notifications.Contracts.SystemNotifications;
+using StarterKit.Modules.Notifications.SignalR;
 using StarterKit.Shared.Constants;
 using System.Text;
 
@@ -41,21 +43,15 @@ public static class ApiAuthenticationExtensions
         // events route by request path rather than by the Authorization header. This reads the
         // raw section directly and runs before the options ValidateOnStart hook, so it needs
         // its own guard: a bad value here would silently break scheme routing for every request.
-        var hubPath = configuration.GetSection(HubOptions.SectionName)
-            .Get<HubOptions>()?.Path ?? new HubOptions().Path;
-        if (!HubOptions.IsValidHubPath(hubPath))
-            throw new InvalidOperationException(HubOptions.InvalidPathMessage);
+        var hubPath = configuration.GetSection(NotificationHubOptions.SectionName)
+            .Get<NotificationHubOptions>()?.Path ?? new NotificationHubOptions().Path;
+        if (!NotificationHubOptionsSetup.IsValidHubPath(hubPath))
+            throw new InvalidOperationException(NotificationHubOptionsSetup.InvalidPathMessage);
 
-        // Register + validate the options for DI (consumed by HubTokenApiGuardHandler).
-        // TODO: host-local stand-in; switch to the Notifications module's hub options
-        // registration when that module exists, so both bind and validate one identical value.
-        services
-            .AddOptions<HubOptions>()
-            .BindConfiguration(HubOptions.SectionName)
-            .Validate(
-                options => HubOptions.IsValidHubPath(options.Path),
-                HubOptions.InvalidPathMessage)
-            .ValidateOnStart();
+        // Register + validate the options for DI (consumed by HubTokenApiGuardHandler) through
+        // the same setup the Notifications SignalR module uses, so the hub mapping and this
+        // authentication pipeline bind and validate one identical value.
+        services.AddNotificationHubOptions(configuration);
 
         // The vendor AddJwtAuth is a black box: it registers the "Bearer" scheme (plus the
         // SignalR hub ?access_token= query pickup) and grabs the app-global default schemes

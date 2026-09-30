@@ -27,6 +27,27 @@ public static class DependencyInjection
 
         services.AddIdentity(configuration);
 
+        services.AddNotifications(configuration);
+
+        return services;
+    }
+
+    private static IServiceCollection AddNotifications(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString(DbConnectionNames.Default);
+
+        services.AddDbContext<NotificationDbContext>(options =>
+            options
+                .UseSqlServer(connectionString, o =>
+                {
+                    o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName);
+                })
+                .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
+
+        services.AddScoped<NotificationContextInitialiser>();
+
         return services;
     }
 

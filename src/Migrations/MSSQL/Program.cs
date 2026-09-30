@@ -16,3 +16,8 @@ var identityInitialiser = serviceProvider.GetRequiredService<IdentityContextInit
 await identityInitialiser.InitialiseAsync();
 
 await identityInitialiser.TrySeedAsync();
+
+// Notifications module
+var notificationInitialiser = serviceProvider.GetRequiredService<NotificationContextInitialiser>();
+
+await notificationInitialiser.InitialiseAsync();

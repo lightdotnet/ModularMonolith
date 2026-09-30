@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<RootNamespace>StarterKit.Modules.Notifications</RootNamespace>
+	<AssemblyName>StarterKit.Modules.Notifications</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Notifications.Tests" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+    <InternalsVisibleTo Include="MSSQL" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Lightsoft.SmtpMail" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EventBusMassTransitRabbitMQ\EventBusMassTransitRabbitMQ.csproj" />
+    <ProjectReference Include="..\Identity.Contracts\Identity.Contracts.csproj" />
+    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\Notifications.Contracts\Notifications.Contracts.csproj" />
+    <ProjectReference Include="..\Persistence\Persistence.csproj" />
+  </ItemGroup>
+
+</Project>
