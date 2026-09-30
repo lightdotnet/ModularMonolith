@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StarterKit.EventBusMassTransitRabbitMQ;
 using StarterKit.Infrastructure;
+using StarterKit.Modules.Identity;
 using StarterKit.Modules.Identity.Domain;
 using StarterKit.Modules.Identity.IntegrationEvents;
 using StarterKit.Persistence;
@@ -19,7 +20,7 @@ public static class DependencyInjection
     {
         services.AddSharedInfrastructure();
 
-        services.AddMigrationsServices();
+        services.AddMigrationsServices(typeof(IdentityModule).Assembly);
 
         // No RabbitMQ section in the migrator's configuration, so this registers the no-op bus.
         services.AddEventBus(configuration);

@@ -16,7 +16,7 @@ public static class DbContextExtensions
         return dbProvider switch
         {
             DbProvider.PostgreSQL =>
-                builder.UseNpgsql(connectionString).EnableSensitiveDataLogging(),
+                builder.UseNpgsql(connectionString),
             DbProvider.MSSQL =>
                 builder.UseSqlServer(connectionString),
             DbProvider.Sqlite =>

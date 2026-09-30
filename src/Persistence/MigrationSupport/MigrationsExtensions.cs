@@ -6,10 +6,17 @@ namespace StarterKit.Persistence.MigrationSupport;
 
 public static class MigrationsExtensions
 {
-    public static IServiceCollection AddMigrationsServices(this IServiceCollection services)
+    /// <summary>
+    /// Registers the migrator's current user and the mediator, scanning the Persistence assembly plus
+    /// <paramref name="moduleAssemblies"/> so module handlers invoked while seeding (for example
+    /// domain-event handlers dispatched on save) are registered.
+    /// </summary>
+    public static IServiceCollection AddMigrationsServices(
+        this IServiceCollection services,
+        params Assembly[] moduleAssemblies)
     {
         services.AddSingleton<ICurrentUser, MigratorCurrentUser>();
-        services.AddMediatorFromAssemblies(Assembly.GetExecutingAssembly());
+        services.AddMediatorFromAssemblies([Assembly.GetExecutingAssembly(), .. moduleAssemblies]);
 
         return services;
     }
