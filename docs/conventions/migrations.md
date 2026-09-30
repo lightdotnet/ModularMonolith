@@ -67,7 +67,9 @@ entity.HasIndex(x => x.IsBase)
 
 ## Resetting a developer database
 
-A database migrated on a different migration chain than the one now in the repository has different migration ids in `__EFMigrationsHistory` and cannot be updated in place. Drop and recreate it, or reset its `__EFMigrationsHistory` rows manually, before running the current baselines. This applies to an MSSQL database whose `Identity` history holds any migration other than `20260908114120_CreateIdentitySchema`.
+A database migrated on a different migration chain than the one now in the repository has different migration ids in `__EFMigrationsHistory` and cannot be updated in place. Drop and recreate it, or reset its `__EFMigrationsHistory` rows manually, before running the current baselines. This applies to an MSSQL database whose `Identity` history holds any migration other than `20260908114120_CreateIdentitySchema`, and to a PostgreSQL database whose history holds any migration other than `20260930163058_CreateIdentitySchema` and `20260930163129_CreateNotificationSchema`.
+
+`__EFMigrationsHistory` is not placed in a module's schema: every module context on a database shares one history table in the connection's default schema (`public` on PostgreSQL). When a history table is reset, the module schemas (`identity`, `system`) must be dropped with it — otherwise the baselines fail on tables that already exist.
 
 ---
 _Last synced: 2026-09-30_
