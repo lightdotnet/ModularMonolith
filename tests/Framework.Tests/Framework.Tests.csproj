@@ -6,6 +6,7 @@
     <ProjectReference Include="..\..\src\Persistence\Persistence.csproj" />
     <ProjectReference Include="..\..\src\Shared\Shared.csproj" />
     <ProjectReference Include="..\..\src\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\EventBusMassTransitRabbitMQ\EventBusMassTransitRabbitMQ.csproj" />
   </ItemGroup>
 
 </Project>
