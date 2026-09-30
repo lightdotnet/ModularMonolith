@@ -28,8 +28,8 @@ public sealed class VatPercentage : ValueObject
 
     /// <summary>
     /// Mutates this same tracked instance in place rather than being replaced by a new one —
-    /// mirrors <see cref="StarterKit.LeaveManagement.Api.Domain.LeaveRequests.DateRange.Update"/>
-    /// and <see cref="StarterKit.Shared.ActiveStatus.Update"/>.
+    /// the same pattern as <see cref="StarterKit.Shared.ActiveStatus.Update"/> and as any owned
+    /// value object a module mutates in place through an internal <c>Update</c> method.
     /// </summary>
     internal void Update(decimal value)
     {
