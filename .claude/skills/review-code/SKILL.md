@@ -1,6 +1,6 @@
 ---
 name: review-code
-description: Playbook for reviewing specific C# code, diffs, or PRs for correctness and quality using code-reviewer.
+description: Playbook for reviewing specific code, diffs, or PRs for correctness and quality using code-reviewer (C# under src/ and tests/) or frontend-code-reviewer (the client app under clients/admin/).
 ---
 
 # Skill: Review Code
@@ -15,10 +15,10 @@ Provide a focused, read-only quality review of specific code — a diff, a file,
 
 ## Workflow
 
-1. **Scope the review**: identify exactly which files/diff are in scope.
-2. **Delegate**: invoke [code-reviewer](../../agents/code-reviewer.md).
-3. **Judge against local conventions**: root `CLAUDE.md` § Framework Conventions and the surrounding code, rather than generic style opinions.
-4. **Escalate if needed**: note architecture, security, or performance concerns briefly and suggest the matching agent rather than going deep here.
+1. **Scope the review**: identify exactly which files/diff are in scope and which side they're on.
+2. **Delegate**: invoke [code-reviewer](../../agents/code-reviewer.md) for backend (`src/`, `tests/`) files, or [frontend-code-reviewer](../../agents/frontend-code-reviewer.md) for client-app (`clients/admin/`) files. If the diff spans both, invoke each for its portion.
+3. **Judge against local conventions**: root `CLAUDE.md` § Framework Conventions (backend) or `clients/admin/CLAUDE.md` and `clients/admin/docs/conventions/coding-conventions.md` (client app), and the surrounding code, rather than generic style opinions.
+4. **Escalate if needed**: note architecture, security, performance, or contract-drift concerns briefly and suggest the matching agent rather than going deep here.
 5. **Report**: findings ranked by importance, with file:line references and concrete suggested fixes.
 
 ## Expected Outputs

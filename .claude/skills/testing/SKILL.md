@@ -32,3 +32,4 @@ Assess and improve test coverage/quality for specific framework, host, or module
 - Don't chase 100% coverage — prioritize behavior that matters.
 - Don't introduce a second testing stack.
 - Flag brittle/flaky existing tests rather than silently working around them.
+- The client app (`clients/admin/`) has no test suite — a known gap recorded in its `CLAUDE.md`. Introducing one is a stack decision for [nextjs-architect](../../agents/nextjs-architect.md) and the user, not a side effect of this skill.

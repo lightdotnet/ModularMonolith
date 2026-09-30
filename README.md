@@ -1,6 +1,6 @@
 # StarterKit — Modular Monolith Core for ASP.NET Core
 
-The core of the StarterKit Modular Monolith template: the reusable C#/.NET framework building blocks (built on the private "Light" framework family — `Lightsoft.*` packages), a composition-root host with a .NET Aspire app host for local development, and two business modules — Identity (the reference module) and Notifications — with their tests. Client apps are not part of this solution.
+The core of the StarterKit Modular Monolith template: the reusable C#/.NET framework building blocks (built on the private "Light" framework family — `Lightsoft.*` packages), a composition-root host with a .NET Aspire app host for local development, and two business modules — Identity (the reference module) and Notifications — with their tests. Client apps are not part of the .NET solution; the repository carries one, the `clients/admin` admin console.
 
 ## Structure
 
@@ -34,7 +34,14 @@ StarterKit.slnx
     └── tests/Notifications.Tests           (Notifications module)
 ```
 
-Project responsibilities and the dependency rules are in [CLAUDE.md](CLAUDE.md#1-repository-purpose); the exact project references are in [docs/architecture/dependency-graph.md](docs/architecture/dependency-graph.md).
+Outside the solution:
+
+```text
+clients/
+└── admin/                                  (Next.js admin console — consumes the Identity and Notifications APIs over HTTP)
+```
+
+Project responsibilities and the dependency rules are in [CLAUDE.md](CLAUDE.md#1-repository-purpose); the exact project references are in [docs/architecture/dependency-graph.md](docs/architecture/dependency-graph.md). The admin client is documented in [clients/admin/CLAUDE.md](clients/admin/CLAUDE.md), and the backend ↔ client boundary in [docs/integration.md](docs/integration.md).
 
 ## Architecture Diagram
 

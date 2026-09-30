@@ -16,6 +16,7 @@ The solution is a modular monolith: reusable framework projects, business module
 | | [StarterKit.AppHost, StarterKit.ServiceDefaults](projects/Aspire.md) | .NET Aspire: the local-development orchestrator and dashboard, and the service defaults (OpenTelemetry, service discovery, HttpClient resilience, Aspire health endpoints) the WebApi applies |
 | Migrators | `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | Console apps holding each module's migrations per provider; they migrate and seed — see [migrations.md](../conventions/migrations.md) |
 | Tests | `tests/Framework.Tests`, `tests/Identity.Tests`, `tests/Notifications.Tests` | Unit tests of the framework projects and of each module — see [coding-conventions.md § Testing Conventions](../conventions/coding-conventions.md#testing-conventions) |
+| Client (outside the solution) | [`clients/admin`](../../clients/admin/docs/architecture/overview.md) | Next.js admin console, a separate-origin consumer of the Identity and Notifications APIs and the SignalR hub over HTTP — see [integration.md](../integration.md) |
 
 Each module's `.Contracts` project is the only seam another module may reference.
 
@@ -112,7 +113,7 @@ The host logs through Serilog and applies the Aspire service defaults, which add
 |---|---|---|
 | No transactional outbox for integration events | Medium | Accepted — see [Identity § Design Notes](projects/Identity.md#design-notes) |
 | Hard-coded super user | Medium | See [Shared § Design Notes](projects/Shared.md#design-notes) |
-| Notifications schema only on MSSQL | Medium | The PostgreSQL and Sqlite migrators do not carry the Notifications migrations, so a host on those providers has no `notifications` schema — see [migrations.md § Migration sets](../conventions/migrations.md#migration-sets) |
+| Notifications schema not on Sqlite | Medium | The Sqlite migrator does not carry the Notifications migrations, so a host on Sqlite has no `system` schema for notifications — see [migrations.md § Migration sets](../conventions/migrations.md#migration-sets) |
 | Save path wired per context | Low | `BaseDbContext` does not audit or dispatch; each module context must call the helpers itself — see [Persistence § Design Notes](projects/Persistence.md#design-notes) |
 
 ## Notes

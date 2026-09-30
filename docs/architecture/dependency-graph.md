@@ -54,7 +54,7 @@ graph TD
     MigMs & MigPg & MigSl --> Infra
     MigMs & MigPg & MigSl --> Pers
     MigMs & MigPg & MigSl --> Shared
-    MigMs --> Not
+    MigMs & MigPg --> Not
     FT --> Shared
     FT --> Infra
     FT --> Pers
@@ -66,7 +66,7 @@ graph TD
     NT --> Shared
 ```
 
-The three migration projects share the same references, except that only `Migrations/MSSQL` references `Notifications`. The dependency rules these edges are checked against are in [CLAUDE.md § 1](../../CLAUDE.md#1-repository-purpose).
+The three migration projects share the same references, except that `Migrations/Sqlite` does not reference `Notifications`. The dependency rules these edges are checked against are in [CLAUDE.md § 1](../../CLAUDE.md#1-repository-purpose).
 
 ## Package References
 
@@ -108,8 +108,8 @@ None found:
 - `Shared` references no solution project; framework projects reference only `Shared`.
 - `Identity.Contracts` and `Notifications.Contracts` reference only `Shared`.
 - `Identity` references its own `.Contracts` and framework projects only; `Identity.Web` references its own module (intra-module), `Infrastructure`, and `EventBusMassTransitRabbitMQ` (its standalone host registers the bus).
-- `Notifications` references its own `.Contracts`, framework projects, and another module only through its seam (`Identity.Contracts`, for the integration event it consumes).
-- Nothing references a migration project. Outside each module's own projects and tests, `StarterKit.WebApi` references `Identity`, `Identity.Web`, and `Notifications`, and the migration projects reference `Identity` (all three) and `Notifications` (MSSQL only) — all composition roots, not modules.
+- `Notifications` references its own `.Contracts`, framework projects, and another module only through its seam (`Identity.Contracts`, for the integration event it consumes and the `IIdentityModuleApi` it calls).
+- Nothing references a migration project. Outside each module's own projects and tests, `StarterKit.WebApi` references `Identity`, `Identity.Web`, and `Notifications`, and the migration projects reference `Identity` (all three) and `Notifications` (MSSQL and PostgreSQL) — all composition roots, not modules.
 - Only `StarterKit.AppHost` references `StarterKit.WebApi`, and nothing references `StarterKit.AppHost`. `StarterKit.ServiceDefaults` references no solution project, and only `StarterKit.WebApi` references it.
 
 ## Notes

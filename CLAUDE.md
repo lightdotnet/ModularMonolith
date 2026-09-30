@@ -10,7 +10,7 @@ This file is the entry point for every Claude Code session in this repository. R
 
 ## 1. Repository Purpose
 
-This branch (`dev/core`) holds the **core of the StarterKit Modular Monolith template**: the reusable C#/.NET framework building blocks, one composition-root host (the only deployable) plus the .NET Aspire app host and service defaults that run it in local development, two business modules (Identity — the reference module — and Notifications), and the per-provider migrator apps, plus their tests. It contains no other business modules and no client apps — don't assume any exist; verify before describing structure.
+This branch (`dev/core`) holds the **core of the StarterKit Modular Monolith template**: the reusable C#/.NET framework building blocks, one composition-root host (the only deployable) plus the .NET Aspire app host and service defaults that run it in local development, two business modules (Identity — the reference module — and Notifications), and the per-provider migrator apps, plus their tests. It contains no other business modules, and one client app — `clients/admin`, a Next.js admin console consuming the Identity and Notifications APIs over HTTP (outside the .NET solution; see [clients/admin/CLAUDE.md](clients/admin/CLAUDE.md)). Don't assume anything else exists; verify before describing structure.
 
 - **One solution** — `StarterKit.slnx` at the repo root, targeting .NET 10 (`net10.0`), with solution folders `/src/_framework/`, `/src/_host/`, `/src/identity-module/`, `/src/notifications-module/`, `/src/_migrations/`, and `/tests/`.
 - **Flat layout** — every project sits directly under `src/` (or `tests/`) (the migrators under `src/Migrations/`). Framework and module projects use a short folder name (`src/Shared`, `src/Identity`); the host-level projects in `/src/_host/` use their full `StarterKit.*` name as the folder name, Aspire-style (`src/StarterKit.WebApi`, `src/StarterKit.AppHost`, `src/StarterKit.ServiceDefaults`). Assembly/root namespaces carry the full name: `StarterKit.<Project>` for framework and host-level projects, `StarterKit.Modules.<Module>[.Contracts|.Web]` for module projects. The migrator assemblies keep their folder names.
@@ -62,6 +62,7 @@ Consequences:
 - **`src/`** — the framework, host, module, and migrator projects (§1). **`tests/`** — their test projects and shared test props.
 - **Root build files** — `StarterKit.slnx`, `Directory.Build.props` (target framework, nullable, implicit usings), `Directory.Packages.props` (central package versions — the version of record).
 - **`docs/`** — where generated documentation for the solution goes (`docs/architecture/`, `docs/conventions/`), created only through [generate-docs](.claude/skills/generate-docs/SKILL.md) on request. How to build, run, and test is in [development-guide.md](docs/conventions/development-guide.md).
+- **`clients/`** — client apps outside the .NET solution: `clients/admin` (with its own `CLAUDE.md` and `docs/`) plus its deploy scripts. **`docs/integration.md`** — the backend ↔ client integration boundary.
 - **`.claude/`** — Claude development infrastructure only: agents, skills, workflows, doc templates, hooks/settings, and working-rules/meta-maintenance docs ([AI_CONTEXT.md](.claude/AI_CONTEXT.md), [ROT.md](.claude/ROT.md), [WORKFLOWS.md](.claude/WORKFLOWS.md)).
 - Manually authored documentation must be preserved during any sync — see [sync-documentation](.claude/workflows/sync-documentation.md).
 
@@ -83,6 +84,10 @@ Specialized agents live in [.claude/agents/](.claude/agents/). Prefer delegating
 | [testing-reviewer](.claude/agents/testing-reviewer.md) | Test coverage/quality of `tests/Framework.Tests` and the module test projects (`tests/Identity.Tests`, `tests/Notifications.Tests`) |
 | [dependency-analyzer](.claude/agents/dependency-analyzer.md) | Project/package references, central versions, circular or direction-violating references |
 | [documentation-writer](.claude/agents/documentation-writer.md) | Generating/updating docs from code, on explicit request only |
+| [nextjs-architect](.claude/agents/nextjs-architect.md) | `clients/admin` design — route/feature structure, server-vs-client boundaries, data fetching, state, frontend performance |
+| [nextjs-developer](.claude/agents/nextjs-developer.md) | Implementing an approved change under `clients/admin/` — lint/build-sanity only, never runs tests or edits docs |
+| [frontend-code-reviewer](.claude/agents/frontend-code-reviewer.md) | React/TypeScript/Next.js code quality review in `clients/admin/` |
+| [api-contract-reviewer](.claude/agents/api-contract-reviewer.md) | Drift between a module's HTTP contract and how `clients/admin` calls it; client impact of a backend API change |
 
 ## 5. Skill Usage
 
@@ -92,6 +97,7 @@ Skills live in [.claude/skills/](.claude/skills/) as `<name>/SKILL.md` — each 
 - [review-code](.claude/skills/review-code/SKILL.md), [review-architecture](.claude/skills/review-architecture/SKILL.md)
 - [refactor](.claude/skills/refactor/SKILL.md), [ddd-modeling](.claude/skills/ddd-modeling/SKILL.md), [efcore](.claude/skills/efcore/SKILL.md), [api](.claude/skills/api/SKILL.md), [testing](.claude/skills/testing/SKILL.md), [performance](.claude/skills/performance/SKILL.md)
 - [generate-docs](.claude/skills/generate-docs/SKILL.md), [sync-docs](.claude/skills/sync-docs/SKILL.md)
+- [analyze-client](.claude/skills/analyze-client/SKILL.md), [context-frontend](.claude/skills/context-frontend/SKILL.md), [nextjs](.claude/skills/nextjs/SKILL.md), [create-feature](.claude/skills/create-feature/SKILL.md)
 
 ## 6. Workflow Usage
 
@@ -131,6 +137,11 @@ The short-form rules; the detail behind them is in [coding-conventions.md](docs/
 | "Design a building block / where should this rule live" | [ddd-modeling](.claude/skills/ddd-modeling/SKILL.md) |
 | "Generate documentation" | [generate-docs](.claude/skills/generate-docs/SKILL.md) |
 | "Sync documentation" | [sync-documentation](.claude/workflows/sync-documentation.md) |
+| "Analyze the client / admin app" | [analyze-client](.claude/skills/analyze-client/SKILL.md) |
+| "Load frontend context" | [context-frontend](.claude/skills/context-frontend/SKILL.md) |
+| "Design a route/page / data fetching in admin" | [nextjs](.claude/skills/nextjs/SKILL.md) |
+| "Implement a feature across backend and admin" | [implement-feature](.claude/workflows/implement-feature.md) + [create-feature](.claude/skills/create-feature/SKILL.md) |
+| "Does the frontend match the API?" | [api-contract-reviewer](.claude/agents/api-contract-reviewer.md) |
 | "Run a ROT review of .claude" | [.claude/ROT.md](.claude/ROT.md) |
 
 ---

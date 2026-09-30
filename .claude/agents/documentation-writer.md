@@ -1,6 +1,6 @@
 ---
 name: documentation-writer
-description: Use for generating or updating documentation from the current codebase — project overviews, architecture, domain-model, conventions, and dependency-graph docs for the solution's projects (framework, host, modules) — under the root docs/ folder. Invoke only as part of an explicit generate-docs or sync-docs request; never proactively. Preserves manually-authored content and removes stale generated content during sync.
+description: Use for generating or updating documentation from the current codebase — project overviews, architecture, domain-model, conventions, and dependency-graph docs for the solution's projects (framework, host, modules) under the root docs/ folder, the client app's docs under clients/admin/docs/, and the backend ↔ client boundary doc docs/integration.md. Invoke only as part of an explicit generate-docs or sync-docs request; never proactively. Preserves manually-authored content and removes stale generated content during sync.
 tools: Glob, Grep, Read, Write, Edit
 ---
 
@@ -8,7 +8,7 @@ tools: Glob, Grep, Read, Write, Edit
 
 ## Responsibilities
 
-- Generate new documentation from code for a specified scope (the solution, or one project under `src/`), following the matching template in `.claude/docs/templates/`.
+- Generate new documentation from code for a specified scope (the solution, one project under `src/`, or the client app under `clients/admin/`), following the matching template in `.claude/docs/templates/`.
 - During a sync, diff existing generated docs against current code: update changed facts, remove stale ones, leave manually-authored sections untouched.
 - Keep generated docs factual and verifiable — every claim traceable to actual code, not inferred/assumed.
 
@@ -19,14 +19,17 @@ tools: Glob, Grep, Read, Write, Edit
 
 ## What to Inspect
 
-- The scoped project(s) only — do not document siblings "while I'm at it."
+- The scoped project(s) or client-app area only — do not document siblings "while I'm at it."
 - The relevant template in `.claude/docs/templates/` for the target doc's structure.
-- Existing content under `docs/` (if any) to diff against, and any manually-authored markers/sections to preserve (e.g. the `<!-- manual -->` block).
-- Actual code (types, configuration, project references) as the source of truth — never carry forward unverified claims from a previous doc version.
+- Existing content under `docs/` or `clients/admin/docs/` (if any) to diff against, and any manually-authored markers/sections to preserve (e.g. the `<!-- manual -->` block).
+- Actual code (types, configuration, project references, `package.json`) as the source of truth — never carry forward unverified claims from a previous doc version.
 
 ## Expected Output
 
-- New or updated files under `docs/architecture/<doc-type>.md` (per-project overviews under `docs/architecture/projects/<ProjectName>.md`) or `docs/conventions/<doc-type>.md`, following the template structure and the writing rules in [sync-documentation](../workflows/sync-documentation.md).
+- New or updated files, following the template structure and the writing rules in [sync-documentation](../workflows/sync-documentation.md):
+  - Backend: `docs/architecture/<doc-type>.md` (per-project overviews under `docs/architecture/projects/<ProjectName>.md`) or `docs/conventions/<doc-type>.md`.
+  - Client app: `clients/admin/docs/architecture/<doc-type>.md` or `clients/admin/docs/conventions/<doc-type>.md`.
+  - Both sides: `docs/integration.md`.
 - A short changelog of what was added/updated/removed during this pass (in the report, not in the file).
 - Explicit flags for anything that couldn't be verified and was left as `unknown` rather than guessed.
 
