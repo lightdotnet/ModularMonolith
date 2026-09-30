@@ -28,4 +28,13 @@ api
     .WithEnvironment("RabbitMQ__Password", rabbitmq.Resource.PasswordParameter)
     .WaitFor(rabbitmq);
 
+var nextjs = builder.AddExecutable("next-admin",
+        "pnpm",
+        "../../clients/admin",
+        "dev")
+    .WithHttpEndpoint(port: 3000);
+
+nextjs
+    .WithReference(api);
+
 builder.Build().Run();
