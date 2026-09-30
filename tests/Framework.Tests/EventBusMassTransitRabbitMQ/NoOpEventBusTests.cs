@@ -27,7 +27,9 @@ public class NoOpEventBusTests
                 LogLevel.Information,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, _) =>
-                    v.ToString()!.Contains(nameof(TestBoundEvent)) && v.ToString()!.Contains(message.Id)),
+                    v != null
+                    && v.ToString()!.Contains(nameof(TestBoundEvent))
+                    && v.ToString()!.Contains(message.Id)),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
