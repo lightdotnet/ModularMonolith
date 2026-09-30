@@ -2,6 +2,7 @@ using FluentValidation;
 using Light.Mediator;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using StarterKit.EventBusMassTransitRabbitMQ;
 using StarterKit.Infrastructure;
 using StarterKit.Infrastructure.Caching;
 using StarterKit.Infrastructure.Services;
@@ -26,6 +27,12 @@ internal static class IdentityWebHost
         services.AddSharedInfrastructure();
         services.AddAppCache(configuration);
         services.AddScoped<ICurrentUser, ServerCurrentUser>();
+
+        // IdentityDbContext publishes collected integration events through IEventBus after
+        // commit. The co-host registers the bus in ConfigureExtensions; the standalone host
+        // registers it here with no consumers (a no-op bus when RabbitMQ is disabled).
+        services.AddEventBus(configuration);
+
         services.AddIdentityServices(configuration);
         services.AddIdentityWeb(configuration);
 
@@ -41,10 +48,9 @@ internal static class IdentityWebHost
         // leaving this one page non-functional in that mode.
 
         // Mediator pipeline, scoped to the Identity assembly only. The standalone host
-        // has NO cross-module notification handlers, so ExternalUserProvisionedIntegrationEvent
-        // — and any future cross-module integration event — is intentionally left unhandled
-        // here: the welcome email for a Microsoft-provisioned (JIT) user is sent only when
-        // running under the co-host (StarterKit.Host), which scans every module assembly.
+        // has NO cross-module notification handlers or integration-event consumers: integration
+        // events such as UserProvisionedIntegrationEvent are still published through IEventBus
+        // after commit, but nothing in this process consumes them.
         // The standalone host is login-only, not a full notification pipeline.
         //
         // The behaviors below (logging + validation) now match the co-host. They are safe

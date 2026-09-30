@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+	<ProjectReference Include="..\EventBusMassTransitRabbitMQ\EventBusMassTransitRabbitMQ.csproj" />
 	<ProjectReference Include="..\Identity\Identity.csproj" />
 	<ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
   </ItemGroup>

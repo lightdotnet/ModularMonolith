@@ -2,7 +2,7 @@ namespace StarterKit.Modules.Identity.Web;
 
 /// <summary>
 /// Configuration for the OAuth-style authorization-code relay (<c>Account/ExternalLoginStart</c> +
-/// <c>Account/ExternalLoginRelay</c>) that lets a separate-origin client (e.g. the Next.js admin
+/// <c>Account/ExternalLoginRelay</c>) that lets a separate-origin client (e.g. a browser-based admin
 /// app) complete Microsoft sign-in without ever holding an <c>Identity.Web</c> cookie session.
 /// </summary>
 public sealed class ExternalLoginRelayOptions

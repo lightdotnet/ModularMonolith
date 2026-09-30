@@ -8,7 +8,7 @@ using StarterKit.Modules.Identity.Domain;
 namespace StarterKit.Modules.Identity.Web.Pages.Account;
 
 /// <summary>
-/// Entry point of the authorization-code relay for a separate-origin client (e.g. the Next.js
+/// Entry point of the authorization-code relay for a separate-origin client (e.g. a browser-based
 /// admin app): validates the caller-supplied <c>provider</c> and <c>redirectUri</c>, then starts
 /// the same Entra ID challenge <see cref="LoginModel.OnPostMicrosoft"/> uses for the interactive
 /// login, but points the callback at <see cref="ExternalLoginRelayModel"/> instead of

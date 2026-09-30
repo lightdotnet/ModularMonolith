@@ -11,9 +11,9 @@ var builder = WebApplication.CreateBuilder(args);
 // in AddIdentityWebHost. Both hosts now run the same mediator behaviors (logging +
 // validation), so a future Razor page that dispatches a mediator command behaves
 // identically on either host — the only difference is scan scope: the standalone host
-// sees the Identity assembly alone, so it still has NO cross-module notification
-// handlers and ExternalUserProvisionedIntegrationEvent stays intentionally unhandled
-// here (the JIT welcome email is sent only under the co-host).
+// sees the Identity assembly alone, so it has NO cross-module notification handlers
+// or integration-event consumers. Integration events such as UserProvisionedIntegrationEvent
+// are still published through IEventBus after commit (registered in AddIdentityWebHost).
 builder.Services.AddIdentityWebHost(builder.Configuration);
 
 var app = builder.Build();
