@@ -1,0 +1,81 @@
+@page
+@model StarterKit.Modules.Identity.Web.Pages.Admin.Roles.IndexModel
+@{
+    ViewData["Title"] = "Roles";
+}
+
+<h1 class="h3 mb-3">Roles</h1>
+
+<div class="row g-3">
+    <div class="col-12 col-lg-8 order-2 order-lg-1">
+        @if (Model.Rows.Count == 0)
+        {
+            <div class="card card-body text-center text-body-secondary">No roles have been created yet.</div>
+        }
+        else
+        {
+            <div class="card shadow-sm">
+                <div class="card-body p-2 p-md-0">
+                    <table class="table table-hover align-middle mb-0 table-stack">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col">Name</th>
+                                <th scope="col">Description</th>
+                                <th scope="col" class="text-md-center">Permissions</th>
+                                <th scope="col" class="text-end"><span class="visually-hidden">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in Model.Rows)
+                            {
+                                <tr>
+                                    <td data-label="Name" class="fw-semibold text-break">@row.Role.Name</td>
+                                    <td data-label="Description">@row.Role.Description</td>
+                                    <td data-label="Permissions" class="text-md-center">
+                                        <span class="badge text-bg-secondary">@row.PermissionCount</span>
+                                    </td>
+                                    <td class="table-stack-actions">
+                                        <div class="d-flex justify-content-end gap-1">
+                                            <a class="btn btn-sm btn-outline-primary"
+                                               asp-page="/Admin/Roles/Edit"
+                                               asp-route-id="@row.Role.Id"
+                                               asp-permission="@IdentityPermissions.Roles.Manage"
+                                               title="Edit"
+                                               aria-label="Edit @row.Role.Name">
+                                                <i class="bi bi-pencil" aria-hidden="true"></i>
+                                            </a>
+                                            <confirm-post asp-page-handler="Delete"
+                                                          asp-route-id="@row.Role.Id"
+                                                          asp-permission="@IdentityPermissions.Roles.Manage"
+                                                          message="@($"Delete role {row.Role.Name}? A role that still grants permissions cannot be deleted.")"
+                                                          title="Delete"
+                                                          icon="trash" />
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="col-12 col-lg-4 order-1 order-lg-2" asp-permission="@IdentityPermissions.Roles.Manage">
+        <div class="card shadow-sm">
+            <div class="card-header">New role</div>
+            <div class="card-body">
+                <form method="post" asp-page-handler="Create">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                    <form-field asp-for="Create.Name" autocomplete="off" />
+                    <form-field asp-for="Create.Description" />
+                    <div class="d-grid d-sm-flex justify-content-sm-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Create role
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

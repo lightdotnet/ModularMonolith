@@ -4,7 +4,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // The standalone host serves only cookie-authenticated Razor Pages — no Bearer scheme,
 // no policy scheme, no /api or SignalR hub handling (that is AddApiAuthentication,
-// which only the co-host StarterKit.Host calls).
+// which only the co-host StarterKit.WebApi calls).
 //
 // The co-host gets its platform + mediator services from a monolith-wide module scan
 // plus ConfigureExtensions; the standalone host composes the Identity-only equivalent

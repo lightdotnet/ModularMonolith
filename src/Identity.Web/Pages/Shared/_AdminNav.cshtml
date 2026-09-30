@@ -1,0 +1,16 @@
+@* Admin section links; rendered once inside the sidebar, which is an offcanvas below md. *@
+<nav class="nav nav-pills flex-column gap-1 w-100" aria-label="Administration">
+    <nav-link asp-page="/Admin/Index" match="exact" icon="speedometer2">Overview</nav-link>
+    <nav-link asp-page="/Admin/Users/Index"
+              icon="people"
+              asp-feature="@AdminFeatures.Users"
+              asp-permission="@IdentityPermissions.Users.View">Users</nav-link>
+    <nav-link asp-page="/Admin/Roles/Index"
+              icon="person-badge"
+              asp-feature="@AdminFeatures.Roles"
+              asp-permission="@IdentityPermissions.Roles.View">Roles</nav-link>
+    <nav-link asp-page="/Admin/Permissions/Index"
+              icon="shield-lock"
+              asp-feature="@AdminFeatures.Permissions"
+              asp-permission="@IdentityPermissions.Roles.View">Permissions</nav-link>
+</nav>

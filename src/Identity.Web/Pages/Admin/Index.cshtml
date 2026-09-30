@@ -1,0 +1,23 @@
+@page
+@model StarterKit.Modules.Identity.Web.Pages.Admin.IndexModel
+@{
+    ViewData["Title"] = "Administration";
+}
+
+<h1 class="h3 mb-4">Administration</h1>
+
+<div class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-3">
+    @foreach (var item in Model.Sections)
+    {
+        <div class="col">
+            <a class="card h-100 shadow-sm text-decoration-none text-body" asp-page="@item.PageName">
+                <div class="card-body">
+                    <h2 class="h5 card-title">
+                        <i class="bi bi-@item.Icon me-2" aria-hidden="true"></i>@item.Title
+                    </h2>
+                    <p class="card-text text-body-secondary mb-0">@item.Description</p>
+                </div>
+            </a>
+        </div>
+    }
+</div>

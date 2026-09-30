@@ -1,0 +1,100 @@
+@page "{id}"
+@model StarterKit.Modules.Identity.Web.Pages.Admin.Users.EditModel
+@{
+    ViewData["Title"] = $"Edit {Model.Account.UserName}";
+    var selectedRoles = Model.Input.Roles.ToHashSet(StringComparer.OrdinalIgnoreCase);
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-page="/Admin/Users/Index">Users</a></li>
+        <li class="breadcrumb-item active text-break" aria-current="page">@Model.Account.UserName</li>
+    </ol>
+</nav>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <h1 class="h3 mb-0 text-break">@Model.Account.UserName</h1>
+    <status-badge value="@(Model.Account.IsDeleted ? "Deleted" : Model.Account.Status)" />
+</div>
+
+<div class="row g-3">
+    <div class="col-12 col-xl-8">
+        <div class="card shadow-sm">
+            <div class="card-header">Profile</div>
+            <div class="card-body">
+                <form method="post" asp-route-id="@Model.Account.Id">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                    <div class="row">
+                        <form-field asp-for="Input.FirstName" class="col-12 col-md-6" />
+                        <form-field asp-for="Input.LastName" class="col-12 col-md-6" />
+                        <form-field asp-for="Input.Email" class="col-12 col-md-6" />
+                        <form-field asp-for="Input.PhoneNumber" class="col-12 col-md-6" />
+                        <form-field asp-for="Input.Status" class="col-12 col-md-6" asp-items="Model.Statuses" disabled="Model.IsEditingSelf" />
+                        <form-field asp-for="Input.AuthProvider" class="col-12 col-md-6" asp-items="Model.AuthProviders" />
+                    </div>
+
+                    <fieldset class="mb-3">
+                        <legend class="form-label fs-6">Roles</legend>
+                        @if (Model.IsEditingSelf)
+                        {
+                            <p class="form-text mt-0">You cannot change your own roles or status.</p>
+                        }
+                        else if (Model.Roles.Any(r => !Model.CanAssign(r)))
+                        {
+                            <p class="form-text mt-0">Roles that grant permissions you do not hold cannot be changed.</p>
+                        }
+                        @if (Model.Roles.Count == 0)
+                        {
+                            <p class="text-body-secondary mb-0">No roles have been created yet.</p>
+                        }
+                        else
+                        {
+                            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-2">
+                                @foreach (var role in Model.Roles)
+                                {
+                                    var inputId = $"role-{role.Id}";
+                                    <div class="col">
+                                        <div class="form-check">
+                                            <input class="form-check-input"
+                                                   type="checkbox"
+                                                   id="@inputId"
+                                                   name="Input.Roles"
+                                                   value="@role.Name"
+                                                   checked="@selectedRoles.Contains(role.Name)"
+                                                   disabled="@(!Model.CanAssign(role))" />
+                                            <label class="form-check-label" for="@inputId">@role.Name</label>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </fieldset>
+
+                    <div class="d-flex flex-column flex-sm-row justify-content-end gap-2">
+                        <a class="btn btn-outline-secondary" asp-page="/Admin/Users/Index">Back</a>
+                        <button type="submit" class="btn btn-primary">Save changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-xl-4">
+        <div class="card shadow-sm">
+            <div class="card-header">Set password</div>
+            <div class="card-body">
+                <form method="post" asp-page-handler="Password" asp-route-id="@Model.Account.Id">
+                    <form-field asp-for="Password.NewPassword" autocomplete="new-password" />
+                    <form-field asp-for="Password.ConfirmPassword" autocomplete="new-password" />
+                    <div class="d-flex justify-content-end">
+                        <button type="submit"
+                                class="btn btn-outline-danger"
+                                data-confirm="@($"Replace the password of {Model.Account.UserName}?")">
+                            Set password
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

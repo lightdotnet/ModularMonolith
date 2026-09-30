@@ -13,12 +13,18 @@
                 <a class="navbar-brand" asp-page="/Index">StarterKit Identity</a>
                 @if (User.Identity?.IsAuthenticated == true)
                 {
-                    <form method="post" asp-page="/Account/Login" asp-page-handler="SwitchAccount" class="d-inline">
-                        <button type="submit" class="btn btn-outline-light me-2">Switch account</button>
-                    </form>
-                    <form method="post" asp-page="/Account/Logout" class="d-inline">
-                        <button type="submit" class="btn btn-outline-light">Sign out</button>
-                    </form>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-light"
+                           asp-page="/Admin/Index"
+                           asp-feature="@AdminFeatures.Admin"
+                           asp-permission="@($"{IdentityPermissions.Users.View},{IdentityPermissions.Roles.View}")">Admin</a>
+                        <form method="post" asp-page="/Account/Login" asp-page-handler="SwitchAccount" class="d-inline">
+                            <button type="submit" class="btn btn-outline-light">Switch account</button>
+                        </form>
+                        <form method="post" asp-page="/Account/Logout" class="d-inline">
+                            <button type="submit" class="btn btn-outline-light">Sign out</button>
+                        </form>
+                    </div>
                 }
             </div>
         </nav>

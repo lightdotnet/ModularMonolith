@@ -51,9 +51,11 @@ internal class UserService(
         return dto;
     }
 
-    private async Task UpdateRolesAsync(User user, IEnumerable<string> roles)
+    private async Task<bool> UpdateRolesAsync(User user, IEnumerable<string> roles)
     {
         var userRoles = await userManager.GetRolesAsync(user).ConfigureAwait(false);
+
+        var changed = !userRoles.ToHashSet().SetEquals(roles);
 
         await CollectionSyncExtensions.SyncCollectionAsync(
             userRoles,
@@ -61,11 +63,15 @@ internal class UserService(
             removeAsync: r => userManager.RemoveFromRolesAsync(user, r),
             addAsync: r => userManager.AddToRolesAsync(user, r)
         ).ConfigureAwait(false);
+
+        return changed;
     }
 
-    private async Task UpdateClaimsAsync(User user, IEnumerable<Claim> claims)
+    private async Task<bool> UpdateClaimsAsync(User user, IEnumerable<Claim> claims)
     {
         var userClaims = await userManager.GetClaimsAsync(user).ConfigureAwait(false);
+
+        var changed = !userClaims.ToHashSet(ClaimComparer.Instance).SetEquals(claims);
 
         await CollectionSyncExtensions.SyncCollectionAsync(
             userClaims,
@@ -74,6 +80,8 @@ internal class UserService(
             addAsync: c => userManager.AddClaimsAsync(user, c),
             comparer: ClaimComparer.Instance
         ).ConfigureAwait(false);
+
+        return changed;
     }
 
     public virtual async Task<IResult<UserDto>> GetByIdAsync(string id)
@@ -196,9 +204,17 @@ internal class UserService(
             .Distinct(new ClaimComparer())
             .ToArray() ?? [];
 
-        await UpdateRolesAsync(user, roles).ConfigureAwait(false);
+        var rolesChanged = await UpdateRolesAsync(user, roles).ConfigureAwait(false);
 
-        await UpdateClaimsAsync(user, claims).ConfigureAwait(false);
+        var claimsChanged = await UpdateClaimsAsync(user, claims).ConfigureAwait(false);
+
+        var statusChanged = wasActive != user.Status.IsActive;
+
+        // Roles and claims carry the user's permissions, and the status decides whether the user
+        // may sign in at all: rotate the security stamp (once) so existing cookie sessions are
+        // re-validated (and dropped) instead of keeping stale permissions or a revoked access.
+        if (rolesChanged || claimsChanged || statusChanged)
+            await userManager.UpdateSecurityStampAsync(user).ConfigureAwait(false);
 
         return Result.Success();
     }

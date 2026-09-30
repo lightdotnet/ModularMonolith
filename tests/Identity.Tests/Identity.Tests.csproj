@@ -4,6 +4,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Identity\Identity.csproj" />
+    <ProjectReference Include="..\..\src\Identity.Web\Identity.Web.csproj" />
     <ProjectReference Include="..\..\src\Shared\Shared.csproj" />
   </ItemGroup>
 

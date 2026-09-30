@@ -67,6 +67,12 @@ public class LoginModel(
         var result = await signInManager.CheckPasswordSignInAsync(user, Password!, lockoutOnFailure: true);
         if (!result.Succeeded)
         {
+            // NotAllowed (e.g. an inactive or deleted user) and LockedOut are returned before the
+            // password is verified: spend the same hashing time so such an account is not
+            // distinguishable by response timing, and keep the generic message.
+            if (result.IsNotAllowed || result.IsLockedOut)
+                _ = passwordHasher.VerifyHashedPassword(new User(), DummyPasswordHash, Password!);
+
             ModelState.AddModelError(string.Empty, "Invalid username or password.");
             return Page();
         }

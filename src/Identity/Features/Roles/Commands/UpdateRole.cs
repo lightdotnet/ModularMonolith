@@ -5,11 +5,20 @@ namespace StarterKit.Modules.Identity.Features.Roles.Commands;
 
 internal sealed record UpdateRoleCommand(RoleDto Model) : ICommand<IResult>;
 
-internal class UpdateRoleCommandHandler(IRoleService roleService)
+internal class UpdateRoleCommandHandler(
+    IRoleService roleService,
+    PermissionGrantGuard guard)
     : ICommandHandler<UpdateRoleCommand, IResult>
 {
-    public Task<IResult> Handle(
+    public async Task<IResult> Handle(
         UpdateRoleCommand request,
-        CancellationToken cancellationToken) =>
-        roleService.UpdateAsync(request.Model);
+        CancellationToken cancellationToken)
+    {
+        var allowed = await guard.CanUpdateRoleAsync(request.Model).ConfigureAwait(false);
+
+        if (!allowed.IsSuccess)
+            return allowed;
+
+        return await roleService.UpdateAsync(request.Model).ConfigureAwait(false);
+    }
 }

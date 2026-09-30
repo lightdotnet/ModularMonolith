@@ -1,0 +1,79 @@
+@page
+@model StarterKit.Modules.Identity.Web.Pages.Admin.Users.IndexModel
+@{
+    ViewData["Title"] = "Users";
+}
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <h1 class="h3 mb-0">Users</h1>
+    <a class="btn btn-primary"
+       asp-page="/Admin/Users/Create"
+       asp-permission="@IdentityPermissions.Users.Create">
+        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New user
+    </a>
+</div>
+
+<search-form placeholder="Search by username, name, email or phone" />
+
+@if (!Model.Result.Records.Any())
+{
+    <div class="card card-body text-center text-body-secondary">No users found.</div>
+}
+else
+{
+    <div class="card shadow-sm">
+        <div class="card-body p-2 p-md-0">
+            <table class="table table-hover align-middle mb-0 table-stack">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">Username</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Phone</th>
+                        <th scope="col">Provider</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="text-end"><span class="visually-hidden">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model.Result.Records)
+                    {
+                        <tr>
+                            <td data-label="Username" class="text-break">@user.UserName</td>
+                            <td data-label="Name">@IndexModel.FullName(user)</td>
+                            <td data-label="Email" class="text-break">@user.Email</td>
+                            <td data-label="Phone">@user.PhoneNumber</td>
+                            <td data-label="Provider">@user.AuthProvider</td>
+                            <td data-label="Status">
+                                <status-badge value="@(user.IsDeleted ? "Deleted" : user.Status)" />
+                            </td>
+                            <td class="table-stack-actions">
+                                <div class="d-flex justify-content-end gap-1">
+                                    <a class="btn btn-sm btn-outline-primary"
+                                       asp-page="/Admin/Users/Edit"
+                                       asp-route-id="@user.Id"
+                                       asp-permission="@IdentityPermissions.Users.Update"
+                                       title="Edit"
+                                       aria-label="Edit @user.UserName">
+                                        <i class="bi bi-pencil" aria-hidden="true"></i>
+                                    </a>
+                                    @if (Model.CanDelete(user))
+                                    {
+                                        <confirm-post asp-page-handler="Delete"
+                                                      asp-route-id="@user.Id"
+                                                      asp-permission="@IdentityPermissions.Users.Delete"
+                                                      message="@($"Delete user {user.UserName}? This cannot be undone.")"
+                                                      title="Delete"
+                                                      icon="trash" />
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+<pager model="Model.Result" />

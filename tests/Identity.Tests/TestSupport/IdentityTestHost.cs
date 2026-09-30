@@ -5,6 +5,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using StarterKit.Modules.Identity.Authorization;
 using StarterKit.Modules.Identity.Domain;
 using StarterKit.Modules.Identity.IntegrationEvents;
 using StarterKit.Modules.Identity.Persistence;
@@ -104,6 +105,8 @@ internal sealed class IdentityTestHost : IDisposable
     public RoleManager<Role> RoleManager { get; }
 
     public UserService CreateUserService() => new(UserManager, IntegrationEvents, DateTime);
+
+    public PermissionGrantGuard CreatePermissionGrantGuard() => new(CurrentUser, UserManager, RoleManager);
 
     public void Dispose()
     {

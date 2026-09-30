@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+	<InternalsVisibleTo Include="Identity.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
 	<PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
 	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
   </ItemGroup>

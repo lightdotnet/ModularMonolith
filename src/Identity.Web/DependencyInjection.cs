@@ -2,13 +2,19 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using StarterKit.Modules.Identity.Domain;
+using StarterKit.Modules.Identity.Web.Admin;
+using StarterKit.Modules.Identity.Web.Authentication;
+using StarterKit.Modules.Identity.Web.TagHelpers;
 
 namespace StarterKit.Modules.Identity.Web;
 
@@ -18,6 +24,10 @@ public static class DependencyInjection
 
     private const string MicrosoftSignInFailedMessage =
         "Microsoft sign-in could not be completed. Start again and use a fresh browser session.";
+
+    internal const string SecurityStampValidationIntervalKey = "IdentityWeb:SecurityStampValidationInterval";
+
+    internal static readonly TimeSpan DefaultSecurityStampValidationInterval = TimeSpan.FromMinutes(5);
 
     /// <summary>
     /// Microsoft (Entra ID) sign-in is optional — it is wired up only when a client id, a
@@ -37,7 +47,10 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddScoped<SignInManager<User>>();
+        // One scoped instance serves both the concrete type and SignInManager<User>, so every
+        // consumer (pages, SecurityStampValidator<User>) gets the status-aware sign-in checks.
+        services.AddScoped<IdentitySignInManager>();
+        services.AddScoped<SignInManager<User>>(sp => sp.GetRequiredService<IdentitySignInManager>());
 
         services.AddOptions<ExternalLoginRelayOptions>().BindConfiguration("ExternalLoginRelay");
 
@@ -56,17 +69,61 @@ public static class DependencyInjection
             {
                 options.LoginPath = "/Account/Login";
                 options.AccessDeniedPath = "/Account/AccessDenied";
+
+                // Re-validate the cookie against the user's security stamp, so a session whose
+                // roles/permissions changed (the stamp is rotated) is dropped and an unchanged one
+                // gets its claims refreshed at every validation interval.
+                options.Events.OnValidatePrincipal = SecurityStampValidator.ValidatePrincipalAsync;
             })
             .AddCookie(IdentityConstants.ExternalScheme);
+
+        services.TryAddScoped<ISecurityStampValidator, SecurityStampValidator<User>>();
+
+        // How often the cookie is re-checked against the security stamp. Shorter means a locked
+        // user or a role/permission change takes effect sooner, at the cost of one user load and
+        // claims rebuild per session per interval. Only cookie-authenticated Razor Pages pay it;
+        // /api is Bearer-authenticated and never runs this validator.
+        var securityStampValidationInterval = configuration.GetValue<TimeSpan?>(SecurityStampValidationIntervalKey)
+            ?? DefaultSecurityStampValidationInterval;
+
+        services
+            .AddOptions<SecurityStampValidatorOptions>()
+            .Configure(options => options.ValidationInterval = securityStampValidationInterval)
+            .Validate(
+                options => options.ValidationInterval > TimeSpan.Zero,
+                $"{SecurityStampValidationIntervalKey} must be a positive TimeSpan.")
+            .ValidateOnStart();
 
         if (microsoft.IsEnabled)
             authenticationBuilder.AddMicrosoftOpenIdConnect(microsoft);
 
         services.AddAuthorization();
 
+        services.AddIdentityAdmin();
+
         services
             .AddRazorPages()
             .AddApplicationPart(typeof(DependencyInjection).Assembly);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Admin page toggles (<see cref="IdentityAdminOptions"/>), the route convention that removes
+    /// disabled admin pages, and the <see cref="IFeatureToggle"/> behind <c>asp-feature</c>.
+    /// </summary>
+    private static IServiceCollection AddIdentityAdmin(this IServiceCollection services)
+    {
+        services
+            .AddOptions<IdentityAdminOptions>()
+            .BindConfiguration(IdentityAdminOptions.SectionName);
+
+        services
+            .AddOptions<RazorPagesOptions>()
+            .Configure<IOptions<IdentityAdminOptions>>((options, admin) =>
+                options.Conventions.Add(new AdminPagesConvention(admin.Value)));
+
+        services.TryAddSingleton<IFeatureToggle, AdminFeatureToggle>();
 
         return services;
     }

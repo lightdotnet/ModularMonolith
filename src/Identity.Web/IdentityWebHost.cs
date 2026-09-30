@@ -1,4 +1,5 @@
 using FluentValidation;
+using Light.AspNetCore.Authorization;
 using Light.Mediator;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,12 +7,14 @@ using StarterKit.EventBusMassTransitRabbitMQ;
 using StarterKit.Infrastructure;
 using StarterKit.Infrastructure.Caching;
 using StarterKit.Infrastructure.Services;
+using StarterKit.Modules.Identity.Authorization;
 using StarterKit.Shared;
+using StarterKit.Shared.Authorization;
 
 namespace StarterKit.Modules.Identity.Web;
 
 /// <summary>
-/// Composition for the standalone Identity.Web host. The co-host (StarterKit.Host)
+/// Composition for the standalone Identity.Web host. The co-host (StarterKit.WebApi)
 /// gets the equivalent platform + mediator services from its monolith-wide module scan
 /// and <c>ConfigureExtensions</c>; this helper wires the same pipeline for the single
 /// Identity assembly so a Razor page dispatching a mediator command gets the same
@@ -36,10 +39,17 @@ internal static class IdentityWebHost
         services.AddIdentityServices(configuration);
         services.AddIdentityWeb(configuration);
 
+        // Permission-based authorization for the admin pages, mirroring the co-host: the policy
+        // provider (which also registers IPermissionManager), the permission handler, and the
+        // Identity permission definitions (the co-host registers them in IdentityModule).
+        services.AddPermissionPolicies();
+        services.AddPermissionAuthorization();
+        services.AddSingleton<IPermissionDefinitionProvider, IdentityPermissionProvider>();
+
         // NOTE: this host does not call AddJwtTokenServices, so IAuthenticationService is not
         // registered here. The new Account/ExternalLoginRelay page (see Pages/Account) depends on
         // it, but that page's counterpart - the auth/token/external exchange endpoint on
-        // the Identity module's TokenController - is only mapped by the co-host (StarterKit.Host),
+        // the Identity module's TokenController - is only mapped by the co-host (StarterKit.WebApi),
         // which does call AddJwtTokenServices via IdentityModule. The relay is therefore only
         // functional end-to-end under the co-host; wiring Jwt services here too would require a
         // "Jwt:SecretKey" in this host's own configuration for a flow it cannot complete alone,
@@ -51,7 +61,7 @@ internal static class IdentityWebHost
         // has NO cross-module notification handlers or integration-event consumers: integration
         // events such as UserProvisionedIntegrationEvent are still published through IEventBus
         // after commit, but nothing in this process consumes them.
-        // The standalone host is login-only, not a full notification pipeline.
+        // The standalone host serves login and the Identity admin pages, not a full notification pipeline.
         //
         // The behaviors below (logging + validation) now match the co-host. They are safe
         // with zero registered validators — ValidationBehaviour skips when none match.

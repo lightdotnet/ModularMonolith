@@ -95,7 +95,9 @@ public class UserController(
             {
                 user.Status = ActiveStatus.State.Locked.ToString();
 
-                await Mediator.Send(new UpdateUserCommand(user));
+                // Calls the service directly, not UpdateUserCommand: this only locks directory
+                // users that no longer exist, so the privilege-escalation guard must not block it.
+                await userService.UpdateAsync(user);
             }
         }
 

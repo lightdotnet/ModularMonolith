@@ -1,0 +1,112 @@
+@page
+@model StarterKit.Modules.Identity.Web.Pages.Admin.Permissions.IndexModel
+@{
+    ViewData["Title"] = "Permissions";
+}
+
+<div class="mb-3">
+    <h1 class="h3 mb-1">Permissions</h1>
+    <p class="text-body-secondary mb-0">
+        @(Model.CanManage
+            ? Model.IsFullControl
+                ? "Tick the permissions each role grants, then save that role's column."
+                : "Tick the permissions each role grants, then save that role's column. You can only grant or revoke permissions you hold."
+            : "Permissions granted by each role.")
+    </p>
+</div>
+
+@if (Model.Roles.Count == 0 || Model.Groups.Count == 0)
+{
+    <div class="card card-body text-center text-body-secondary">
+        @(Model.Roles.Count == 0 ? "No roles have been created yet." : "No permissions are defined.")
+    </div>
+}
+else
+{
+    @* One form per role; the checkboxes of a role's column join it through the form attribute. *@
+    @foreach (var role in Model.Roles)
+    {
+        <form id="role-form-@role.Id" method="post" asp-page-handler="Save" asp-route-roleId="@role.Id"></form>
+    }
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-0 table-matrix">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" class="text-nowrap">Permission</th>
+                        @foreach (var role in Model.Roles)
+                        {
+                            <th scope="col" class="text-center" style="min-width: 7rem;">
+                                <div class="text-break">@role.Name</div>
+                                @if (Model.CanManage)
+                                {
+                                    <button type="submit"
+                                            form="role-form-@role.Id"
+                                            class="btn btn-sm btn-outline-primary mt-1"
+                                            title="Save @role.Name"
+                                            aria-label="Save permissions of @role.Name">
+                                        <i class="bi bi-floppy" aria-hidden="true"></i>
+                                    </button>
+                                }
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var group in Model.Groups)
+                    {
+                        <tr class="table-secondary">
+                            <th scope="rowgroup" class="text-capitalize">@group.Name</th>
+                            @foreach (var role in Model.Roles)
+                            {
+                                var groupKey = $"{role.Id}-{group.Name}";
+                                <td class="text-center">
+                                    @if (Model.CanManage)
+                                    {
+                                        <input class="form-check-input"
+                                               type="checkbox"
+                                               data-check-all="@groupKey"
+                                               title="All @group.Name permissions for @role.Name"
+                                               aria-label="All @group.Name permissions for @role.Name" />
+                                    }
+                                </td>
+                            }
+                        </tr>
+                        @foreach (var permission in group.Permissions)
+                        {
+                            <tr>
+                                <th scope="row" class="fw-normal">
+                                    @permission.DisplayName
+                                    <span class="d-block small text-body-secondary text-break">@permission.Name</span>
+                                </th>
+                                @foreach (var role in Model.Roles)
+                                {
+                                    var granted = Model.Grants(role, permission.Name);
+                                    <td class="text-center">
+                                        @if (Model.CanManage)
+                                        {
+                                            <input class="form-check-input"
+                                                   type="checkbox"
+                                                   form="role-form-@role.Id"
+                                                   name="permissions"
+                                                   value="@permission.Name"
+                                                   data-check-group="@($"{role.Id}-{group.Name}")"
+                                                   checked="@granted"
+                                                   disabled="@(!Model.CanGrant(permission.Name))"
+                                                   aria-label="@permission.DisplayName for @role.Name" />
+                                        }
+                                        else if (granted)
+                                        {
+                                            <i class="bi bi-check-lg text-success" role="img" aria-label="Granted"></i>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

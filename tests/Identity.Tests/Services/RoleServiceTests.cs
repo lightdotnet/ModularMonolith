@@ -14,7 +14,7 @@ public class RoleServiceTests
     {
         // Arrange
         using var host = new IdentityTestHost();
-        var service = new RoleService(host.RoleManager);
+        var service = new RoleService(host.RoleManager, host.UserManager);
 
         // Act
         var result = await service.CreateAsync(
@@ -32,7 +32,7 @@ public class RoleServiceTests
     {
         // Arrange
         using var host = new IdentityTestHost();
-        var service = new RoleService(host.RoleManager);
+        var service = new RoleService(host.RoleManager, host.UserManager);
 
         // Act
         var result = await service.GetByIdAsync("missing");
@@ -49,7 +49,7 @@ public class RoleServiceTests
         var role = new Role { Name = "Admin", Description = "Administrators" };
         Assert.True((await host.RoleManager.CreateAsync(role)).Succeeded);
         Assert.True((await host.RoleManager.AddClaimAsync(role, new Claim("perm", "orders.view"))).Succeeded);
-        var service = new RoleService(host.RoleManager);
+        var service = new RoleService(host.RoleManager, host.UserManager);
 
         // Act
         var result = await service.GetByNameAsync("Admin");
@@ -65,7 +65,7 @@ public class RoleServiceTests
     {
         // Arrange
         using var host = new IdentityTestHost();
-        var service = new RoleService(host.RoleManager);
+        var service = new RoleService(host.RoleManager, host.UserManager);
 
         // Act
         var result = await service.GetByNameAsync("missing");
@@ -82,7 +82,7 @@ public class RoleServiceTests
         var role = new Role { Name = "Admin", Description = "Old description" };
         Assert.True((await host.RoleManager.CreateAsync(role)).Succeeded);
         Assert.True((await host.RoleManager.AddClaimAsync(role, new Claim("old", "value"))).Succeeded);
-        var service = new RoleService(host.RoleManager);
+        var service = new RoleService(host.RoleManager, host.UserManager);
 
         var request = new RoleDto
         {
@@ -110,7 +110,7 @@ public class RoleServiceTests
     {
         // Arrange
         using var host = new IdentityTestHost();
-        var service = new RoleService(host.RoleManager);
+        var service = new RoleService(host.RoleManager, host.UserManager);
 
         // Act
         var result = await service.UpdateAsync(new RoleDto { Id = "missing", Name = "x" });
@@ -127,7 +127,7 @@ public class RoleServiceTests
         var role = new Role { Name = "Admin" };
         Assert.True((await host.RoleManager.CreateAsync(role)).Succeeded);
         Assert.True((await host.RoleManager.AddClaimAsync(role, new Claim("perm", "orders.view"))).Succeeded);
-        var service = new RoleService(host.RoleManager);
+        var service = new RoleService(host.RoleManager, host.UserManager);
 
         // Act
         var result = await service.DeleteAsync(role.Id);
@@ -144,7 +144,7 @@ public class RoleServiceTests
         using var host = new IdentityTestHost();
         var role = new Role { Name = "Empty" };
         Assert.True((await host.RoleManager.CreateAsync(role)).Succeeded);
-        var service = new RoleService(host.RoleManager);
+        var service = new RoleService(host.RoleManager, host.UserManager);
 
         // Act
         var result = await service.DeleteAsync(role.Id);
@@ -159,7 +159,7 @@ public class RoleServiceTests
     {
         // Arrange
         using var host = new IdentityTestHost();
-        var service = new RoleService(host.RoleManager);
+        var service = new RoleService(host.RoleManager, host.UserManager);
 
         // Act
         var result = await service.DeleteAsync("missing");

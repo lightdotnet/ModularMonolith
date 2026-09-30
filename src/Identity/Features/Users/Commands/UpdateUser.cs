@@ -5,11 +5,20 @@ namespace StarterKit.Modules.Identity.Features.Users.Commands;
 
 internal sealed record UpdateUserCommand(UserDto Model) : ICommand<IResult>;
 
-internal class UpdateUserCommandHandler(IUserService userService)
+internal class UpdateUserCommandHandler(
+    IUserService userService,
+    PermissionGrantGuard guard)
     : ICommandHandler<UpdateUserCommand, IResult>
 {
-    public Task<IResult> Handle(
+    public async Task<IResult> Handle(
         UpdateUserCommand request,
-        CancellationToken cancellationToken) =>
-        userService.UpdateAsync(request.Model);
+        CancellationToken cancellationToken)
+    {
+        var allowed = await guard.CanUpdateUserAsync(request.Model).ConfigureAwait(false);
+
+        if (!allowed.IsSuccess)
+            return allowed;
+
+        return await userService.UpdateAsync(request.Model).ConfigureAwait(false);
+    }
 }

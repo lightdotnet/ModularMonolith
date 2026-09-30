@@ -195,6 +195,33 @@ public class UserServiceTests
     }
 
     [Fact]
+    public async Task UpdateAsync_ShouldRotateSecurityStamp_WhenStatusChangesFromActiveToLocked()
+    {
+        // Arrange: no role/claim change, so only the status change can rotate the stamp.
+        using var host = new IdentityTestHost();
+        var user = new User { UserName = "jane.doe" };
+        Assert.True((await host.UserManager.CreateAsync(user)).Succeeded);
+        var stampBefore = await host.UserManager.GetSecurityStampAsync(user);
+        var service = host.CreateUserService();
+
+        var dto = new UserDto
+        {
+            Id = user.Id,
+            UserName = user.UserName!,
+            Status = ActiveStatus.State.Locked.ToString(),
+        };
+
+        // Act
+        var result = await service.UpdateAsync(dto);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        var reloaded = await host.UserManager.FindByIdAsync(user.Id);
+        Assert.Equal(ActiveStatus.State.Locked, reloaded!.Status.Value);
+        Assert.NotEqual(stampBefore, await host.UserManager.GetSecurityStampAsync(reloaded));
+    }
+
+    [Fact]
     public async Task UpdateAsync_ShouldReturnNotFound_WhenUserDoesNotExist()
     {
         // Arrange

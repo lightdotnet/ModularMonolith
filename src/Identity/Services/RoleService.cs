@@ -6,7 +6,10 @@ using System.Security.Claims;
 
 namespace StarterKit.Modules.Identity.Services;
 
-internal class RoleService(RoleManager<Role> roleManager) : IRoleService
+internal class RoleService(
+    RoleManager<Role> roleManager,
+    UserManager<User> userManager)
+    : IRoleService
 {
     protected RoleManager<Role> RoleManager => roleManager;
 
@@ -79,18 +82,30 @@ internal class RoleService(RoleManager<Role> roleManager) : IRoleService
         if (!result.Succeeded)
             return result.ToResult();
 
-        await UpdateClaimsAsync(role, request.Claims).ConfigureAwait(false);
+        var claimsChanged = await UpdateClaimsAsync(role, request.Claims).ConfigureAwait(false);
+
+        // Role claims carry permissions: rotate the security stamp of every member so existing
+        // cookie sessions are re-validated (and dropped) instead of keeping stale permissions.
+        if (claimsChanged)
+            await UpdateMembersSecurityStampAsync(role).ConfigureAwait(false);
 
         return Result.Success();
     }
 
-    public virtual async Task UpdateClaimsAsync(Role role, IEnumerable<ClaimDto> claims)
+    /// <summary>
+    /// Syncs the role's claims to <paramref name="claims"/>; returns whether anything changed.
+    /// </summary>
+    public virtual async Task<bool> UpdateClaimsAsync(Role role, IEnumerable<ClaimDto> claims)
     {
         var existing = await RoleManager.GetClaimsAsync(role).ConfigureAwait(false);
 
         var target = claims
             .Select(c => new Claim(c.Type, c.Value))
             .ToList();
+
+        var changed = !existing
+            .ToHashSet(ClaimComparer.Instance)
+            .SetEquals(target);
 
         await CollectionSyncExtensions.SyncCollectionAsync(
             existing,
@@ -99,6 +114,21 @@ internal class RoleService(RoleManager<Role> roleManager) : IRoleService
             addAsync: c => RoleManager.AddClaimAsync(role, c),
             comparer: ClaimComparer.Instance
         ).ConfigureAwait(false);
+
+        return changed;
+    }
+
+    private async Task UpdateMembersSecurityStampAsync(Role role)
+    {
+        if (string.IsNullOrEmpty(role.Name))
+            return;
+
+        var members = await userManager
+            .GetUsersInRoleAsync(role.Name)
+            .ConfigureAwait(false);
+
+        foreach (var member in members)
+            await userManager.UpdateSecurityStampAsync(member).ConfigureAwait(false);
     }
 
     public virtual async Task<IResult> DeleteAsync(string id)

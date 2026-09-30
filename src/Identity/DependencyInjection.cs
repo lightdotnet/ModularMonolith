@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StarterKit.Modules.Identity.Api;
+using StarterKit.Modules.Identity.Authentication;
 using StarterKit.Modules.Identity.Authentication.ExternalLogin;
 using StarterKit.Modules.Identity.Contracts;
 using StarterKit.Modules.Identity.Domain;
@@ -53,6 +54,7 @@ public static class DependencyInjection
                 //options.User.RequireUniqueEmail = true;
             })
             .AddRoles<Role>()
+            .AddClaimsPrincipalFactory<IdentityClaimsPrincipalFactory>()
             .AddEntityFrameworkStores<IdentityDbContext>()
             .AddDefaultTokenProviders();
 
@@ -62,6 +64,7 @@ public static class DependencyInjection
 
         services.AddTransient<IUserService, UserService>();
         services.AddTransient<IRoleService, RoleService>();
+        services.AddScoped<PermissionGrantGuard>();
         services.AddScoped<IExternalLoginService, ExternalLoginService>();
         services.AddScoped<IExternalLoginAuthCodeStore, ExternalLoginAuthCodeStore>();
         services.AddScoped<IIdentityModuleApi, IdentityModuleApi>();
