@@ -43,7 +43,7 @@ public static class DependencyInjection
 
         services.AddDbContext<NotificationDbContext>(options =>
             options
-                .UseSqlServer(connectionString, o =>
+                .UseNpgsql(connectionString, o =>
                 {
                     o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName);
                 })

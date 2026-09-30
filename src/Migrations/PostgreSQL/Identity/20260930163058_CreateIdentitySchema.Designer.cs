@@ -12,7 +12,7 @@ using StarterKit.Modules.Identity.Persistence;
 namespace PostgreSQL.Identity
 {
     [DbContext(typeof(IdentityDbContext))]
-    [Migration("20260930150208_CreateIdentitySchema")]
+    [Migration("20260930163058_CreateIdentitySchema")]
     partial class CreateIdentitySchema
     {
         /// <inheritdoc />
