@@ -1,6 +1,6 @@
 <!--
 Template: Coding Conventions
-Used by: skills/generate-docs/SKILL.md, skills/sync-docs/SKILL.md
+Used by: skills/generate-docs/SKILL.md
 Output location: docs/conventions/coding-conventions.md
 Do not populate this file itself — copy its structure into the generated output.
 -->
