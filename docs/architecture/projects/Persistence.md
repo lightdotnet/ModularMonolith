@@ -20,7 +20,7 @@ It references only `Shared`.
 |---|---|
 | `DbContextExtensions.AddConfiguredDbContext<TContext>(IConfiguration, string connectionName)` | Registers `TContext` for the provider in `DbProvider`: InMemory needs no connection string; any other provider requires `ConnectionStrings:<connectionName>` and throws `InvalidOperationException` at registration when it is missing |
 | `DbContextExtensions.GetDbProvider` | Reads `DbProvider` as the `DbProvider` enum (`InMemory`, `PostgreSQL`, `MSSQL`, `Sqlite`) |
-| `DbConnectionNames` | Connection-string names: `Default` and one per module (`Identity`); each resolves to `DefaultConnection` |
+| `DbConnectionNames` | Connection-string names: `Default` (`DefaultConnection`) and a per-module alias for `Identity` that resolves to it; a module without its own alias uses `Default` |
 | `Context.BaseDbContext` | Abstract context that seals `OnModelCreating`: it calls the virtual `ConfigureModel(ModelBuilder)`, then applies the Sqlite `DateTimeOffset` conversion. It adds nothing to the save path |
 
 **Save-path building blocks** (`Extensions/`):
@@ -112,11 +112,11 @@ services.AddConfiguredDbContext<BillingDbContext>(
 ## Design Notes
 
 - **Save path is the context's job**: `BaseDbContext` only builds the model. A context gets audit and domain-event dispatch by calling `AuditEntries` and `DispatchDomainEvents` from its `SaveChanges` overrides, in that order, before committing. Domain events are therefore handled before the commit, sequentially, and — because the mediator runs notification handlers in-line — in the caller's DI scope, so a handler's changes to the same context are committed with the originating save. The solution-level save path, including integration events, is in [architecture.md § Persistence save path](../architecture.md#persistence-save-path).
-- **Contexts that cannot derive the base** call the helpers directly — `IdentityDbContext` is the example, see [Identity § Design Notes](Identity.md#design-notes). No context in this solution derives from `BaseDbContext`.
+- **Contexts in this solution**: `NotificationDbContext` derives from `BaseDbContext` and calls only `AuditEntries`, since its module raises no events — see [Notifications § Design Notes](Notifications.md#design-notes). `IdentityDbContext` cannot derive the base (it derives the ASP.NET Core Identity context) and calls the helpers, including `FixSqliteDateTimeOffset`, directly — see [Identity § Design Notes](Identity.md#design-notes).
 - **InMemory**: every InMemory context shares one database name (`InMemoryDb`).
 - **Sqlite `DateTimeOffset`**: Sqlite cannot order by `DateTimeOffset`, so the conversion stores Unix seconds. Stored values lose sub-second precision and their offset (they read back as UTC). The conversion is applied after the context's own model configuration and replaces any converter configured there.
 - **Pending model changes**: `AddConfiguredDbContext` configures EF Core's `PendingModelChangesWarning` to be logged, so a runtime context whose model differs from its migrations' snapshot does not fail when it migrates. The migrators configure the warning in their own registration — see [migrations.md § Migration sets](../../conventions/migrations.md#migration-sets).
-- **Migrator identity**: `AddMigrationsServices` makes every audit stamp written by a migrator read `Migrator`. Its mediator registration covers the `Persistence` assembly plus the module assemblies each migrator passes (the migrators pass the Identity assembly), so a module's notification handlers run during migrate-and-seed.
+- **Migrator identity**: `AddMigrationsServices` makes every audit stamp written by a migrator read `Migrator`. Its mediator registration covers the `Persistence` assembly plus the module assemblies each migrator passes (the migrators pass the Identity assembly), so those modules' notification handlers run during migrate-and-seed.
 - **Cache repository contract**: an entity cached through `CacheRepositoryBase` must be written only through the repository — a save on the underlying context leaves the cache stale, and nothing enforces this. Cached instances are detached snapshots. The repository needs a relational provider (its cache key reads the connection's database name, which the InMemory provider cannot supply).
 - **Dynamic-table concurrency**: `DynamicTableRepository.Update` is last-writer-wins; no concurrency token is configured.
 
@@ -136,6 +136,7 @@ Package versions: `Directory.Packages.props`. Full reference graph: [dependency-
 | Project | Why |
 |---|---|
 | `Identity` | `AddConfiguredDbContext`, the save-path extensions, `FixSqliteDateTimeOffset`, `MigrateDatabaseAsync`, paging — see [Identity](Identity.md) |
+| `Notifications` | `BaseDbContext`, `AddConfiguredDbContext`, `AuditEntries`, `ConfigureAuditableEntity`, `MigrateDatabaseAsync`, paging — see [Notifications](Notifications.md) |
 | `StarterKit.WebApi` | Project reference only; host code calls no `Persistence` member — the module contexts it composes register through `AddConfiguredDbContext` — see [StarterKit.WebApi](WebApi.md) |
 | `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | `AddMigrationsServices`, `DbConnectionNames` — see [migrations.md](../../conventions/migrations.md) |
 | `tests/Framework.Tests` | Unit tests (Sqlite in-memory contexts where behaviour needs a database) |

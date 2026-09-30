@@ -109,6 +109,7 @@ Package versions: `Directory.Packages.props`. Full reference graph: [dependency-
 | `StarterKit.WebApi` | Composes every registration and middleware helper above — see [StarterKit.WebApi](WebApi.md) |
 | `Identity` | `IdentityModule : AppModule`, controllers on `VersionedApiController` — see [Identity](Identity.md) |
 | `Identity.Web` | Its standalone host's composition (`AddSharedInfrastructure`, `AddAppCache`, `ServerCurrentUser`) |
+| `Notifications` | `NotificationsModule` and `SignalRModule : AppModule`, `SignalREndpoint : AppModuleEndpoint`, controllers on `VersionedApiController` — see [Notifications](Notifications.md) |
 | `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | `AddSharedInfrastructure` for `IDateTime` in the migrate-and-seed apps |
 | `tests/Framework.Tests` | Unit tests |
 

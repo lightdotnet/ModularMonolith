@@ -95,8 +95,9 @@ No project reference. Package versions: `Directory.Packages.props`. Full referen
 |---|---|
 | `Infrastructure`, `Persistence`, `EventBusMassTransitRabbitMQ` | Framework projects built on the kernel |
 | `Identity.Contracts` | Kernel types and `IntegrationEvent` for the module's seam; `Identity` and `Identity.Web` reach `Shared` through it — see [Identity](Identity.md) |
+| `Notifications.Contracts` | `PageQuery` for the module's lookup DTO; `Notifications` reaches `Shared` through it — see [Notifications](Notifications.md) |
 | `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | Composition of the migrate-and-seed apps |
-| `tests/Framework.Tests`, `tests/Identity.Tests` | Unit tests |
+| `tests/Framework.Tests`, `tests/Identity.Tests`, `tests/Notifications.Tests` | Unit tests |
 
 `StarterKit.WebApi` reaches `Shared` transitively.
 

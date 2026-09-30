@@ -1,6 +1,6 @@
 # Architecture
 
-The solution is a modular monolith: reusable framework projects, business modules built on them, one host that composes the modules into a single process, and per-provider migrator apps that create and seed the schema. For local development, a .NET Aspire app host runs that process with the Aspire dashboard. This document is the entry point to the architecture docs; each project's detail lives in its own overview, linked below.
+The solution is a modular monolith: reusable framework projects, business modules built on them, one host that composes the modules into a single process, and per-provider migrator apps that create and seed the schema. For local development, a .NET Aspire app host runs that process, with its Redis and RabbitMQ dependencies, under the Aspire dashboard. This document is the entry point to the architecture docs; each project's detail lives in its own overview, linked below.
 
 ## Layering
 
@@ -10,11 +10,14 @@ The solution is a modular monolith: reusable framework projects, business module
 | | [Infrastructure](projects/Infrastructure.md) | ASP.NET Core hosting blocks: module registration bases, controller bases and response envelope, endpoint mapping, caching, CORS, health checks |
 | | [Persistence](projects/Persistence.md) | EF Core blocks: provider selection, context base, audit and domain-event dispatch helpers, repositories, migration support |
 | | [EventBusMassTransitRabbitMQ](projects/EventBusMassTransitRabbitMQ.md) | Integration-event bus over MassTransit/RabbitMQ (no-op when disabled) and consumer bases |
-| Module | [Identity](projects/Identity.md) (`Identity.Contracts`, `Identity`, `Identity.Web`) | The one business module: users, roles, sessions, token issuance, login pages. Its `.Contracts` project is the only seam other modules may reference |
+| Module | [Identity](projects/Identity.md) (`Identity.Contracts`, `Identity`, `Identity.Web`) | Users, roles, sessions, token issuance, login and admin pages |
+| | [Notifications](projects/Notifications.md) (`Notifications.Contracts`, `Notifications`) | Per-user notifications, live push over SignalR, email over SMTP |
 | Host | [StarterKit.WebApi](projects/WebApi.md) | Composition root and the only deployable: registers the framework and the modules, owns the HTTP pipeline and authentication schemes |
 | | [StarterKit.AppHost, StarterKit.ServiceDefaults](projects/Aspire.md) | .NET Aspire: the local-development orchestrator and dashboard, and the service defaults (OpenTelemetry, service discovery, HttpClient resilience, Aspire health endpoints) the WebApi applies |
 | Migrators | `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | Console apps holding each module's migrations per provider; they migrate and seed — see [migrations.md](../conventions/migrations.md) |
-| Tests | `tests/Framework.Tests`, `tests/Identity.Tests` | Unit tests of the framework projects and of the Identity module — see [coding-conventions.md § Testing Conventions](../conventions/coding-conventions.md#testing-conventions) |
+| Tests | `tests/Framework.Tests`, `tests/Identity.Tests`, `tests/Notifications.Tests` | Unit tests of the framework projects and of each module — see [coding-conventions.md § Testing Conventions](../conventions/coding-conventions.md#testing-conventions) |
+
+Each module's `.Contracts` project is the only seam another module may reference.
 
 ## Dependency Direction
 
@@ -24,7 +27,7 @@ The dependency rules are defined in [CLAUDE.md § 1](../../CLAUDE.md#1-repositor
 
 ### HTTP request pipeline
 
-The host builds one pipeline for the JSON API and the Identity Razor Pages. In order:
+The host builds one pipeline for the JSON API, the SignalR hub, and the Identity Razor Pages. In order:
 
 1. HTTPS redirection — outside `Development` only.
 2. Trace id — sets `HttpContext.TraceIdentifier` to a GUID v7; it becomes the `RequestId` of every response envelope and error body.
@@ -33,7 +36,7 @@ The host builds one pipeline for the JSON API and the Identity Razor Pages. In o
 5. Static files, routing, CORS (`AllowCors`), rate limiter, authentication, authorization, Swagger.
 6. Module middleware (`AppModule.Use`), then WebSockets.
 
-Endpoints: `/hc` (health), module endpoints (unversioned `AppModuleEndpoint.Map` at the root; `AppModule.Map` under `api/v{version:apiVersion}`), the Identity Razor Pages, the MVC controllers, which are secure by default — see [Infrastructure § Design Notes](projects/Infrastructure.md#design-notes) — and, in `Development` only, the Aspire health endpoints `/health` and `/alive` — see [Aspire](projects/Aspire.md#how-starterkitwebapi-uses-the-service-defaults).
+Endpoints: `/hc` (health), module endpoints (unversioned `AppModuleEndpoint.Map` at the root — the Notifications SignalR hub is mapped this way; `AppModule.Map` under `api/v{version:apiVersion}`), the Identity Razor Pages, the MVC controllers, which are secure by default — see [Infrastructure § Design Notes](projects/Infrastructure.md#design-notes) — and, in `Development` only, the Aspire health endpoints `/health` and `/alive` — see [Aspire](projects/Aspire.md#how-starterkitwebapi-uses-the-service-defaults).
 
 Responses and errors share one envelope, the vendor `Result`/`Result<T>`:
 
@@ -45,7 +48,7 @@ Responses and errors share one envelope, the vendor `Result`/`Result<T>`:
 
 The host keeps one **assembly scan list** (the host assembly plus each module assembly), defined in its `ConfigureExtensions`. From it the host registers FluentValidation validators, mediator handlers with the `LoggingBehaviour` → `ValidationBehaviour` pipeline, event-bus consumers, and the modules themselves:
 
-- `AddModules<AppModule>` instantiates every `AppModule` in the list and calls its `Add` hooks — this is where a module registers its services and its `DbContext`;
+- `AddModules<AppModule>` instantiates every `AppModule` in the list and calls its `Add` hooks — this is where a module registers its services and its `DbContext`; an assembly may hold more than one `AppModule`;
 - `UseModules<AppModule>` calls each module's `Use` hook in the pipeline;
 - endpoint mapping calls `AppModuleEndpoint.Map` at the root and `AppModule.Map` inside the versioned route group.
 
@@ -53,7 +56,7 @@ A module becomes part of the process by adding its assembly to that list. MVC co
 
 ### Persistence save path
 
-Each module owns its `DbContext`, registered through `Persistence`'s `AddConfiguredDbContext` for the configured provider. `Persistence` supplies the save-path steps; the module context wires them in its own `SaveChangesAsync`:
+Each module owns its `DbContext`, registered through `Persistence`'s `AddConfiguredDbContext` for the configured provider. `Persistence` supplies the save-path steps; the module context wires the ones it needs in its own `SaveChangesAsync`:
 
 ```mermaid
 flowchart LR
@@ -64,15 +67,18 @@ flowchart LR
 
 - Domain-event dispatch semantics (timing, ordering, DI scope): [Persistence § Design Notes](projects/Persistence.md#design-notes).
 - Integration-event buffering, publish-after-commit, and the no-outbox trade-off: [Identity § Design Notes](projects/Identity.md#design-notes), the implementation of record.
+- A module that raises no events audits and commits only — see [Notifications § Design Notes](projects/Notifications.md#design-notes).
 - The schema comes from the migrators — see [migrations.md](../conventions/migrations.md).
 
 ### Messaging
 
-Integration events are published through `IEventBus`; the host registers the bus once, with every `AppModuleConsumer` found in the scan list. Enabled vs. no-op behaviour, delivery policy, queues, and consumer registration: [EventBusMassTransitRabbitMQ](projects/EventBusMassTransitRabbitMQ.md). The migrators' settings files have no `RabbitMQ` section, so they run on the no-op bus.
+Integration events are published through `IEventBus`; the host registers the bus once, with every `AppModuleConsumer` found in the scan list. Identity publishes its user events and Notifications consumes `UserProvisionedIntegrationEvent` to send the welcome mail. Enabled vs. no-op behaviour, delivery policy, queues, and consumer registration: [EventBusMassTransitRabbitMQ](projects/EventBusMassTransitRabbitMQ.md). The migrators' settings files have no `RabbitMQ` section, so they run on the no-op bus.
+
+Real-time delivery to clients is separate from the bus: the Notifications module pushes over its SignalR hub — see [Notifications](projects/Notifications.md).
 
 ### Authentication and authorization
 
-- **Authentication** is the host's concern: Bearer tokens for `/api`, a hub-only Bearer scheme, and the Identity cookie for the Razor Pages, selected by request path — see [StarterKit.WebApi § Design Notes](projects/WebApi.md#design-notes). Tokens are issued by the Identity module — see [Identity](projects/Identity.md); the client-facing sign-in paths are diagrammed in [README § Login Flow](../../README.md#login-flow-client--server).
+- **Authentication** is the host's concern: Bearer tokens for `/api`, a hub-only Bearer scheme for the SignalR hub path, and the Identity cookie for the Razor Pages, selected by request path — see [StarterKit.WebApi § Design Notes](projects/WebApi.md#design-notes). Tokens are issued by the Identity module — see [Identity](projects/Identity.md); the client-facing sign-in paths are diagrammed in [README § Login Flow](../../README.md#login-flow-client--server).
 - **Authorization** is permission-based and comes from `Shared` — see [Shared § Design Notes](projects/Shared.md#design-notes). Modules contribute their permission catalogs by registering a vendor `IPermissionDefinitionProvider`.
 - **Current user**: code depends on `ICurrentUser`; the host binds it to the HTTP user (`ServerCurrentUser`), a migrator to a fixed `Migrator` identity.
 
@@ -95,10 +101,10 @@ The host logs through Serilog and applies the Aspire service defaults, which add
 |---|---|---|
 | joins the host | an `AppModule` (and optionally an `AppModuleEndpoint`) in an assembly on the host's scan list | [Infrastructure](projects/Infrastructure.md) |
 | exposes an API | controllers on `VersionedApiController` / `ApiControllerBase`, returning through `Ok(...)` | [Infrastructure](projects/Infrastructure.md) |
-| persists data | its own context via `AddConfiguredDbContext`, optionally on `BaseDbContext`, calling `AuditEntries` and `DispatchDomainEvents` on save; migrations in each migrator project, whose `AddMigrationsServices` call includes the module assembly | [Persistence](projects/Persistence.md), [migrations.md](../conventions/migrations.md) |
+| persists data | its own context via `AddConfiguredDbContext`, optionally on `BaseDbContext`, calling `AuditEntries` (and `DispatchDomainEvents` when it raises domain events) on save; migrations in each migrator project, whose `AddMigrationsServices` call includes the module assembly | [Persistence](projects/Persistence.md), [migrations.md](../conventions/migrations.md) |
 | models its domain | `AuditableEntity`, `DomainEvent`, value objects | [Shared](projects/Shared.md) |
 | protects endpoints | permission policies plus an `IPermissionDefinitionProvider` for its catalog | [Shared](projects/Shared.md) |
-| talks to other modules | its `.Contracts` seam, or integration events through `IEventBus` and the consumer bases | [EventBusMassTransitRabbitMQ](projects/EventBusMassTransitRabbitMQ.md), [Identity](projects/Identity.md) |
+| talks to other modules | integration events through `IEventBus` and the consumer bases, or its `.Contracts` facade for synchronous calls — the rule is in [coding-conventions.md § Structural Conventions](../conventions/coding-conventions.md#structural-conventions) | [EventBusMassTransitRabbitMQ](projects/EventBusMassTransitRabbitMQ.md), [Notifications](projects/Notifications.md) |
 
 ## Known Architectural Risks / Debt
 
@@ -106,6 +112,7 @@ The host logs through Serilog and applies the Aspire service defaults, which add
 |---|---|---|
 | No transactional outbox for integration events | Medium | Accepted — see [Identity § Design Notes](projects/Identity.md#design-notes) |
 | Hard-coded super user | Medium | See [Shared § Design Notes](projects/Shared.md#design-notes) |
+| Notifications schema only on MSSQL | Medium | The PostgreSQL and Sqlite migrators do not carry the Notifications migrations, so a host on those providers has no `notifications` schema — see [migrations.md § Migration sets](../conventions/migrations.md#migration-sets) |
 | Save path wired per context | Low | `BaseDbContext` does not audit or dispatch; each module context must call the helpers itself — see [Persistence § Design Notes](projects/Persistence.md#design-notes) |
 
 ## Notes

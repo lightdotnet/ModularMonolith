@@ -18,7 +18,7 @@ Restructure existing code in the framework, host, and module projects for clarit
 
 1. **Confirm scope and motivation** — avoid refactoring "while you're in there" beyond what was asked.
 2. **Check public-API impact**: determine whether any public signature, base type, or extension method in a framework project or a module's `.Contracts` would change. If yes, flag it as a breaking change for consuming modules and confirm with the user before proceeding.
-3. **Note the baseline**: identify existing tests covering the target — in `tests/Framework.Tests` (framework projects) or `tests/Identity.Tests` (Identity module) — without running them yet; if coverage looks thin, say so in the plan; characterization tests may need to be added first.
+3. **Note the baseline**: identify existing tests covering the target — in `tests/Framework.Tests` (framework projects) or the module's `tests/<Module>.Tests` (e.g. `tests/Identity.Tests`, `tests/Notifications.Tests`) — without running them yet; if coverage looks thin, say so in the plan; characterization tests may need to be added first.
 4. **Present a plan and wait for explicit approval** before touching code (root `CLAUDE.md` §2.9). If the refactor reshapes a DDD building block, run [ddd-modeler](../../agents/ddd-modeler.md) first so the target shape is deliberate.
 5. **Refactor incrementally**, delegating the edits to [dotnet-developer](../../agents/dotnet-developer.md) once approved: small steps, each verified by building (not by running the test suite).
 6. **Present the refactored code back to the user for review.** Stop here.

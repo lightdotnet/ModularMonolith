@@ -4,6 +4,7 @@
 
 - A .NET SDK that targets `net10.0`.
 - A reachable database matching the configured `DbProvider` (see Running Locally below) if running the host against a real database — no external service is required just to run the test suite.
+- A container runtime (e.g. Docker) to run the API under the Aspire app host, which starts Redis and RabbitMQ containers.
 - The `dotnet-ef` tool for migration work — see [migrations.md § Update Tools](migrations.md#update-tools).
 
 ## Building
@@ -21,13 +22,15 @@ dotnet run --project src/StarterKit.AppHost
 dotnet run --project src/StarterKit.WebApi/StarterKit.WebApi.csproj
 ```
 
-- **Under the AppHost**: starts `StarterKit.WebApi` as the resource `api` and opens the Aspire dashboard (logs, metrics, traces, and the resource's endpoints). The AppHost's launch profiles, dashboard URLs, and what it passes to the API: [../architecture/projects/Aspire.md § Running](../architecture/projects/Aspire.md#running).
+- **Under the AppHost**: starts `StarterKit.WebApi` as the resource `api`, together with Redis and RabbitMQ containers, points the API's cache and event bus at them, and opens the Aspire dashboard (logs, metrics, traces, and the resources' endpoints). The AppHost's resources, launch profiles, dashboard URLs, and what it passes to the API: [../architecture/projects/Aspire.md § Running](../architecture/projects/Aspire.md#running).
 - **On its own**: the default `http` launch profile binds plain HTTP on `http://localhost:5000`, which is the primary Development endpoint — HTTPS redirection is skipped in `Development`, so no HTTPS listener is needed for local work (this also lets a server-to-server client call the API without hitting the untrusted dev certificate). The `https` profile additionally binds `https://localhost:5001` (ASP.NET dev certificate) for anyone who wants it. Run this way, the API exports no telemetry.
 
-`src/StarterKit.WebApi` is the composition root — see [../architecture/projects/WebApi.md](../architecture/projects/WebApi.md). Its local defaults:
+`src/StarterKit.WebApi` is the composition root — see [../architecture/projects/WebApi.md](../architecture/projects/WebApi.md). Its local defaults (`appsettings.json`), which apply when it runs on its own:
 
-- **Database**: `DbProvider` is `MSSQL` in `src/StarterKit.WebApi/appsettings.json`, pointing `ConnectionStrings:DefaultConnection` at a local `(localdb)\mssqllocaldb` instance, and `appsettings.Development.json` does not override it. A relational database needs its schema created first by the matching migrator — see [migrations.md § Migration sets](migrations.md#migration-sets). Switch to `InMemory` (no schema step, no database server) or `Sqlite`/`PostgreSQL` via `DbProvider` and a matching `ConnectionStrings:DefaultConnection` (commented-out PostgreSQL/Sqlite examples are in `appsettings.json`) if SQL Server LocalDB is not available.
-- **Event bus**: `RabbitMQ:Enable` is `false`, so no broker is needed.
+- **Database**: `DbProvider` is `MSSQL` in `src/StarterKit.WebApi/appsettings.json`, pointing `ConnectionStrings:DefaultConnection` at a local `(localdb)\mssqllocaldb` instance, and `appsettings.Development.json` does not override it. A relational database needs its schema created first by the matching migrator — see [migrations.md § Migration sets](migrations.md#migration-sets), including which providers carry which modules. Switch to `InMemory` (no schema step, no database server) or `Sqlite`/`PostgreSQL` via `DbProvider` and a matching `ConnectionStrings:DefaultConnection` (commented-out PostgreSQL/Sqlite examples are in `appsettings.json`) if SQL Server LocalDB is not available.
+- **Cache**: `Caching:Provider` is `memory`.
+- **Event bus**: `RabbitMQ:Enable` is `false`, so no broker is needed; integration events are dropped and no consumer runs (so no welcome mail is sent).
+- **Mail**: the `SmtpMail` section must be present or startup fails; the checked-in values point at a test SMTP host with empty credentials — see [../architecture/projects/Notifications.md § Configuration](../architecture/projects/Notifications.md#configuration).
 - **Authentication**: `AllowAnonymous` is `false` in `appsettings.json` and not overridden in Development — requests need a valid JWT unless the endpoint is explicitly anonymous.
 - **Health**: `/hc` in every environment; `/health` and `/alive` in `Development` — see [../architecture/projects/Aspire.md § How StarterKit.WebApi Uses the Service Defaults](../architecture/projects/Aspire.md#how-starterkitwebapi-uses-the-service-defaults).
 
@@ -48,7 +51,7 @@ No external database or service is needed. Test conventions and coverage: [codin
 
 ## Local Setup
 
-- The checked-in connection string, JWT signing values (`Jwt:SecretKey`, `Jwt:Issuer`, token lifetimes), and Basic Auth value (`BasicAuth`) in `src/StarterKit.WebApi/appsettings.json` are starter-template placeholders, not production secrets — replace them before any real deployment.
+- The checked-in connection string, JWT signing values (`Jwt:SecretKey`, `Jwt:Issuer`, token lifetimes), Basic Auth value (`BasicAuth`), and SMTP settings (`SmtpMail`) in `src/StarterKit.WebApi/appsettings.json` are starter-template placeholders, not production secrets — replace them before any real deployment.
 - `UserSecretsId` is set on `src/StarterKit.WebApi/StarterKit.WebApi.csproj` for local `dotnet user-secrets` overrides if preferred over editing `appsettings.Development.json` directly — e.g. the Microsoft Entra ID client secret:
 
   ```
@@ -65,6 +68,7 @@ No external database or service is needed. Test conventions and coverage: [codin
 |---|---|
 | Add a migration | [migrations.md § Add migrations](migrations.md#add-migrations) and [§ Migration workflow](migrations.md#migration-workflow) (which providers to update when) |
 | Create/update a database schema and seed it | `dotnet run` from `src/Migrations/<Provider>` — see [migrations.md § Migration sets](migrations.md#migration-sets) |
+| Run the API with Redis and RabbitMQ | `dotnet run --project src/StarterKit.AppHost` — see [../architecture/projects/Aspire.md § Running](../architecture/projects/Aspire.md#running) |
 | Run local infra (Postgres, Redis, pgAdmin) via Docker | [docker-cli.md](docker-cli.md) |
 
 ## Where to Look for X

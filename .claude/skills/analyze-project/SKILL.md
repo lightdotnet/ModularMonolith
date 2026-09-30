@@ -1,6 +1,6 @@
 ---
 name: analyze-project
-description: Playbook for analyzing a single named project (.csproj) — e.g. src/Shared, src/Infrastructure, src/Persistence, src/StarterKit.WebApi, src/Identity, tests/Framework.Tests, or tests/Identity.Tests — its responsibility, public surface, and dependencies, without expanding scope to the whole solution.
+description: Playbook for analyzing a single named project (.csproj) — e.g. src/Shared, src/Infrastructure, src/Persistence, src/StarterKit.WebApi, src/Identity, src/Notifications, tests/Framework.Tests, or a module's tests/<Module>.Tests (e.g. tests/Identity.Tests, tests/Notifications.Tests) — its responsibility, public surface, and dependencies, without expanding scope to the whole solution.
 ---
 
 # Skill: Analyze Project

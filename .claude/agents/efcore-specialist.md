@@ -23,7 +23,7 @@ tools: Glob, Grep, Read, Bash
 ## What to Inspect
 
 - The specific `src/Persistence` types relevant to the task, and the matching tests under `tests/Framework.Tests/Persistence/`.
-- A module's own context when in scope — Identity's `IdentityDbContext` under `src/Identity/Persistence/`, tested in `tests/Identity.Tests/Persistence/`.
+- A module's own context when in scope — e.g. Identity's `IdentityDbContext` under `src/Identity/Persistence/` (tested in `tests/Identity.Tests/Persistence/`) or Notifications' `NotificationDbContext` under `src/Notifications/Persistence/`.
 - The per-provider migrations and migrate-and-seed apps under `src/Migrations/*` (MSSQL, PostgreSQL, Sqlite), and the workflow in [migrations.md](../../docs/conventions/migrations.md).
 - Entity configuration (`IEntityTypeConfiguration<T>`, `OnModelCreating`, builder extensions). Convention: inside an `entity.ToTable(...)` block, `HasIndex` calls come right after `ToTable`, before other configuration.
 - Actual LINQ query shapes when diagnosing performance — `.Include`, `AsNoTracking`, projection, client-vs-server evaluation.

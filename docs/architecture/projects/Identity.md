@@ -26,7 +26,7 @@ The module owns users, roles, claims, and sessions, and issues the tokens the re
 |---|---|
 | `IIdentityModuleApi` | In-process seam other modules use to query users (by id, ids, email, or granted permission) and to idempotently ensure a user exists by email |
 | `UserSummary` | The user shape exposed through the seam |
-| `IntegrationEvents/*` | Integration events (`IntegrationEvent` records) published when a user is provisioned, updated, has its status changed, or is deleted. Each carries the user's full current state and a `Version`; consumers must be idempotent on the user id and drop events that are not newer than the one already applied |
+| `IntegrationEvents/*` | Integration events (`IntegrationEvent` records) published when a user is provisioned, updated, has its status changed, or is deleted. Each carries the user's full current state and a `Version`; consumers must be idempotent on the user id and drop events that are not newer than the one already applied. `UserProvisionedIntegrationEvent` carries a `ProvisioningSource` |
 
 **`Identity`**:
 
@@ -64,7 +64,7 @@ The connection string is the framework default (`DefaultConnection`). Section pl
 ## Design Notes
 
 - **Persistence**: `IdentityDbContext` derives from the ASP.NET Core Identity context, not `BaseDbContext`, and uses the schema `identity`. It calls `Persistence`'s `AuditEntries`, `DispatchDomainEvents`, and `FixSqliteDateTimeOffset` directly. An asynchronous save runs in this order: audit → dispatch domain events → commit → publish the integration events buffered in the scoped, module-local `IntegrationEventCollector` through `IEventBus`. A failed commit clears the buffer. There is no outbox: a publish failure after the commit is logged and the events of that save are lost, which the per-event `Version` makes recoverable by a later event. A synchronous save with buffered integration events throws.
-- **Publishing without a bus dependency**: the module publishes through `IEventBus` (vendor abstraction reached through `Shared`) and does not reference `EventBusMassTransitRabbitMQ`; the host registers the bus.
+- **Publishing without a bus dependency**: the module publishes through `IEventBus` (vendor abstraction reached through `Shared`) and does not reference `EventBusMassTransitRabbitMQ`; the host registers the bus. The Notifications module consumes `UserProvisionedIntegrationEvent` — see [Notifications § Design Notes](Notifications.md#design-notes).
 - **Cookie principal**: `IdentityClaimsPrincipalFactory` (`Authentication/`) adds the platform user-id and user-name claims to the cookie principal, so `ICurrentUser`, auditing, and super-user checks work for cookie sessions as they do for a self-issued JWT; role and permission claims come from the base factory.
 - **Session revocation**: `UserService` rotates a user's security stamp when the user's roles, claims, or active status change, and `RoleService` rotates the stamp of every member when a role's claims change. The application cookie revalidates on the configured interval, so an affected session is dropped at its next revalidation. JWT and refresh tokens are not stamp-checked; `AuthenticationService` applies its own active/deleted check instead.
 - **External-login relay**: the flow a separate-origin client uses is diagrammed in [README § Login Flow](../../../README.md#login-flow-client--server). `ExternalLoginStart` accepts only the `Microsoft`/`EntraId` provider and an allow-listed `redirectUri`, then challenges Entra ID. `ExternalLoginRelay` resolves (links or provisions) the user, mints a token pair, stores it in the cache under a one-time code bound to the PKCE challenge (S256 of the verifier) with the configured TTL, and redirects to the client with `code` and `state`. `POST auth/token/external` consumes the code once with the verifier. The relay never sets an `Identity.Web` cookie. The relay pages and the exchange endpoint are rate-limited by the host's `external-login` policy — see [StarterKit.WebApi § Design Notes](WebApi.md#design-notes).
@@ -90,15 +90,15 @@ The connection string is the framework default (`DefaultConnection`). Section pl
 |---|---|
 | `StarterKit.WebApi` | `Identity`, `Identity.Web` |
 | `Identity.Web` | `Identity` (intra-module) |
+| `Notifications` | `Identity.Contracts` — the integration event it consumes; see [Notifications](Notifications.md) |
 | `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | `Identity` |
 | `tests/Identity.Tests` | `Identity`, `Identity.Web`, `Shared` |
-
-No other module exists on this branch.
 
 ## Notable Conventions
 
 - `IntegrationEventCollector` is module-local; it becomes a `Persistence` building block only once a second module needs it.
 - The `Identity.Web` tag helpers stay in the module until a second module's `.Web` project needs them; they are then candidates for a framework project.
+- The handlers forward to services and `IIdentityModuleApi` reads the context and calls services directly — a documented deviation, see [coding-conventions.md § Deviations](../../conventions/coding-conventions.md#deviations-from-norms-elsewhere-in-the-repo).
 
 ## Notes
 

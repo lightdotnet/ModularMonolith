@@ -10,9 +10,10 @@ The migration commands below run from `src/Migrations/<Provider>` and use the gl
 ### Add migrations
 ```
 dotnet ef migrations add CreateIdentitySchema --context IdentityDbContext --output-dir Identity
+dotnet ef migrations add CreateNotificationSchema --context NotificationDbContext --output-dir Notifications
 ```
 
-Run from `src/Migrations/{Sqlite,PostgreSQL,MSSQL}` — pick the provider directory matching your target database; each module gets its own `--output-dir` under it. `--context <ModuleName>DbContext` selects which module's schema to migrate.
+Run from `src/Migrations/{Sqlite,PostgreSQL,MSSQL}` — pick the provider directory matching your target database; each module gets its own `--output-dir` under it. `--context` names the module's context (`IdentityDbContext`, `NotificationDbContext`) and selects which module's schema to migrate; the provider project must reference the module and register its context.
 
 ### Check for pending model changes
 ```
@@ -29,19 +30,22 @@ Alternatively `dotnet run` in the provider directory migrates and seeds — see 
 ## Migration workflow
 
 - **During development**, each schema change gets one incremental migration, added to `src/Migrations/MSSQL` only (named after the change, e.g. `AddUserCreatedIndex`). The other providers are not updated per change.
-- **A full from-scratch regenerate** — deleting a module's migration chain and generating a single baseline named `Create<Module>Schema` (e.g. `CreateIdentitySchema`), for MSSQL and/or the other providers — happens only on the user's explicit command, once the module is complete. Until then a provider's baseline may lag the MSSQL chain; the current per-provider state is in § Migration sets.
+- **A full from-scratch regenerate** — deleting a module's migration chain and generating a single baseline named `Create<Module>Schema` (e.g. `CreateIdentitySchema`), for MSSQL and/or the other providers — happens only on the user's explicit command, once the module is complete. Until then a provider's baseline may lag the MSSQL chain, or be missing; the current per-provider state is in § Migration sets.
 
 ## Migration sets
 
-Each provider directory under `src/Migrations/` is a console app holding one folder per module. The provider is fixed by the project (`MSSQL`, `PostgreSQL`, `Sqlite`), not by `DbProvider`; the connection string is `ConnectionStrings:DefaultConnection` from the project's own `appsettings.json` (plus `appsettings.<ASPNETCORE_ENVIRONMENT>.json`, default `Staging`, and environment variables). Each module's `<Module>ContextInitialiser` applies its migrations (`InitialiseAsync` → `MigrateDatabaseAsync`) and each provider's `Program.cs` calls the initialisers; modules with reference data also call `TrySeedAsync` (`Identity` does). Seed rows are written at runtime by the initialisers, never by migrations. The host does not migrate at startup. The migrators ignore EF Core's pending-model-changes warning, so they apply a provider's migrations even when its snapshot lags the model.
+Each provider directory under `src/Migrations/` is a console app holding one folder per module it carries. The provider is fixed by the project (`MSSQL`, `PostgreSQL`, `Sqlite`), not by `DbProvider`; the connection string is `ConnectionStrings:DefaultConnection` from the project's own `appsettings.json` (plus `appsettings.<ASPNETCORE_ENVIRONMENT>.json`, default `Staging`, and environment variables). Each module's `<Module>ContextInitialiser` applies its migrations (`InitialiseAsync` → `MigrateDatabaseAsync`) and each provider's `Program.cs` calls the initialisers of the modules it carries; modules with reference data also call `TrySeedAsync` (`Identity` does; `Notifications` seeds nothing). Seed rows are written at runtime by the initialisers, never by migrations. The host does not migrate at startup. The migrators ignore EF Core's pending-model-changes warning, so they apply a provider's migrations even when its snapshot lags the model.
 
 | Modules | MSSQL | PostgreSQL | Sqlite |
 |---|---|---|---|
 | `Identity` | one `CreateIdentitySchema` baseline | baseline plus `AddUserCreatedIndex` | baseline plus `AddUserCreatedIndex` |
+| `Notifications` | one `CreateNotificationSchema` baseline | not carried | not carried |
 
 A baseline is generated from the module's current model, so its model snapshot is the source of truth for that module and provider.
 
-`dotnet ef migrations has-pending-model-changes` reports no pending changes for MSSQL and pending changes for PostgreSQL and Sqlite: their snapshots store `User.AuthProvider` as a string, while the model maps it as an `int` enum. Those two providers are regenerated only on the user's explicit command.
+`Notifications` is wired into the MSSQL migrator only: the PostgreSQL and Sqlite projects do not reference the module, register its context, or receive its `InternalsVisibleTo` grant, so a host running on either provider has no `notifications` schema.
+
+For `Identity`, `dotnet ef migrations has-pending-model-changes` reports no pending changes for MSSQL and pending changes for PostgreSQL and Sqlite: their snapshots store `User.AuthProvider` as a string, while the model maps it as an `int` enum. Those two providers are regenerated only on the user's explicit command.
 
 ## Provider-aware filtered indexes
 

@@ -1,6 +1,6 @@
 # StarterKit — Modular Monolith Core for ASP.NET Core
 
-The core of the StarterKit Modular Monolith template: the reusable C#/.NET framework building blocks (built on the private "Light" framework family — `Lightsoft.*` packages), a composition-root host with a .NET Aspire app host for local development, and the Identity reference module, with their tests. Client apps are not part of this solution.
+The core of the StarterKit Modular Monolith template: the reusable C#/.NET framework building blocks (built on the private "Light" framework family — `Lightsoft.*` packages), a composition-root host with a .NET Aspire app host for local development, and two business modules — Identity (the reference module) and Notifications — with their tests. Client apps are not part of this solution.
 
 ## Structure
 
@@ -15,19 +15,23 @@ StarterKit.slnx
 │   └── src/EventBusMassTransitRabbitMQ     (integration-event bus)
 ├── /src/_host/
 │   ├── src/StarterKit.WebApi               (composition root, the only deployable)
-│   ├── src/StarterKit.AppHost              (.NET Aspire app host — local orchestration and dashboard)
+│   ├── src/StarterKit.AppHost              (.NET Aspire app host — local orchestration, Redis/RabbitMQ containers, dashboard)
 │   └── src/StarterKit.ServiceDefaults      (.NET Aspire service defaults — telemetry, service discovery, resilience)
 ├── /src/identity-module/
 │   ├── src/Identity.Contracts              (the module's cross-module seam)
 │   ├── src/Identity                        (module implementation — JSON API, token issuance, persistence)
 │   └── src/Identity.Web                    (Razor Pages login, Microsoft login relay, and admin pages — co-hosted or standalone)
+├── /src/notifications-module/
+│   ├── src/Notifications.Contracts         (the module's cross-module seam)
+│   └── src/Notifications                   (module implementation — notification storage, SignalR push, SMTP mail)
 ├── /src/_migrations/
 │   ├── src/Migrations/MSSQL                (EF migrations + migrate-and-seed console app, SQL Server)
 │   ├── src/Migrations/PostgreSQL           (same, PostgreSQL)
 │   └── src/Migrations/Sqlite               (same, Sqlite)
 └── /tests/
     ├── tests/Framework.Tests               (framework projects)
-    └── tests/Identity.Tests                (Identity module)
+    ├── tests/Identity.Tests                (Identity module)
+    └── tests/Notifications.Tests           (Notifications module)
 ```
 
 Project responsibilities and the dependency rules are in [CLAUDE.md](CLAUDE.md#1-repository-purpose); the exact project references are in [docs/architecture/dependency-graph.md](docs/architecture/dependency-graph.md).
@@ -48,6 +52,11 @@ graph TD
         IdC["Identity.Contracts<br/>seam"]
     end
 
+    subgraph NotificationsModule["Notifications module"]
+        Nt["Notifications<br/>implementation"]
+        NtC["Notifications.Contracts<br/>seam"]
+    end
+
     subgraph Framework["Framework"]
         Infra["Infrastructure"]
         Persistence["Persistence"]
@@ -55,17 +64,23 @@ graph TD
         Shared["Shared<br/>(leaf)"]
     end
 
-    Client -. HTTP/JSON .-> WebApi
+    Client -. HTTP/JSON, SignalR .-> WebApi
     AppHost -. runs .-> WebApi
     WebApi --> SD
     WebApi --> IdentityModule
+    WebApi --> NotificationsModule
     WebApi --> Framework
     Migrators --> IdentityModule
+    Migrators -- MSSQL only --> NotificationsModule
     Migrators --> Framework
     IdW --> Id
     Id --> IdC
     IdentityModule --> Infra & Persistence
+    Nt --> NtC
+    Nt --> IdC
+    Nt --> Infra & Persistence & Bus
     IdC --> Shared
+    NtC --> Shared
     Infra & Persistence & Bus --> Shared
 
     classDef leaf fill:#2f6f4f,stroke:#1e4a34,color:#fff;
@@ -121,8 +136,9 @@ Access tokens are renewed through `POST api/v1/auth/token/refresh`. The client's
 | Data access | EF Core — provider-configurable via `DbProvider` (`InMemory` / `PostgreSQL` / `MSSQL` / `Sqlite`) |
 | Authentication | ASP.NET Core Identity; self-issued JWT (Bearer) for the API; cookie for the Razor Pages; optional Microsoft Entra ID (OIDC) external login |
 | Messaging | MassTransit over RabbitMQ for integration events; a no-op bus when disabled |
-| Observability / local orchestration | Serilog; OpenTelemetry via .NET Aspire service defaults; Aspire app host and dashboard for local development |
-| Vendor framework | `Lightsoft.*` package family (mediator, `Result`/`Paged` contracts, domain base types, ASP.NET Core authorization/modularity helpers, caching, Serilog, event bus, Active Directory) |
+| Real-time / mail | SignalR hub for real-time notification push; SMTP mail (`Lightsoft.SmtpMail`) |
+| Observability / local orchestration | Serilog; OpenTelemetry via .NET Aspire service defaults; Aspire app host and dashboard for local development, also running Redis and RabbitMQ containers |
+| Vendor framework | `Lightsoft.*` package family (mediator, `Result`/`Paged` contracts, domain base types, ASP.NET Core authorization/modularity helpers, caching, Serilog, event bus, Active Directory, SMTP mail) |
 | Validation / mapping | FluentValidation, Mapster |
 | Testing | xUnit v3 + Moq (via `tests/ModuleTests.props`) on Microsoft.Testing.Platform (selected by the root `global.json`) |
 
@@ -132,8 +148,8 @@ Package versions are managed centrally in [Directory.Packages.props](Directory.P
 
 ```bash
 dotnet build StarterKit.slnx
-dotnet run --project src/StarterKit.AppHost                              # API + Aspire dashboard
-dotnet run --project src/StarterKit.WebApi/StarterKit.WebApi.csproj      # or the API on its own
+dotnet run --project src/StarterKit.AppHost                              # API + Redis + RabbitMQ + Aspire dashboard
+dotnet run --project src/StarterKit.WebApi/StarterKit.WebApi.csproj      # or the API on its own (in-memory cache, no-op bus)
 dotnet test --solution StarterKit.slnx
 ```
 

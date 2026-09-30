@@ -93,7 +93,7 @@ Publish by injecting `IEventBus` and calling `Publish(new OrderPlacedIntegration
 - **Failure logging**: the vendor consumer base logs an error on every failed attempt, so a message that exhausts its retries produces one error entry per attempt (five in total).
 - **Per-module queues**: without a prefix, every consumer of an event with a `[BindingName]` binds to one queue named after the binding name, so consumers compete (load-balancing). Passing a module prefix (e.g. `base("billing")`) yields `billing-<binding-name>`, giving each module its own copy of the event. Per the vendor base, the prefix applies only when the event type itself carries `[BindingName]` (the attribute is not inherited); prefixes may contain only letters, digits, `-`, `_`, `.`, `:`.
 - **Consumer discovery**: `AddEventBus` hands its assemblies to the vendor registration, which scans them for `ModuleConsumer` types, instantiates each (parameterless constructor) and calls `AddConsumers`.
-- **Disabled bus**: `NoOpEventBus` keeps publishers working with no broker (development, tests, migrators); events are not queued for later delivery.
+- **Disabled bus**: `NoOpEventBus` keeps publishers working with no broker (development, tests, migrators); events are not queued for later delivery, and no consumer runs.
 
 ## Dependencies
 
@@ -110,10 +110,11 @@ Package versions: `Directory.Packages.props`. Full reference graph: [dependency-
 |---|---|
 | `StarterKit.WebApi` | Calls `AddEventBus` once with its module assembly list — see [StarterKit.WebApi](WebApi.md) |
 | `Identity.Web` | Its standalone host calls `AddEventBus` with no assemblies so `IdentityDbContext` resolves — see [Identity](Identity.md) |
+| `Notifications` | Consumer, consumer-definition, and module-consumer bases for its `UserProvisionedIntegrationEvent` consumer — see [Notifications](Notifications.md) |
 | `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | Call `AddEventBus` with no assemblies; their configuration has no `RabbitMQ` section, so they get `NoOpEventBus` |
 | `tests/Framework.Tests` | Unit tests of the registration, the no-op bus, the settings binding, and the consumer-definition policy |
 
-A module that only publishes does not reference this project: it injects `IEventBus`, which reaches it through `Shared` (the Identity module publishes this way — see [Identity](Identity.md)). A module that consumes integration events references it for the consumer bases.
+A module that only publishes does not reference this project: it injects `IEventBus`, which reaches it through `Shared` (the Identity module publishes this way — see [Identity](Identity.md)). A module that consumes integration events references it for the consumer bases, as Notifications does.
 
 ## Notable Conventions
 

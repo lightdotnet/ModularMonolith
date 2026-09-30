@@ -1,6 +1,6 @@
 ---
 name: architecture-reviewer
-description: Use for reviewing layering, dependency direction, and structural cohesion of the projects under src/ — the framework projects (Shared, Infrastructure, Persistence, EventBusMassTransitRabbitMQ), the StarterKit.WebApi composition root and the Aspire projects (StarterKit.AppHost, StarterKit.ServiceDefaults), and the modules built on them (currently Identity, Identity.Contracts, Identity.Web). Invoke when the user asks to review/assess architecture, check for layering or boundary violations, or evaluate whether a project's structure makes sense. Not for designing a domain model (use ddd-modeler), line-level code quality (use code-reviewer), or security/performance concerns (use their dedicated agents).
+description: Use for reviewing layering, dependency direction, and structural cohesion of the projects under src/ — the framework projects (Shared, Infrastructure, Persistence, EventBusMassTransitRabbitMQ), the StarterKit.WebApi composition root and the Aspire projects (StarterKit.AppHost, StarterKit.ServiceDefaults), and the modules built on them (currently Identity, Identity.Contracts, Identity.Web, Notifications, Notifications.Contracts). Invoke when the user asks to review/assess architecture, check for layering or boundary violations, or evaluate whether a project's structure makes sense. Not for designing a domain model (use ddd-modeler), line-level code quality (use code-reviewer), or security/performance concerns (use their dedicated agents).
 tools: Glob, Grep, Read
 ---
 

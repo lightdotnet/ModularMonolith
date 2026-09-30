@@ -10,9 +10,9 @@ This file is the entry point for every Claude Code session in this repository. R
 
 ## 1. Repository Purpose
 
-This branch (`dev/core`) holds the **core of the StarterKit Modular Monolith template**: the reusable C#/.NET framework building blocks, one composition-root host (the only deployable) plus the .NET Aspire app host and service defaults that run it in local development, one reference business module (Identity), and the per-provider migrator apps, plus their tests. It contains no other business modules and no client apps — don't assume any exist; verify before describing structure.
+This branch (`dev/core`) holds the **core of the StarterKit Modular Monolith template**: the reusable C#/.NET framework building blocks, one composition-root host (the only deployable) plus the .NET Aspire app host and service defaults that run it in local development, two business modules (Identity — the reference module — and Notifications), and the per-provider migrator apps, plus their tests. It contains no other business modules and no client apps — don't assume any exist; verify before describing structure.
 
-- **One solution** — `StarterKit.slnx` at the repo root, targeting .NET 10 (`net10.0`), with solution folders `/src/_framework/`, `/src/_host/`, `/src/identity-module/`, `/src/_migrations/`, and `/tests/`.
+- **One solution** — `StarterKit.slnx` at the repo root, targeting .NET 10 (`net10.0`), with solution folders `/src/_framework/`, `/src/_host/`, `/src/identity-module/`, `/src/notifications-module/`, `/src/_migrations/`, and `/tests/`.
 - **Flat layout** — every project sits directly under `src/` (or `tests/`) (the migrators under `src/Migrations/`). Framework and module projects use a short folder name (`src/Shared`, `src/Identity`); the host-level projects in `/src/_host/` use their full `StarterKit.*` name as the folder name, Aspire-style (`src/StarterKit.WebApi`, `src/StarterKit.AppHost`, `src/StarterKit.ServiceDefaults`). Assembly/root namespaces carry the full name: `StarterKit.<Project>` for framework and host-level projects, `StarterKit.Modules.<Module>[.Contracts|.Web]` for module projects. The migrator assemblies keep their folder names.
 
 | Project | Assembly | Responsibility |
@@ -27,9 +27,11 @@ This branch (`dev/core`) holds the **core of the StarterKit Modular Monolith tem
 | `src/Identity` | `StarterKit.Modules.Identity` | Identity module implementation: ASP.NET Core Identity store, self-issued JWT/refresh/session/hub tokens, external login, Active Directory, user/role endpoints — see [Identity](docs/architecture/projects/Identity.md) |
 | `src/Identity.Contracts` | `StarterKit.Modules.Identity.Contracts` | Identity's cross-module seam: `IIdentityModuleApi`, `UserSummary`, integration events |
 | `src/Identity.Web` | `StarterKit.Modules.Identity.Web` | Identity's Razor Pages: login and the Microsoft external-login relay; co-hosted by `StarterKit.WebApi` or run standalone |
+| `src/Notifications` | `StarterKit.Modules.Notifications` | Notifications module implementation: notification storage, SignalR hub for real-time push, SMTP mail, welcome-mail consumer of Identity's `UserProvisionedIntegrationEvent` — see [Notifications](docs/architecture/projects/Notifications.md) |
+| `src/Notifications.Contracts` | `StarterKit.Modules.Notifications.Contracts` | Notifications' cross-module seam: `INotificationsModuleApi`, `IMailService`, system-notification DTOs, `NotificationHubOptions` |
 | `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | `MSSQL`, `PostgreSQL`, `Sqlite` | Per-provider EF Core migrations and migrate-and-seed console apps — see [migrations.md](docs/conventions/migrations.md) |
 
-- **Tests** — `tests/Framework.Tests` (framework projects) and `tests/Identity.Tests` (Identity module), both configured by `tests/ModuleTests.props`; layout and conventions are in [coding-conventions.md § Testing Conventions](docs/conventions/coding-conventions.md#testing-conventions).
+- **Tests** — `tests/Framework.Tests` (framework projects), `tests/Identity.Tests` (Identity module), and `tests/Notifications.Tests` (Notifications module), all configured by `tests/ModuleTests.props`; layout and conventions are in [coding-conventions.md § Testing Conventions](docs/conventions/coding-conventions.md#testing-conventions).
 - **Project references** — the one canonical diagram is [dependency-graph.md](docs/architecture/dependency-graph.md); layering and runtime flows are in [architecture.md](docs/architecture/architecture.md).
 
 Consequences:
@@ -78,7 +80,7 @@ Specialized agents live in [.claude/agents/](.claude/agents/). Prefer delegating
 | [code-reviewer](.claude/agents/code-reviewer.md) | General C# code quality review |
 | [security-reviewer](.claude/agents/security-reviewer.md) | Vulnerabilities, secrets, auth/authz building blocks, token issuance, unsafe defaults |
 | [performance-reviewer](.claude/agents/performance-reviewer.md) | Hot paths, allocations, async misuse, per-request framework overhead |
-| [testing-reviewer](.claude/agents/testing-reviewer.md) | Test coverage/quality of `tests/Framework.Tests` and `tests/Identity.Tests` |
+| [testing-reviewer](.claude/agents/testing-reviewer.md) | Test coverage/quality of `tests/Framework.Tests` and the module test projects (`tests/Identity.Tests`, `tests/Notifications.Tests`) |
 | [dependency-analyzer](.claude/agents/dependency-analyzer.md) | Project/package references, central versions, circular or direction-violating references |
 | [documentation-writer](.claude/agents/documentation-writer.md) | Generating/updating docs from code, on explicit request only |
 
@@ -99,7 +101,7 @@ Workflows live in [.claude/workflows/](.claude/workflows/) — see [.claude/WORK
 
 The short-form rules; the detail behind them is in [coding-conventions.md](docs/conventions/coding-conventions.md).
 
-- **Packages**: versions are set centrally in `Directory.Packages.props`; don't put `Version=` on a `PackageReference` in a project (the test projects via `tests/ModuleTests.props`, the migrators, and `StarterKit.ServiceDefaults` opt out — see [dependency-graph.md § Version Mismatches](docs/architecture/dependency-graph.md#version-mismatches)). Many building blocks derive from vendor `Lightsoft.*` packages (namespaces `Light.*`) — check the vendor base type before re-implementing behavior.
+- **Packages**: versions are set centrally in `Directory.Packages.props`; don't put `Version=` on a `PackageReference` in a project (the test projects via `tests/ModuleTests.props`, the migrators, `StarterKit.AppHost`, and `StarterKit.ServiceDefaults` opt out — see [dependency-graph.md § Version Mismatches](docs/architecture/dependency-graph.md#version-mismatches)). Many building blocks derive from vendor `Lightsoft.*` packages (namespaces `Light.*`) — check the vendor base type before re-implementing behavior.
 - **Errors**: expected failures return `Result`/`Result<T>`, not exceptions. Input/format validation (required, length, range) is FluentValidation; domain types enforce domain rules only.
 - **API responses**: controllers derive from the `Infrastructure/Endpoints` bases, and responses returned through the base `Ok<T>()` are auto-wrapped in the response envelope — never hand-wrap.
 - **DDD**: behavior and invariants live on the entity/aggregate, not in handlers; domain events derive from `Shared`'s `DomainEvent` and are dispatched through `Persistence`'s dispatch on save.
