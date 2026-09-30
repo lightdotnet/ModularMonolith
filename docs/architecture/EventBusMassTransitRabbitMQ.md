@@ -109,6 +109,7 @@ Package versions: `Directory.Packages.props`. Full reference graph: [dependency-
 | Project | Why |
 |---|---|
 | `Host` | Calls `AddEventBus` once with its module assembly list — see [Host](Host.md) |
+| `Identity.Web` | Its standalone host calls `AddEventBus` with no assemblies so `IdentityDbContext` resolves — see [Identity](Identity.md) |
 | `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | Call `AddEventBus` with no assemblies; their configuration has no `RabbitMQ` section, so they get `NoOpEventBus` |
 | `tests/Framework.Tests` | Unit tests of the registration, the no-op bus, the settings binding, and the consumer-definition policy |
 

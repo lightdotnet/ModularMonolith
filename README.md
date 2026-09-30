@@ -126,13 +126,7 @@ Package versions are managed centrally in [Directory.Packages.props](Directory.P
 ```bash
 dotnet build StarterKit.slnx
 dotnet run --project src/Host/Host.csproj
-```
-
-`dotnet test` fails on the .NET 10 SDK; after building, run each test project's executable directly:
-
-```bash
-tests/Framework.Tests/bin/Debug/net10.0/Framework.Tests.exe
-tests/Identity.Tests/bin/Debug/net10.0/Identity.Tests.exe
+dotnet test --solution StarterKit.slnx
 ```
 
 Database provider and schema setup, configuration, test filters, and migrations: [docs/conventions/development-guide.md](docs/conventions/development-guide.md).

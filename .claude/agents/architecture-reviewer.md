@@ -8,7 +8,7 @@ tools: Glob, Grep, Read
 
 ## Responsibilities
 
-- Verify dependency direction using actual `<ProjectReference>` entries against the rules in root `CLAUDE.md` §1: framework projects reference only `Shared`, and `Shared` references no other project in the solution; a `<Module>.Contracts` project references only `Shared`; a module reaches another module only through its `.Contracts`; outside a module's own projects and tests, only `Host` references its implementation or `.Web` project. Flag anything that inverts or tangles this.
+- Verify dependency direction using actual `<ProjectReference>` entries against the rules in root `CLAUDE.md` §1: framework projects reference only `Shared`, and `Shared` references no other project in the solution; a `<Module>.Contracts` project references only `Shared`; a module reaches another module only through its `.Contracts`; outside a module's own projects and tests, only the composition roots (`Host` and the migrators) reference its implementation, and only `Host` references its `.Web` project. Flag anything that inverts or tangles this.
 - Evaluate whether `Shared` (the shared kernel) stays a small set of genuinely cross-cutting building blocks rather than a dumping ground — anything specific to one business capability belongs in that module, not the framework.
 - Flag framework code that assumes a specific business module exists, or that would force modules to reach into each other instead of going through a module's `<Module>.Contracts` seam.
 - Check folder-to-namespace alignment inside each project (`StarterKit.<Project>.<Folder>` for framework projects and the host, `StarterKit.Modules.<Module>[.Contracts|.Web].<Folder>` for module projects).

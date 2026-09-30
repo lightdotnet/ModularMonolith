@@ -30,15 +30,14 @@ An existing developer database that no longer matches the current migration ids 
 
 ## Running Tests
 
-On the .NET 10 SDK `dotnet test` fails ("Testing with VSTest target is no longer supported by Microsoft.Testing.Platform"). Build, then run each test project's executable directly:
+The root `global.json` selects the Microsoft.Testing.Platform runner for `dotnet test` (required on the .NET 10 SDK):
 
 ```
-dotnet build StarterKit.slnx
-tests/Framework.Tests/bin/Debug/net10.0/Framework.Tests.exe
-tests/Identity.Tests/bin/Debug/net10.0/Identity.Tests.exe
+dotnet test --solution StarterKit.slnx
+dotnet test --project tests/Identity.Tests/Identity.Tests.csproj
 ```
 
-Narrow a run with `-class <FullyQualifiedClassName>` or `-method <FullyQualifiedMethodName>`.
+Narrow a run by passing runner options after `--`, e.g. `-- --filter-class <FullyQualifiedClassName>` or `-- --filter-method <FullyQualifiedMethodName>`; a built test project's executable (`tests/<Project>/bin/Debug/net10.0/<Project>.exe`) accepts the same options directly.
 
 No external database or service is needed. Test conventions and coverage: [coding-conventions.md § Testing Conventions](coding-conventions.md#testing-conventions).
 

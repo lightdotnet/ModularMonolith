@@ -35,7 +35,7 @@ Consequences:
 - Every public type/member in a framework project is a contract for every module built on it — a change to it is potentially breaking. The same holds for a module's `.Contracts` project toward the modules that consume it.
 - Dependency direction is fixed:
   - Framework: `Infrastructure → Shared`, `Persistence → Shared`, `EventBusMassTransitRabbitMQ → Shared`; `Shared` references no solution project; no framework project references a module, the host, or a migrator.
-  - Modules: a `<Module>.Contracts` project references only `Shared`; a module's implementation references its own `.Contracts` plus framework projects, and other modules only through their `.Contracts`; a module's `.Web` project references its own module. No module references `Host` or a migrator.
+  - Modules: a `<Module>.Contracts` project references only `Shared`; a module's implementation references its own `.Contracts` plus framework projects, and other modules only through their `.Contracts`; a module's `.Web` project references its own module plus framework projects. No module references `Host` or a migrator.
   - Outside a module's own projects and its test project, only the composition roots reference a module's implementation — `Host` and the migrators under `src/Migrations/` — and only `Host` references a module's `.Web` project.
 - Modules talk to each other only through a `<Module>.Contracts` seam, a domain event, an integration event, or a denormalized snapshot — the framework must not force anything else.
 - Keep the framework small: a building block belongs in a framework project only if it is genuinely reused across modules; anything specific to one module stays in that module.

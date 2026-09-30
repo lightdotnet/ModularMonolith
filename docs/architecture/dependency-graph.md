@@ -27,6 +27,7 @@ graph TD
     Host --> Pers
     IdW --> Id
     IdW --> Infra
+    IdW --> Bus
     Id --> IdC
     Id --> Infra
     Id --> Pers
@@ -80,7 +81,7 @@ None found:
 
 - `Shared` references no solution project; framework projects reference only `Shared`.
 - `Identity.Contracts` references only `Shared`.
-- `Identity` references its own `.Contracts` and framework projects only; `Identity.Web` references its own module (intra-module) and `Infrastructure`.
+- `Identity` references its own `.Contracts` and framework projects only; `Identity.Web` references its own module (intra-module), `Infrastructure`, and `EventBusMassTransitRabbitMQ` (its standalone host registers the bus).
 - Nothing references `Host` or a migration project. Outside the Identity module and its tests, `Host` references `Identity` and `Identity.Web`, and the migration projects reference `Identity` — both are composition roots, not modules.
 
 ## Notes
