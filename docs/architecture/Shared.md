@@ -104,7 +104,7 @@ No project reference. Package versions: `Directory.Packages.props`. Full referen
 
 - Registration follows the `static class DependencyInjection` convention (`Authorization/DependencyInjection`).
 - The authorization handler and policy provider are `internal`; modules use only the registration methods and `ICurrentUser`.
-- `InternalsVisibleTo` grants `Framework.Tests`, and also `StarterKit.Catalog.Api` and `StarterKit.Orders.Api`, which are not part of this solution.
+- `InternalsVisibleTo` grants only `Framework.Tests`.
 
 ## Notes
 

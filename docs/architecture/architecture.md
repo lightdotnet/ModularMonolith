@@ -27,8 +27,8 @@ The host builds one pipeline for the JSON API and the Identity Razor Pages ([Hos
 
 1. HTTPS redirection — outside `Development` only.
 2. Trace id — sets `HttpContext.TraceIdentifier` to a GUID v7; it becomes the `RequestId` of every response envelope and error body.
-3. Request logging — when `RequestLogging:Enable` is set.
-4. Exception handler — the vendor middleware turns an exception into the error envelope described below.
+3. Exception handler — the vendor middleware turns an exception into the error envelope described below.
+4. Request logging — when `RequestLogging:Enable` is set; it runs inside the exception handler, so a failed request is logged before the handler writes the error envelope.
 5. Static files, routing, CORS (`AllowCors`), rate limiter, authentication, authorization, Swagger.
 6. Module middleware (`AppModule.Use`), then WebSockets.
 
@@ -90,7 +90,7 @@ Integration events derive from `Shared`'s `IntegrationEvent` and are published t
 |---|---|---|
 | joins the host | an `AppModule` (and optionally an `AppModuleEndpoint`) in an assembly on the host's scan list | [Infrastructure](Infrastructure.md) |
 | exposes an API | controllers on `VersionedApiController` / `ApiControllerBase`, returning through `Ok(...)` | [Infrastructure](Infrastructure.md) |
-| persists data | its own context via `AddConfiguredDbContext`, optionally on `BaseDbContext`, calling `AuditEntries` and `DispatchDomainEvents` on save; migrations in each migrator project | [Persistence](Persistence.md), [migrations.md](../conventions/migrations.md) |
+| persists data | its own context via `AddConfiguredDbContext`, optionally on `BaseDbContext`, calling `AuditEntries` and `DispatchDomainEvents` on save; migrations in each migrator project, whose `AddMigrationsServices` call includes the module assembly | [Persistence](Persistence.md), [migrations.md](../conventions/migrations.md) |
 | models its domain | `AuditableEntity`, `DomainEvent`, value objects | [Shared](Shared.md) |
 | protects endpoints | permission policies plus an `IPermissionDefinitionProvider` for its catalog | [Shared](Shared.md) |
 | talks to other modules | its `.Contracts` seam, or integration events through `IEventBus` and the consumer bases | [EventBusMassTransitRabbitMQ](EventBusMassTransitRabbitMQ.md), [Identity](Identity.md) |
@@ -101,10 +101,7 @@ Integration events derive from `Shared`'s `IntegrationEvent` and are published t
 |---|---|---|
 | No transactional outbox for integration events | Medium | Accepted: a publish failure after commit loses that save's events; versioned full-state events let a later event supersede a lost one. See [Identity § Design Notes](Identity.md#design-notes) |
 | Hard-coded super user | Medium | `super` bypasses every permission check; the list is code, not configuration — see [Shared § Design Notes](Shared.md#design-notes) |
-| Sensitive-data logging always on for PostgreSQL | Medium | `AddConfiguredDbContext` enables it regardless of environment — see [Persistence § Design Notes](Persistence.md#design-notes) |
-| Request logging registered before the exception handler | Low | The vendor request-logging middleware documents that the exception handler should be registered before it; the host registers it after |
 | Save path wired per context | Low | `BaseDbContext` does not audit or dispatch; each module context must call the helpers itself, and none derives from `BaseDbContext` today |
-| References to modules outside this solution | Low | `Shared`'s `InternalsVisibleTo` grants, `DbConnectionNames`, and some XML-doc references name modules that do not exist in this solution |
 
 ## Notes
 
