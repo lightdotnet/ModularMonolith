@@ -19,6 +19,10 @@ StarterKit.slnx
 │   ├── src/Identity.Contracts              (the module's cross-module seam)
 │   ├── src/Identity                        (module implementation — JSON API, token issuance, persistence)
 │   └── src/Identity.Web                    (Razor Pages login and Microsoft login relay — co-hosted or standalone)
+├── /src/_migrations/
+│   ├── src/Migrations/MSSQL                (EF migrations + migrate-and-seed console app, SQL Server)
+│   ├── src/Migrations/PostgreSQL           (same, PostgreSQL)
+│   └── src/Migrations/Sqlite               (same, Sqlite)
 └── /tests/
     ├── tests/Framework.Tests               (framework projects)
     └── tests/Identity.Tests                (Identity module)
@@ -32,6 +36,7 @@ Other modules reach a module only through its `<Module>.Contracts` seam. `Identi
 graph TD
     Client["Separate-origin client"]
     Host["src/Host<br/>composition root"]
+    Migrators["src/Migrations/*<br/>migrate + seed"]
 
     subgraph IdentityModule["Identity module"]
         IdW["Identity.Web<br/>Razor Pages"]
@@ -49,6 +54,8 @@ graph TD
     Client -. HTTP/JSON .-> Host
     Host --> IdentityModule
     Host --> Framework
+    Migrators --> IdentityModule
+    Migrators --> Framework
     IdW --> Id
     Id --> IdC
     IdentityModule --> Infra & Persistence
@@ -121,21 +128,20 @@ dotnet build StarterKit.slnx
 dotnet run --project src/Host/Host.csproj
 ```
 
-In the `Development` environment the host uses the `InMemory` database provider and the event bus is disabled, so it runs with no database server or message broker. For other environments configure `DbProvider`, the connection strings, and the `Jwt` section in `src/Host/appsettings.json` — see [Host § Configuration](docs/architecture/Host.md#configuration).
-
-On the .NET 10 SDK `dotnet test` fails ("Testing with VSTest target is no longer supported by Microsoft.Testing.Platform"). Build, then run each test project's executable directly:
+`dotnet test` fails on the .NET 10 SDK; after building, run each test project's executable directly:
 
 ```bash
 tests/Framework.Tests/bin/Debug/net10.0/Framework.Tests.exe
 tests/Identity.Tests/bin/Debug/net10.0/Identity.Tests.exe
 ```
 
-Filters: `-class <FQN>` / `-method <FQN>`. Tests need no database server or message broker.
+Database provider and schema setup, configuration, test filters, and migrations: [docs/conventions/development-guide.md](docs/conventions/development-guide.md).
 
 ## Documentation
 
 - [CLAUDE.md](CLAUDE.md) — repository-wide entry point (project map, dependency direction, framework conventions, AI operating rules).
 - [docs/](docs/) — generated project documentation.
+- [docs/conventions/](docs/conventions/) — coding conventions, development guide, migrations, and local Docker infrastructure.
 - [.claude/](.claude/) — reusable Claude development infrastructure (agents, skills, workflows), not project documentation.
 
 ## License
