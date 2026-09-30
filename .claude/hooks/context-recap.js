@@ -1,12 +1,21 @@
 #!/usr/bin/env node
 // Re-grounds Claude in real repo state after a compaction or a resumed session,
 // when prior conversation turns have just been summarized away.
-// Invoked by .claude/settings.json (PostCompact, SessionStart[resume]) as:
-//   node .claude/hooks/context-recap.js <hookEventName>
+// Invoked by .claude/settings.json as a SessionStart hook (matcher "resume|compact"):
+//   node .claude/hooks/context-recap.js [source]
+// The session source is read from the hook's stdin JSON (`source`), falling back to
+// the optional argv[2]; the emitted hookEventName is always "SessionStart".
 
 const { execSync } = require("child_process");
 
-const hookEventName = process.argv[2] || "PostCompact";
+function readStdin() {
+  try {
+    const raw = require("fs").readFileSync(0, "utf8");
+    return raw.trim() ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
 
 function run(cmd) {
   try {
@@ -16,8 +25,12 @@ function run(cmd) {
   }
 }
 
+const input = readStdin();
+const source = (input && input.source) || process.argv[2] || "";
+const verbs = { compact: "compacted", resume: "resumed" };
+const verb = verbs[source] || "resumed or compacted";
+
 const status = run("git status --short -b");
-const verb = hookEventName === "SessionStart" ? "resumed" : "compacted";
 
 const lines = [
   `Context was just ${verb}. Re-grounding in actual repo state (not a prior summary):`,
@@ -35,7 +48,7 @@ const lines = [
 console.log(
   JSON.stringify({
     hookSpecificOutput: {
-      hookEventName,
+      hookEventName: "SessionStart",
       additionalContext: lines.join("\n"),
     },
   })

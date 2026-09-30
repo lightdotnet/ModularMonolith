@@ -62,7 +62,7 @@ Ask Claude: *"Run a ROT review of `.claude/` per ROT.md"* (optionally scoped). E
 - [ ] `WORKFLOWS.md` index matches the actual files in `workflows/`.
 - [ ] No workflow merely restates a skill (Redundant) — the skill owns the procedure.
 
-### Doc templates (`docs/templates/*.md`)
+### Doc templates (`.claude/docs/templates/*.md`)
 
 - [ ] Every template is used by at least one skill/agent/workflow, and its "Used by" header is accurate.
 - [ ] `Output location` comments match the root `docs/{architecture,conventions}/` layout.
@@ -83,6 +83,7 @@ Ask Claude: *"Run a ROT review of `.claude/` per ROT.md"* (optionally scoped). E
 | Date | Scope | Reviewer | R/O/T found | Actions taken |
 |---|---|---|---|---|
 | 2026-09-29 | Full `.claude/` + root `CLAUDE.md` + `README.md`, for the `dev/core` branch (framework projects + `tests/Framework.Tests` only; no modules, hosts, or clients) | Claude + user | Trivial: every agent/skill/workflow/template whose purpose was client apps, the MVC host, API-contract drift, full-stack features, business-module analysis/splitting, or project scaffolding. Outdated: remaining files pointed at `clients/`, module docs, `src/CLAUDE.md`/`src/docs/` content, and module-specific conventions absent here. Redundant: the analyze-solution workflow restated its skill. | Deleted the Trivial/Redundant files; rewrote the remaining agents, skills, workflows, templates, and core docs for the framework layer; inlined the essential conventions into root `CLAUDE.md` § Framework Conventions; reset this log to a `dev/core` baseline (earlier history lives in git on `main`). |
+| 2026-09-30 | Event-based (projects added: Host, Identity/.Contracts/.Web, migrators, Identity.Tests; docs moved to root `docs/`): full `.claude/` + root `CLAUDE.md`/`README.md` | Claude + user | Outdated: `context-recap.js` emitted `hookSpecificOutput` for `PostCompact` (rejected by Claude Code); framework-only scope wording in several agents/skills; nonexistent `tests/<Project>.Tests` path; missing migrator package-version opt-out; `overview.md`/`database.md` template targets; WORKFLOWS.md footer. Redundant: dependency-direction rules restated in agents; AI_CONTEXT safety rules; sync-docs skill restating its workflow. Trivial: `solution-overview`/`database` templates; stale `settings.local.json` entries. | Moved the recap hook to `SessionStart[resume\|compact]`; widened agent/skill scopes to host and modules; replaced restated rules with links to `CLAUDE.md` §1; deleted the two unused templates; thinned `sync-docs`; documented the migrator package opt-out; fixed the test-runner wording in coding-conventions/README; pruned `settings.local.json`. |
 
 _This file is itself subject to ROT review — if the schedule or checklist stops matching how the project works, update it during a review rather than letting it drift._
 

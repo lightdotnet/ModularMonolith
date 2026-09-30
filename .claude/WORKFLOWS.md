@@ -25,3 +25,6 @@ This file indexes the workflows in [workflows/](workflows/). Workflows are step-
 - **Workflows** orchestrate a request end-to-end (may invoke multiple skills/agents in sequence).
 - **Skills** ([skills/](skills/)) are focused, reusable playbooks for one kind of task.
 - **Agents** ([agents/](agents/)) are specialized designers, an implementer, reviewers, and analysts invoked by workflows or skills — the design/review ones keep deep investigation out of the main context; `dotnet-developer` makes the code changes once a plan is approved.
+
+---
+_Last synced: 2026-09-30_

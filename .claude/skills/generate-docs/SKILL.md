@@ -12,7 +12,7 @@ Produce new documentation for a specific project or the solution that doesn't ye
 ## Inputs
 
 - The target scope (the solution or one project).
-- Which doc type is wanted (solution overview, project overview, architecture, database, domain model, coding conventions, dependency graph, development guide) — see [docs/templates/](../../docs/templates/).
+- Which doc type is wanted (project overview, architecture, domain model, coding conventions, dependency graph, development guide) — see [.claude/docs/templates/](../../docs/templates/).
 
 ## Workflow
 
@@ -20,7 +20,7 @@ Produce new documentation for a specific project or the solution that doesn't ye
 2. **Read the template**: load the matching file from `.claude/docs/templates/` for structure.
 3. **Delegate**: invoke [documentation-writer](../../agents/documentation-writer.md) with the scope and template.
 4. **Verify facts**: every claim must trace to actual code inspected for this scope — mark anything unverifiable as `unknown` rather than guessing.
-5. **Write output**: place the result as a flat file under the root `docs/architecture/<doc-type>.md` (overview, architecture, database, dependency-graph, per-project overviews) or `docs/conventions/<doc-type>.md` (coding-conventions, development-guide).
+5. **Write output**: place the result as a flat file under the root `docs/architecture/<doc-type>.md` (architecture, dependency-graph, per-project overviews) or `docs/conventions/<doc-type>.md` (coding-conventions, development-guide).
 6. **Report**: summarize what was generated and flag any gaps found.
 
 ## Expected Outputs

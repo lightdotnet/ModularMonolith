@@ -52,30 +52,24 @@ See `CLAUDE.md` §2.9. This is the standard lifecycle for any request that adds 
 1. **Plan → present → wait.** Write the plan, show it to the user, and stop. Do not edit production code before the user has explicitly said to proceed, even for changes that feel small.
 2. **Implement using the normal toolbox.** Once approved, delegate as `CLAUDE.md` §4–§6 describe — the code changes themselves go to `dotnet-developer`.
 3. **Present the result → wait again.** When the change is done, hand it back for review. Don't chain into running tests or updating docs.
-4. **Tests and docs are separate, explicit asks.** Running the test suite and updating documentation each need their own follow-up instruction, even if the approved plan mentioned them — writing test *code* can be part of implementation if the plan called for it; *executing* the suite is a separate step. How the suite is run is in `README.md` § Getting Started.
+4. **Tests and docs are separate, explicit asks.** Running the test suite and updating documentation each need their own follow-up instruction, even if the approved plan mentioned them — writing test *code* can be part of implementation if the plan called for it; *executing* the suite is a separate step. How the suite is run is in [development-guide.md § Running Tests](../docs/conventions/development-guide.md#running-tests).
 5. **Basic build sanity is not "running tests."** Confirming the code compiles as you go is expected.
 
 ## Documentation Discipline
 
 - Never regenerate or rewrite root `CLAUDE.md`, `README.md`, or `docs/**` as a side effect of an unrelated task.
 - When a sync is requested, follow [workflows/sync-documentation.md](workflows/sync-documentation.md).
-- Templates in `docs/templates/` are structural skeletons — copy their structure into outputs; don't edit the templates during normal doc generation.
+- Templates in `.claude/docs/templates/` are structural skeletons — copy their structure into outputs; don't edit the templates during normal doc generation.
 
 ## Automatic Context Recap (Hooks)
 
-Unlike everything else in `.claude/` (pull-based — invoked on request), two hooks registered in [`settings.json`](settings.json) run automatically, at the two points a session's context is most likely to drift:
-
-- **`PostCompact`** — after every conversation compaction (auto or manual), runs [`hooks/context-recap.js`](hooks/context-recap.js), which injects the actual `git status --short -b` output plus a condensed reminder of the operating rules most likely to get lost in a summary (the code-change workflow gate, scoped reading, delegation defaults).
-- **`SessionStart`** (matcher `resume`) — the same recap when a previous session is resumed, since repo state may have changed.
+Unlike everything else in `.claude/` (pull-based — invoked on request), one `SessionStart` hook registered in [`settings.json`](settings.json) runs automatically, with matchers `resume` and `compact` — the two points a session's context is most likely to drift: a resumed session (repo state may have changed) and a conversation compaction (auto or manual). It runs [`hooks/context-recap.js`](hooks/context-recap.js), which injects the actual `git status --short -b` output plus a condensed reminder of the operating rules most likely to get lost in a summary (the code-change workflow gate, scoped reading, delegation defaults).
 
 A cold `startup` doesn't need this: root `CLAUDE.md` loads fresh in that case.
 
 ## Framework Safety Rules
 
-- Treat every public type/member in the framework projects under `src/` (`Shared`, `Infrastructure`, `Persistence`, `EventBusMassTransitRabbitMQ`) as a contract: every module built on the framework depends on it. A change to it is potentially breaking — flag it and confirm first (see `CLAUDE.md` §2.7).
-- `Shared` is the highest-risk project — every other framework project and every module depend on it.
-- A module's `.Contracts` project (`Identity.Contracts`) is the contract other modules build against — its public types, including integration-event shapes, get the same confirm-first treatment.
-- Changes to central build files (`Directory.Build.props`, `Directory.Packages.props`, `tests/ModuleTests.props`) affect every project — confirm first.
+Public framework API, a module's `.Contracts`, and the central build files are contracts — see root `CLAUDE.md` §1 Consequences and §2.7 (confirm before changing them).
 
 ---
 _Last synced: 2026-09-30_

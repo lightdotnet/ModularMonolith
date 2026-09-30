@@ -26,7 +26,7 @@ tools: Glob, Grep, Read
 
 - `src/Shared/Entities/`, `src/Shared/ValueObjects/`, and the vendor base types they derive from — how state changes are exposed (methods vs. public setters).
 - `src/Persistence` domain-event dispatch and audit handling, to confirm the model's events and audit fields are actually honored on save.
-- The matching tests under `tests/Framework.Tests/Shared/`.
+- The matching tests: `tests/Framework.Tests/Shared/` for the building blocks, a module's domain tests (e.g. `tests/Identity.Tests/Domain/`) for a module's model.
 
 ## Expected Output
 

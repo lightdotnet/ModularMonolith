@@ -1,13 +1,13 @@
 ---
 name: review-architecture
-description: Playbook for reviewing layering, dependency direction, and cohesion of the framework projects (or the whole solution) using architecture-reviewer.
+description: Playbook for reviewing layering, dependency direction, and cohesion of the framework, host, and module projects under src/ (or the whole solution) using architecture-reviewer.
 ---
 
 # Skill: Review Architecture
 
 ## Purpose
 
-Assess the structural health of one framework project or the whole solution — layering, dependency direction, shared-kernel cohesion — without assuming structure that hasn't been verified.
+Assess the structural health of one project under `src/` (framework, host, or module) or the whole solution — layering, dependency direction, shared-kernel cohesion, module boundaries — without assuming structure that hasn't been verified.
 
 ## Inputs
 

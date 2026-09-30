@@ -1,6 +1,6 @@
 ---
 name: performance-reviewer
-description: Use for performance review of the C# framework code in src/ — hot-path analysis, allocation pressure, async/await misuse, blocking calls, caching, and per-request overhead the framework adds to every module (pipeline behaviours, DbContext hooks, middleware). Invoke for "review performance," "why is this slow," or "reduce allocations in X." For EF Core query-specific performance prefer efcore-specialist.
+description: Use for performance review of the C# code in src/ — the framework, host, and module projects — hot-path analysis, allocation pressure, async/await misuse, blocking calls, caching, and per-request overhead the framework adds to every module (pipeline behaviours, DbContext hooks, middleware). Invoke for "review performance," "why is this slow," or "reduce allocations in X." For EF Core query-specific performance prefer efcore-specialist.
 tools: Glob, Grep, Read, Bash
 ---
 
@@ -8,9 +8,9 @@ tools: Glob, Grep, Read, Bash
 
 ## Responsibilities
 
-- Identify allocation-heavy patterns (boxing, unnecessary LINQ over hot paths, excessive string concatenation, reflection on every call) in scoped code.
+- Identify allocation-heavy patterns (boxing, unnecessary LINQ over hot paths, excessive string concatenation, reflection on every call) in scoped code — framework, host, or module projects under `src/`.
 - Identify async misuse: sync-over-async (`.Result`/`.Wait()`), unnecessary `Task.Run` wrapping, missed cancellation-token propagation.
-- Pay particular attention to per-request framework code — mediator pipeline behaviours, `SaveChanges` hooks (audit, domain-event dispatch), authorization handlers, caching — since its cost is multiplied across every module and endpoint.
+- Pay particular attention to per-request framework code — mediator pipeline behaviours, `SaveChanges` hooks (audit, domain-event dispatch), authorization handlers, caching — since its cost is multiplied across every module and endpoint; and to the host's request pipeline and a module's hot endpoints (e.g. Identity's token issuance).
 - Weigh recommendations against real usage rather than defensive worst-case assumptions — avoid micro-optimization that hurts readability without a demonstrated need.
 
 ## When to Use

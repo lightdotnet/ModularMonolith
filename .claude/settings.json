@@ -1,26 +1,14 @@
 {
   "hooks": {
-    "PostCompact": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node .claude/hooks/context-recap.js PostCompact",
-            "timeout": 15,
-            "statusMessage": "Re-grounding context after compaction..."
-          }
-        ]
-      }
-    ],
     "SessionStart": [
       {
-        "matcher": "resume",
+        "matcher": "resume|compact",
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/context-recap.js SessionStart",
+            "command": "node .claude/hooks/context-recap.js",
             "timeout": 15,
-            "statusMessage": "Re-grounding context after resume..."
+            "statusMessage": "Re-grounding context after resume/compaction..."
           }
         ]
       }

@@ -7,7 +7,7 @@ description: Playbook for reviewing or improving test coverage and quality of th
 
 ## Purpose
 
-Assess and improve test coverage/quality for specific framework code, focused on behaviorally meaningful gaps rather than raw coverage percentage.
+Assess and improve test coverage/quality for specific framework, host, or module code under `src/`, focused on behaviorally meaningful gaps rather than raw coverage percentage.
 
 ## Inputs
 

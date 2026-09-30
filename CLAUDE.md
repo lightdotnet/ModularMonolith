@@ -96,7 +96,7 @@ Workflows live in [.claude/workflows/](.claude/workflows/) — see [.claude/WORK
 
 The short-form rules; the detail behind them is in [coding-conventions.md](docs/conventions/coding-conventions.md).
 
-- **Packages**: versions are set centrally in `Directory.Packages.props`; don't put `Version=` on a `PackageReference` in a project. Many building blocks derive from vendor `Lightsoft.*` packages (namespaces `Light.*`) — check the vendor base type before re-implementing behavior.
+- **Packages**: versions are set centrally in `Directory.Packages.props`; don't put `Version=` on a `PackageReference` in a project (the test projects via `tests/ModuleTests.props` and the migrators opt out — see [dependency-graph.md § Version Mismatches](docs/architecture/dependency-graph.md#version-mismatches)). Many building blocks derive from vendor `Lightsoft.*` packages (namespaces `Light.*`) — check the vendor base type before re-implementing behavior.
 - **Errors**: expected failures return `Result`/`Result<T>`, not exceptions. Input/format validation (required, length, range) is FluentValidation; domain types enforce domain rules only.
 - **API responses**: controllers derive from the `Infrastructure/Endpoints` bases, and responses returned through the base `Ok<T>()` are auto-wrapped in the response envelope — never hand-wrap.
 - **DDD**: behavior and invariants live on the entity/aggregate, not in handlers; domain events derive from `Shared`'s `DomainEvent` and are dispatched through `Persistence`'s dispatch on save.

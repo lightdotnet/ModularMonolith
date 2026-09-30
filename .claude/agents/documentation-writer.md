@@ -1,6 +1,6 @@
 ---
 name: documentation-writer
-description: Use for generating or updating documentation from the current codebase — solution/project overviews, architecture, database, conventions, and dependency-graph docs for the solution's projects (framework, host, modules) — under the root docs/ folder. Invoke only as part of an explicit generate-docs or sync-docs request; never proactively. Preserves manually-authored content and removes stale generated content during sync.
+description: Use for generating or updating documentation from the current codebase — project overviews, architecture, domain-model, conventions, and dependency-graph docs for the solution's projects (framework, host, modules) — under the root docs/ folder. Invoke only as part of an explicit generate-docs or sync-docs request; never proactively. Preserves manually-authored content and removes stale generated content during sync.
 tools: Glob, Grep, Read, Write, Edit
 ---
 

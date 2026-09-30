@@ -29,7 +29,7 @@ The short-form framework rules (packages, errors, API responses, DDD, events, DI
 
 ## Testing Conventions
 
-- Framework: xUnit v3 + Moq on Microsoft.Testing.Platform, pinned by `tests/ModuleTests.props`. On the .NET 10 SDK tests run through the built test executable, not `dotnet test` — see [development-guide.md § Running Tests](development-guide.md#running-tests).
+- Framework: xUnit v3 + Moq, pinned by `tests/ModuleTests.props`; how to run them: [development-guide.md § Running Tests](development-guide.md#running-tests).
 - Coverage: `tests/Framework.Tests` covers the framework projects; each module has one `tests/<Module>.Tests` project (`tests/Identity.Tests`).
 - Layout: a test project mirrors its source projects' folder structure — `tests/Framework.Tests/<ProjectName>/...` for the framework projects and `tests/<Module>.Tests/<Area>/...` for a module; `tests/Identity.Tests` adds a `TestSupport/` folder for shared test infrastructure.
 - Naming: `<TypeUnderTest>Tests` classes; `MethodOrMember_ShouldExpectedBehavior_WhenCondition` methods; `// Arrange`/`// Act`/`// Assert` comments.

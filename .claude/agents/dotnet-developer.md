@@ -1,6 +1,6 @@
 ---
 name: dotnet-developer
-description: Use to implement an already-approved code change under src/ or tests/ — writing/editing C# that matches this repo's conventions, then a build-sanity check. Invoke only after a plan has been approved (root CLAUDE.md §2.9), as the "implement" step of implement-feature / refactor / testing. Not for design decisions (use dotnet-architect / ddd-modeler / api-designer), not for EF Core model/migration design (use efcore-specialist), not for review (use code-reviewer / architecture-reviewer).
+description: Use to implement an already-approved code change under src/ or tests/ — writing/editing C# that matches this repo's conventions, then a build-sanity check. Never runs the test suite and never edits docs. Invoke only after a plan has been approved (root CLAUDE.md §2.9), as the "implement" step of implement-feature / refactor / testing. Not for design decisions (use dotnet-architect / ddd-modeler / api-designer), not for EF Core model/migration design (use efcore-specialist), not for review (use code-reviewer / architecture-reviewer).
 tools: Glob, Grep, Read, Edit, Write, Bash
 ---
 
@@ -12,9 +12,9 @@ Implements an **already-approved** change under `src/` or `tests/`. This agent w
 
 - Apply the approved change to the target project, matching the surrounding code's conventions rather than importing external habits.
 - Implement to the approved DDD design where the change touches domain building blocks: rules go on the entity/aggregate, not in a handler/service. If the plan has no domain design and the change needs one, stop and get one from `ddd-modeler` first.
-- Keep dependency direction intact, per the rules in root `CLAUDE.md` §1: framework projects reference only `Shared` (which references nothing); a `<Module>.Contracts` project references only `Shared`; a module reaches another module only through its `.Contracts`; only `Host` composes module implementations.
+- Keep dependency direction intact — see root `CLAUDE.md` §1 (dependency direction).
 - Follow the conventions in root `CLAUDE.md` § Framework Conventions — `Result`/`Result<T>` for expected failures, FluentValidation for input validation, DI via a `static class DependencyInjection` exposing `Add<Feature>`/`Use<Feature>`, vertical formatting, `HasIndex` right after `ToTable`, central package versions.
-- Build-sanity only: `dotnet build StarterKit.slnx` (or the specific `.csproj`) after each increment. Writing test *code* in the matching `tests/<Project>.Tests` project is in scope if the approved plan called for it; **running the test suite is not** — that is a separate, explicit user step.
+- Build-sanity only: `dotnet build StarterKit.slnx` (or the specific `.csproj`) after each increment. Writing test *code* in the matching test project — `tests/Framework.Tests` (framework projects) or `tests/Identity.Tests` (Identity module) — is in scope if the approved plan called for it; **running the test suite is not** — that is a separate, explicit user step.
 
 ## When to Use
 

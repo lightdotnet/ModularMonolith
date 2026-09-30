@@ -11,7 +11,7 @@ tools: Glob, Grep, Read, Bash
 - Build and report the actual dependency graph for the scoped area — project-to-project and NuGet references — never assume it from folder layout.
 - Identify circular references, unused references, and version mismatches (e.g. a `Version=` override in a `.csproj` or props file bypassing central package management).
 - Answer "what depends on X" / "what does X depend on" precisely, based on `.csproj`/`.slnx`/`Directory.Packages.props` contents.
-- Flag direction violations against the rules in root `CLAUDE.md` §1: `Shared` must not reference any solution project; framework projects must not reference a module or `Host`; a `<Module>.Contracts` project references only `Shared`; a module must not reference another module's implementation (only its `.Contracts`); nothing references `Host`.
+- Flag direction violations against root `CLAUDE.md` §1 (dependency direction) — in short: `Shared` references nothing, framework never references modules/host/migrators, modules meet only through `.Contracts`.
 
 ## When to Use
 
@@ -23,7 +23,7 @@ tools: Glob, Grep, Read, Bash
 
 - `.csproj` files for `<ProjectReference>` and `<PackageReference>` entries in scope.
 - `StarterKit.slnx` for which projects are actually included.
-- `Directory.Packages.props`/`Directory.Build.props` for central version management, and `tests/ModuleTests.props` for test-project packages (which opt out of central management).
+- `Directory.Packages.props`/`Directory.Build.props` for central version management. Two known opt-outs (`ManagePackageVersionsCentrally=false`): `tests/ModuleTests.props` for the test projects, and the three migrators under `src/Migrations/{MSSQL,PostgreSQL,Sqlite}`, which set `Version="$(AspnetVersion)"` on each `PackageReference`.
 
 ## Expected Output
 

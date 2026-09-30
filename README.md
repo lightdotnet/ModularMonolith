@@ -117,7 +117,7 @@ Access tokens are renewed through `POST api/v1/auth/token/refresh`. The client's
 | Messaging | MassTransit over RabbitMQ for integration events; a no-op bus when disabled |
 | Vendor framework | `Lightsoft.*` package family (mediator, `Result`/`Paged` contracts, domain base types, ASP.NET Core authorization/modularity helpers, caching, Serilog, event bus, Active Directory) |
 | Validation / mapping | FluentValidation, Mapster |
-| Testing | xUnit v3 + Moq on Microsoft.Testing.Platform (via `tests/ModuleTests.props`) |
+| Testing | xUnit v3 + Moq (via `tests/ModuleTests.props`) on Microsoft.Testing.Platform (selected by the root `global.json`) |
 
 Package versions are managed centrally in [Directory.Packages.props](Directory.Packages.props).
 

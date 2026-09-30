@@ -19,7 +19,7 @@ Build (or refresh) an understanding of the solution as a whole: its projects, ho
 2. **Map dependencies**: delegate to [dependency-analyzer](../../agents/dependency-analyzer.md) to build the real project/package dependency graph, flagging direction violations.
 3. **Understand structure**: delegate to [architecture-reviewer](../../agents/architecture-reviewer.md) if a structural/layering assessment is also wanted; otherwise just describe what's observed.
 4. **Read minimally**: open only the files needed to describe each project's responsibility (namespaces, key public types) — not every file.
-5. **Update docs, if requested**: write/update `docs/architecture/overview.md` using the [solution-overview template](../../docs/templates/solution-overview.md). Only when explicitly asked.
+5. **Update docs, if requested**: write/refresh `docs/architecture/architecture.md` using the [architecture template](../../docs/templates/architecture.md). Only when explicitly asked.
 
 ## Expected Outputs
 
