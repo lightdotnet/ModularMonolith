@@ -1,0 +1,26 @@
+# Integration — Backend ↔ Clients
+
+Cross-cutting facts that span both `src/` and `clients/*` — the integration boundary itself, not owned by either side. See the root [CLAUDE.md](../CLAUDE.md) and [architecture.md](architecture/architecture.md) for the backend, and [clients/admin/CLAUDE.md](../clients/admin/CLAUDE.md) for the admin client's own architecture.
+
+## Shape
+
+- **Backend** (`src/`): ASP.NET Core, C#, Modular Monolith — flat projects under `src/`, composed into one host, `StarterKit.WebApi` (see [StarterKit.WebApi](architecture/projects/WebApi.md)). The host serves the JSON API, the Notifications SignalR hub, and the `Identity.Web` Razor Pages (login and the Microsoft external-login relay) — server-rendered HTML for interactive sign-in, not part of the JSON API a client consumes.
+- **Clients** (`clients/`): frontend apps, each in `clients/<app-name>/`. Currently one: `clients/admin/`, a Next.js (App Router) TypeScript/React admin console consuming the Identity and Notifications modules.
+- **Integration**: each client app is a separate-origin consumer of the backend over HTTP (JSON API + SignalR), never a UI rendered by the backend. No shared source, no shared DB access, no in-process calls between `src/` and `clients/*`.
+
+## API Contract
+
+| App | Client generation strategy | Base URL / env config | Auth flow |
+|---|---|---|---|
+| admin | Hand-written, one consolidated `<feature>.api.ts` per feature under `modules/<domain>/<feature>/api/` — no OpenAPI-generated client | One named backend client per backend module (Identity, Notifications) via `lib/server/`, each with its own server-only `<MODULE>_API_BASE_URL` env var; the base URL owns its full path/version prefix (`api/v1/`). Full client/env-var list: [clients/admin/docs/conventions/development-guide.md § Environment](../clients/admin/docs/conventions/development-guide.md#environment). Real-time notifications use a **server-only** `SIGNALR_HUB_URL` (not `NEXT_PUBLIC_`-inlined), read server-side and handed to the browser at connect time so it stays a runtime setting | Encrypted httpOnly cookie session (`admin_session`, AES-256-GCM), permissions/roles decoded from the access-token JWT; `src/proxy.ts` enforces the session cap, `components/layout/session-gate.tsx` proactively refreshes a near-expiry token. The SignalR handshake is the one deliberate exception to "the token never leaves the cookie" — see below and [clients/admin/docs/architecture/overview.md § Auth Flow](../clients/admin/docs/architecture/overview.md#auth-flow) |
+
+## Notable cross-cutting facts
+
+- **CORS.** A client runs on its own origin, so the backend must allow it in `CorsOrigins` (`StarterKit.WebApi` allows `http://localhost:3000` — the admin dev server — out of the box). See [StarterKit.WebApi § Configuration](architecture/projects/WebApi.md#configuration).
+- **SignalR hub handshake.** The browser connects **directly to the backend hub** (`SIGNALR_HUB_URL`, absolute; `/signalr-hub` by default — the admin app does not proxy it same-origin). The handshake is authenticated not with the full session JWT but with a **short-lived (~120s), hub-audience-only token** minted by `POST api/v1/auth/token/hub` (an authenticated Identity endpoint). That token carries only `uid` + `jti` and the hub audience (`signalr-hub` by default); the backend's `"HubBearer"` scheme rejects it on `/api`, and `CloseOnAuthenticationExpiration` drops the socket when it lapses. The admin client re-mints it per (re)connect via a Server Action. Backend side: [StarterKit.WebApi § Design Notes](architecture/projects/WebApi.md#design-notes) and [Notifications](architecture/projects/Notifications.md).
+- **Notification deep links.** A `Notification.Url` starting with `/` is an app-relative deep link the admin client renders as a `next/link`. External/absolute URLs stay plain non-navigating rows.
+- **`AuthProvider` on the user contract.** The backend models `User.AuthProvider` as an enum (`Local`/`ActiveDirectory`/`EntraId`) but the user wire contract carries it as `string?` (`null` / `"AD"` / `"Microsoft"`), bridged server-side — the admin client sees only the string form.
+- **Microsoft login relay (PKCE authorization-code exchange).** A second sign-in path alongside the direct password/AD login: the browser is redirected through `Identity.Web` (a browser-reachable origin — `IDENTITY_WEB_BASE_URL` on the client, not the server-to-server `IDENTITY_API_BASE_URL`) to complete Microsoft Entra ID OIDC, then handed back to the client with a one-time, PKCE-bound code instead of a token. The client exchanges that code server-to-server (`POST api/v1/auth/token/external`) for the same `TokenDto` shape a normal login returns, converging on the identical session-establishment step either way. The client's callback URL (`/login/microsoft/callback` for admin) must be allow-listed in `ExternalLoginRelay:AllowedRedirectUris`. The flow is diagrammed in [README § Login Flow](../README.md#login-flow-client--server); the two sides' mechanics are in [clients/admin/docs/architecture/overview.md § Auth Flow](../clients/admin/docs/architecture/overview.md#auth-flow) and [Identity § Design Notes](architecture/projects/Identity.md#design-notes).
+
+---
+_Last synced: 2026-09-30_

@@ -1,0 +1,318 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Soft elevation scale — no heavy Material-style drop shadows. */
+  --shadow-soft-sm: 0 1px 2px 0 oklch(0 0 0 / 0.04);
+  --shadow-soft-md:
+    0 4px 12px -2px oklch(0 0 0 / 0.06), 0 2px 4px -2px oklch(0 0 0 / 0.04);
+  --shadow-soft-lg:
+    0 12px 32px -8px oklch(0 0 0 / 0.1), 0 4px 8px -4px oklch(0 0 0 / 0.05);
+
+  /* Shared motion tokens — theme toggle, sidebar collapse, topbar blur. */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+
+  /* Named stacking order instead of ad hoc z-index numbers. Topbar spans the
+     full width above the sidebar, so it stacks above it. */
+  --z-index-sidebar: 20;
+  --z-index-topbar: 30;
+  --z-index-dropdown: 50;
+  --z-index-dialog: 60;
+  --z-index-toast: 70;
+  --z-index-overlay: 80;
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  /* Primary brand color — the single place to retune the app's accent. */
+  --primary: var(--color-green-600);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: var(--primary);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.75rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  /* Active nav item — flat neutral highlight, text follows the accent color. */
+  --sidebar-primary: #ebebeb;
+  --sidebar-primary-foreground: var(--primary);
+  --sidebar-accent: #eeeeee;
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: var(--primary);
+
+  /* Layout constants. */
+  --sidebar-width: 17rem;
+  --topbar-height: 4rem;
+
+  /* Scrollbar — transparent track, ~70% opacity gray thumb, rounded. */
+  --scrollbar-thumb: oklch(0.556 0 0 / 0.7);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: var(--color-green-500);
+  --primary-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: var(--primary);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  /* Active nav item — flat neutral highlight, text follows the accent color. */
+  --sidebar-primary: oklch(0.269 0 0);
+  --sidebar-primary-foreground: var(--primary);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: var(--primary);
+
+  --scrollbar-thumb: oklch(0.708 0 0 / 0.7);
+}
+
+/* Accent color presets — swapped at runtime via `data-accent` on <html>
+   (see hooks/use-accent-color.tsx). Green (above) is the default; every other
+   token that should follow the brand color derives from --primary, so each
+   preset only has to override that one variable. Dark blocks must stay after
+   their light counterpart — `:root[data-accent]` and `.dark[data-accent]`
+   have equal specificity, so source order breaks the tie. */
+:root[data-accent="blue"] {
+  --primary: var(--color-blue-600);
+}
+.dark[data-accent="blue"] {
+  --primary: var(--color-blue-500);
+}
+
+:root[data-accent="violet"] {
+  --primary: var(--color-violet-600);
+}
+.dark[data-accent="violet"] {
+  --primary: var(--color-violet-500);
+}
+
+:root[data-accent="rose"] {
+  --primary: var(--color-rose-600);
+}
+.dark[data-accent="rose"] {
+  --primary: var(--color-rose-500);
+}
+
+:root[data-accent="orange"] {
+  --primary: var(--color-orange-600);
+}
+.dark[data-accent="orange"] {
+  --primary: var(--color-orange-500);
+}
+
+:root[data-accent="amber"] {
+  --primary: var(--color-amber-600);
+}
+.dark[data-accent="amber"] {
+  --primary: var(--color-amber-500);
+}
+
+/* Black has no Tailwind shade scale (just the flat --color-black/--color-white
+   tokens), so it inverts across themes instead of stepping one shade lighter. */
+:root[data-accent="black"] {
+  --primary: var(--color-black);
+}
+.dark[data-accent="black"] {
+  --primary: var(--color-white);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    transition:
+      background-color var(--duration-base) var(--ease-standard),
+      color var(--duration-base) var(--ease-standard);
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* Modern, minimal scrollbar — transparent track, translucent gray thumb. */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border-radius: var(--radius-4xl);
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+}
+
+/* Toastr-style toast progress-bar countdown (components/toast). */
+@keyframes toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/* Periodic bell ring while there's an unread notification (features/notifications): a strike
+   followed by a slow, decaying pendulum-like swing, then at rest for the remainder of the cycle
+   so it reads as a distinct "ring" rather than a rapid buzz. */
+@keyframes bell-ring {
+  0%,
+  45%,
+  100% {
+    transform: rotate(0deg);
+  }
+
+  4% {
+    transform: rotate(20deg);
+  }
+
+  12% {
+    transform: rotate(-17deg);
+  }
+
+  20% {
+    transform: rotate(13deg);
+  }
+
+  28% {
+    transform: rotate(-9deg);
+  }
+
+  35% {
+    transform: rotate(5deg);
+  }
+
+  41% {
+    transform: rotate(-2deg);
+  }
+}
+
+/* Liquid-glass panel material — frosted, translucent card used by the
+   session-gate overlays (session-loading-overlay, session-unreachable-overlay)
+   shown during the hard-navigation (F5 / revisit) session check. */
+.glass-panel {
+  background: linear-gradient(
+    155deg,
+    color-mix(in oklch, var(--card) 65%, transparent),
+    color-mix(in oklch, var(--card) 35%, transparent)
+  );
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
+  border-radius: var(--radius-3xl);
+  box-shadow:
+    var(--shadow-soft-lg),
+    inset 0 1px 0 0 color-mix(in oklch, white 45%, transparent),
+    inset 0 -1px 0 0 color-mix(in oklch, black 8%, transparent);
+}
+
+/* Hide native up/down spinner arrows on number inputs. */
+@layer base {
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}

@@ -1,0 +1,131 @@
+# Development Guide: admin
+
+How to set up, run, and make common changes to `clients/admin`. Architectural background is in
+[../architecture/overview.md](../architecture/overview.md) and
+[../architecture/architecture.md](../architecture/architecture.md) — this guide stays task-oriented.
+
+## Prerequisites
+
+- **Node.js**: `.nvmrc` pins `26.8.2`; `package.json` `engines` requires `node >=26.8.2`.
+  `@types/node` is `^26.5.1`.
+- **pnpm**: required (`pnpm-lock.yaml` is the only lockfile). Version not pinned (no `packageManager`).
+- **A reachable backend**: login, profile, notifications, and every feature page make real HTTP calls
+  to `StarterKit.WebApi`, which co-hosts the Identity and Notifications modules and the `Identity.Web`
+  pages — how to run it is in the root [development-guide.md](../../../../docs/conventions/development-guide.md).
+  Every `*_API_BASE_URL` var (see [Environment](#environment)) must point at it. SignalR notifications
+  additionally need the backend reachable **directly from the browser** (`SIGNALR_HUB_URL` resolvable
+  + backend CORS allowing the admin origin), and the Microsoft login relay needs
+  `IDENTITY_WEB_BASE_URL` browser-reachable and the client's `/login/microsoft/callback` URL
+  allow-listed on the backend (`ExternalLoginRelay:AllowedRedirectUris` — see
+  [Identity § Configuration](../../../../docs/architecture/projects/Identity.md#configuration)).
+
+## Scripts
+
+```bash
+pnpm dev     # next dev — default port 3000
+pnpm build   # next build — output: "standalone" (per next.config.ts)
+pnpm start   # next start — serves a prior pnpm build
+pnpm lint    # eslint (eslint.config.mjs)
+```
+
+Local dev talks to the backend over plain HTTP (`http://localhost:5000`): the backend disables
+HTTPS redirection in Development, so the server-side `fetch` calls in `lib/server/*` reach it
+directly without tripping over the untrusted self-signed ASP.NET dev certificate. The backend's
+`https` launch profile also exposes `https://localhost:5001` for anyone who needs it. Set the
+URL vars below to match (see `.env.example`). The `next dev` bundler is not pinned (no
+`--turbopack` flag, no config override).
+
+## Environment
+
+`.gitignore` ignores `.env*` except the committed `.env.example`, which is the template. All vars are
+server-only (never `NEXT_PUBLIC_`); the app-read ones go through `lib/server/config.ts`, which throws
+on a missing value.
+
+### Backend module base URLs
+
+One named backend client per backend module: `lib/server/api-clients.ts` names it,
+`lib/server/config.ts` maps it to its env var, and `lib/server/backend-api.ts` exports its
+ready-to-use, bearer-token-wired instance. Each base URL must include the full path prefix (e.g.
+`api/v1/`) — `lib/server/http.ts` prepends nothing; a missing trailing slash is appended by
+`getApiBaseUrl()`. The vars are configured independently even though they currently point at the
+same host. This table is the complete list:
+
+| Var | `backend-api.ts` instance | Backend module |
+|---|---|---|
+| `IDENTITY_API_BASE_URL` | `identityApi` | [Identity](../../../../docs/architecture/projects/Identity.md) |
+| `NOTIFICATIONS_API_BASE_URL` | `notificationsApi` | [Notifications](../../../../docs/architecture/projects/Notifications.md) |
+
+### Other vars
+
+| Var | Purpose |
+|---|---|
+| `IDENTITY_WEB_BASE_URL` | Absolute, **browser-reachable** origin of `Identity.Web` (co-hosted by `StarterKit.WebApi`). The `/login/microsoft/start` Route Handler redirects the browser there (`/Account/ExternalLoginStart`) for the Microsoft login relay — unlike `IDENTITY_API_BASE_URL` (server-to-server only, may be internal-only). Required by `lib/server/config.ts`. |
+| `SIGNALR_HUB_URL` | Absolute URL to the backend SignalR hub (`/signalr-hub` by default). Read server-side and handed to the browser at connect time by a Server Action (not inlined), so it's a runtime setting — change it by editing the server `.env` and restarting, no rebuild. |
+| `TOKEN_ENCRYPTION_KEY` | 32-byte base64 key (`openssl rand -base64 32`). AES-256-GCM key for the `admin_session` cookie. `lib/server/config.ts` throws if unset; read on every request. |
+| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | Base64 AES key Next.js uses at **build time** to salt Server Action IDs. Not read by app code. If unset, a fresh key per build ⇒ every deploy breaks open tabs with "Failed to find Server Action". Optional locally; must be set and **constant forever** on deployed servers. |
+
+## Deploying
+
+Three PowerShell scripts at `clients/` (not `clients/admin/`) deploy the standalone build to a
+Windows host:
+
+- `clients/deploy-nssm.ps1` — IIS + NSSM Windows Service. `pnpm install --frozen-lockfile` →
+  `pnpm build` → copy `.next/standalone` (+ `.next/static`, `public/`) into the live folder,
+  preserving deployed `.env*` → cycle the app pool, site, and service. Wipes only `standalone/`.
+- `clients/deploy-pm2.ps1` — the PM2 variant of the same flow.
+- `clients/init-nssm.ps1` — one-time NSSM service registration.
+
+Both deploy scripts run `Get-ServerActionsEncryptionKey` first, hoisting
+`NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` from the preserved `standalone/.env` into the build environment
+before `pnpm build`. Generate it once per server, put it in `standalone/.env`, never change it.
+
+## Testing
+
+None — no test runner installed, no `*.test.*`/`*.spec.*` files.
+
+## Common Tasks
+
+| Task | How |
+|---|---|
+| Run the dev server | `cd clients/admin && pnpm install && pnpm dev` (copy `.env.example` → `.env.local` and fill the URLs + `TOKEN_ENCRYPTION_KEY` first) |
+| Deploy | Run `clients/deploy-nssm.ps1` (or `deploy-pm2.ps1`) from a prepared Windows host; ensure `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` is in the deployed `standalone/.env` first |
+| Add a backend endpoint call | Add a function to the feature/module's `<name>.api.ts` (create it if missing), wrapping `requestJson`/`requestVoid` from the right `lib/server/backend-api.ts` instance via a `call-guard.ts` helper; export it from `index.ts` |
+| Add a feature/module | Create `src/modules/<domain>/<name>/` (or a flat `src/modules/<name>/`) with `api/`, optional `components/`/`types/`/`constants/`, and an `index.ts` barrel; add a `page.tsx` under `src/app/` (see [architecture.md § Layering](../architecture/architecture.md#layering) for its shape). Don't add new `src/features/*` |
+| Add a new backend client | Add an entry to `lib/server/api-clients.ts`, its `*_API_BASE_URL` name to `lib/server/config.ts`, a `createBackendApiClient(...)` instance in `lib/server/backend-api.ts`, the var to `.env.example`, and a row to the [base-URL table](#backend-module-base-urls) above |
+| Gate a page on a permission | `requirePermission(permission)` at the top, then `if (denied) return denied;` before the data fetch — see `users-page.tsx` |
+| Hide a field/action by a secondary permission | `hasPermission(session, PERMISSION)` from `lib/server/authorization.ts` in the (server) page, passed down as a boolean prop — see `notifications-page.tsx` (the "Send" action) |
+| Add a list/table page | Reuse `components/shared/data-table` (`DataTable<TData>`). Reference wirings: `users` (server-driven URL-param search), `roles` (client-side filter, no backend search), `notifications` (`customSearch` multi-field filter) |
+| Show a toast | `notifySuccess`/`notifyError` from `@/components/toast` — never import `sonner` directly |
+| Imperative action + toast/pending | `useGuardedAction()` (`hooks/use-guarded-action.ts`) — see `delete-user-dialog.tsx` |
+| Form dialog on a mutation action | `useActionState` + `useActionSuccessToast(state, msg, onSuccess?)` (`hooks/use-action-success-toast.ts`) — see any create/edit dialog |
+| Add a shadcn primitive | `npx shadcn@latest add <component>` from `clients/admin/` (`components.json`: style `radix-nova`, base `neutral`, icons `lucide`). `button.tsx` has manual edits — diff after any regen |
+| Add a nav item | Add/update the feature's `constants/nav-item.ts`, re-export from its `index.ts`, then reference it in `src/constants/nav-items.ts` **by direct file path** (not the barrel — it carries server-only code the client-side `Sidebar` must not pull in). Set `exact: true` on a parent item whose sibling route lives under its path. Adding a nav entry does not create the route |
+
+## Where to Look for X
+
+Routing and per-feature responsibilities are in [../architecture/overview.md § Key Routes/Areas](../architecture/overview.md#key-routesareas)
+and the auth flow in [§ Auth Flow](../architecture/overview.md#auth-flow). Beyond those:
+
+| Concern | Location |
+|---|---|
+| App shell / global providers | `src/app/layout.tsx`, `src/app/(dashboard)/layout.tsx` → `components/layout/app-shell.tsx` |
+| Login / logout | `modules/identity/auth/api/{login,logout}-action.ts` (`logout-action.ts` is imported directly by `user-menu.tsx`, not barrel-exported) |
+| Microsoft login relay | `app/login/microsoft/{start,callback}/route.ts`, `lib/server/external-login-pkce.ts`, `modules/identity/auth/api/establish-session.ts` |
+| Session cookie: crypto, chunking, refresh | `lib/server/{session-cookie,token-cipher,stored-session,cookie-codec,session,jwt,build-session-claims,refresh-session,refetch-profile,persist-session-cookie}.ts` |
+| Session freshness gate | `components/layout/session-gate.tsx` → `modules/identity/auth/api/ensure-fresh-session-action.ts`. `src/proxy.ts` is only the 7-day cap + `/login` redirect |
+| Deploy-stale-tab recovery | `lib/shared/deployment-recovery.ts`, `components/layout/deployment-recovery-notice.tsx`, both `error.tsx` boundaries, `app/api/health/route.ts` |
+| Server-only API plumbing | `lib/server/{http,backend-api,api-clients,call-guard,config}.ts`, `lib/server/http-handlers/bearer-token-handler.ts`. `http.ts` emits `[api]` request traces to the console **in development only** (never bodies/query/headers — those carry tokens) |
+| Permission checks | `lib/shared/authorization.ts` (logic), `lib/server/authorization.ts` (wrapper), `lib/server/require-permission.tsx` (page gate), `components/shared/access-denied.tsx` |
+| Real-time notifications | `modules/notifications/hooks/use-notifications.ts`, `context/notifications-provider.tsx`, `components/{notification-bell,notification-inbox}.tsx`, `api/{get-signalr-token-action,signalr.api}.ts` |
+| Reusable list/table block | `components/shared/data-table/` |
+| Command palette (⌘K) | `components/command/*`, wired via `components/shared/search-box.tsx` |
+| Nav structure | each feature/module's `constants/nav-item.ts` + `src/constants/nav-items.ts` (assembly), `lib/shared/menu.ts` |
+| Theming | `components/theme/*`, tokens in `src/app/globals.css` |
+| Backend/client shared shapes | `types/api.ts` (envelope), per-feature `types/*.ts` (DTOs, barrel-re-exported) |
+
+## Notes
+
+<!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
+
+---
+_Last synced: 2026-09-30_
