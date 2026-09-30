@@ -1,0 +1,10 @@
+global using Light.AspNetCore.Authorization;
+global using Light.Contracts;
+global using Light.Extensions;
+global using Light.Mediator;
+global using Light.Specification;
+global using Microsoft.EntityFrameworkCore;
+global using Microsoft.Extensions.Logging;
+global using StarterKit.Modules.Identity.Authorization;
+global using StarterKit.Modules.Identity.Extensions;
+global using StarterKit.Persistence.Extensions;
