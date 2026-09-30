@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using StarterKit.Modules.Identity.Contracts;
 using StarterKit.Modules.Notifications.Contracts.SystemNotifications;
 using StarterKit.Modules.Notifications.Domain;
 using StarterKit.Modules.Notifications.Persistence;
@@ -49,6 +50,8 @@ internal sealed class NotificationsTestHost : IDisposable
 
     public Mock<IHubService> Hub { get; } = new();
 
+    public Mock<IIdentityModuleApi> IdentityApi { get; } = new();
+
     public NotificationDbContext Context { get; }
 
     /// <summary>
@@ -60,15 +63,16 @@ internal sealed class NotificationsTestHost : IDisposable
     public async Task<Notification> AddAsync(
         string toUserId,
         NotificationStatus status,
-        string title = "Title")
+        string title = "Title",
+        string? senderName = null)
     {
         var notification = Notification.Create(
-            "sender",
-            null,
             toUserId,
             title,
             null,
-            null);
+            null,
+            "sender",
+            senderName);
 
         Context.Notifications.Add(notification);
         await Context.SaveChangesAsync();

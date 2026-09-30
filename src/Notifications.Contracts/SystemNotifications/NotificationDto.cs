@@ -1,12 +1,8 @@
 namespace StarterKit.Modules.Notifications.Contracts.SystemNotifications;
 
-public class NotificationDto
+public record NotificationDto
 {
     public string Id { get; set; } = null!;
-
-    public string FromUserId { get; set; } = null!;
-
-    public string? FromName { get; set; }
 
     public string ToUserId { get; set; } = null!;
 
@@ -15,6 +11,10 @@ public class NotificationDto
     public string? Message { get; set; }
 
     public string? Url { get; set; }
+
+    public string? SenderUserId { get; set; }
+
+    public string? SenderName { get; set; }
 
     public NotificationStatus Status { get; set; }
 

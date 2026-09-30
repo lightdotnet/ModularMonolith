@@ -12,7 +12,11 @@ public class GetNotificationQueryHandlerTests
     {
         // Arrange
         using var host = new NotificationsTestHost();
-        var entry = await host.AddAsync("user-1", NotificationStatus.None, "Hello");
+        var entry = await host.AddAsync(
+            "user-1",
+            NotificationStatus.None,
+            "Hello",
+            "Jane Doe");
         var handler = new GetNotificationQueryHandler(host.Context);
 
         // Act
@@ -23,7 +27,8 @@ public class GetNotificationQueryHandlerTests
         // Assert
         Assert.NotNull(dto);
         Assert.Equal(entry.Id, dto.Id);
-        Assert.Equal("sender", dto.FromUserId);
+        Assert.Equal("sender", dto.SenderUserId);
+        Assert.Equal("Jane Doe", dto.SenderName);
         Assert.Equal("user-1", dto.ToUserId);
         Assert.Equal("Hello", dto.Title);
         Assert.Equal(NotificationStatus.None, dto.Status);

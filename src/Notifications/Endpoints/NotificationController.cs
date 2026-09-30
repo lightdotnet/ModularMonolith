@@ -2,11 +2,12 @@ using Microsoft.AspNetCore.Mvc;
 using StarterKit.Infrastructure.Endpoints;
 using StarterKit.Modules.Notifications.Features.Notifications.Commands;
 using StarterKit.Modules.Notifications.Features.Notifications.Queries;
+using StarterKit.Shared;
 
 namespace StarterKit.Modules.Notifications.Endpoints;
 
 [ApiExplorerSettings(GroupName = "push")]
-public class NotificationController : VersionedApiController
+public class NotificationController(ICurrentUser currentUser) : VersionedApiController
 {
     [HttpGet]
     [MustHavePermission(NotificationPermissions.Read)]
@@ -18,16 +19,15 @@ public class NotificationController : VersionedApiController
     [HttpPost]
     [MustHavePermission(NotificationPermissions.Send)]
     public async Task<IActionResult> SendToUserId(
-        string fromUserId,
-        string? fromName,
         string toUserId,
         [FromBody] SystemMessage request)
     {
-        return Ok(await Mediator.Send(new SendNotificationCommand(
-            fromUserId,
-            fromName,
-            toUserId,
-            request)));
+        // The sender comes from the authenticated token so a caller cannot spoof it.
+        return Ok(await Mediator.Send(
+            new SendNotificationCommand(
+                toUserId,
+                request,
+                currentUser.UserId)));
     }
 
     [HttpPost("force_logout")]

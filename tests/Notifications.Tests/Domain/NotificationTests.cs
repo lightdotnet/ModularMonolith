@@ -8,12 +8,12 @@ public class NotificationTests
 {
     private static Notification CreateNotification() =>
         Notification.Create(
-            "from-user",
-            "Sender",
             "to-user",
             "Title",
             "Body",
-            "/orders/1");
+            "/orders/1",
+            "from-user",
+            "Sender");
 
     [Fact]
     public void Create_ShouldSetAllFields_AndStartUnread()
@@ -22,9 +22,9 @@ public class NotificationTests
         var notification = CreateNotification();
 
         // Assert
-        Assert.Equal("from-user", notification.FromUserId);
-        Assert.Equal("Sender", notification.FromName);
-        Assert.Equal("to-user", notification.ToUserId);
+        Assert.Equal("from-user", notification.SenderUserId);
+        Assert.Equal("Sender", notification.SenderName);
+        Assert.Equal("to-user", notification.RecipientUserId);
         Assert.Equal("Title", notification.Title);
         Assert.Equal("Body", notification.Message);
         Assert.Equal("/orders/1", notification.Url);
@@ -36,15 +36,15 @@ public class NotificationTests
     {
         // Act
         var notification = Notification.Create(
-            "from-user",
-            null,
             "to-user",
             "Title",
             null,
+            null,
+            "from-user",
             null);
 
         // Assert
-        Assert.Null(notification.FromName);
+        Assert.Null(notification.SenderName);
         Assert.Null(notification.Message);
         Assert.Null(notification.Url);
         Assert.Equal(NotificationStatus.None, notification.Status);

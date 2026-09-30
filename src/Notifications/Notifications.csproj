@@ -9,6 +9,8 @@
     <InternalsVisibleTo Include="Notifications.Tests" />
     <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
     <InternalsVisibleTo Include="MSSQL" />
+    <InternalsVisibleTo Include="PostgreSQL" />
+    <InternalsVisibleTo Include="Sqlite" />
   </ItemGroup>
 
   <ItemGroup>

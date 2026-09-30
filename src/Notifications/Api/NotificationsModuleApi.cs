@@ -1,4 +1,5 @@
 using StarterKit.Modules.Notifications.Features.Notifications.Commands;
+using StarterKit.Shared;
 
 namespace StarterKit.Modules.Notifications.Api;
 
@@ -10,22 +11,21 @@ namespace StarterKit.Modules.Notifications.Api;
 /// Cross-module calls bypass the endpoints' permission attributes; the calling module is
 /// responsible for authorizing the operation before it calls this seam.
 /// </remarks>
-internal sealed class NotificationsModuleApi(IMediator mediator)
+internal sealed class NotificationsModuleApi(
+    IMediator mediator,
+    ICurrentUser currentUser)
     : INotificationsModuleApi
 {
     public async Task SendAsync(
-        string fromUserId,
-        string? fromName,
         string toUserId,
         SystemMessage message,
         CancellationToken ct = default)
     {
         await mediator.Send(
             new SendNotificationCommand(
-                fromUserId,
-                fromName,
                 toUserId,
-                message),
+                message,
+                currentUser.UserId),
             ct);
     }
 }

@@ -13,7 +13,7 @@ internal class MarkNotificationReadCommandHandler(NotificationDbContext context)
     {
         var entity = await context.Notifications
             .SingleOrDefaultAsync(
-                x => x.Id == request.Id && x.ToUserId == request.UserId,
+                x => x.Id == request.Id && x.RecipientUserId == request.UserId,
                 cancellationToken);
 
         // An unknown id, or one addressed to another user, is a no-op.

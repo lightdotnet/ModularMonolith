@@ -12,7 +12,7 @@ using StarterKit.Modules.Notifications.Persistence;
 namespace MSSQL.Notifications
 {
     [DbContext(typeof(NotificationDbContext))]
-    [Migration("20260930115555_CreateNotificationSchema")]
+    [Migration("20260930141517_CreateNotificationSchema")]
     partial class CreateNotificationSchema
     {
         /// <inheritdoc />
@@ -20,7 +20,7 @@ namespace MSSQL.Notifications
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasDefaultSchema("notifications")
+                .HasDefaultSchema("system")
                 .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
@@ -39,15 +39,6 @@ namespace MSSQL.Notifications
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("FromName")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("FromUserId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<DateTimeOffset?>("LastModified")
                         .HasColumnType("datetimeoffset");
 
@@ -58,6 +49,19 @@ namespace MSSQL.Notifications
                     b.Property<string>("Message")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("RecipientUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("SenderName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("SenderUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -66,19 +70,14 @@ namespace MSSQL.Notifications
                         .HasMaxLength(250)
                         .HasColumnType("nvarchar(250)");
 
-                    b.Property<string>("ToUserId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<string>("Url")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ToUserId");
+                    b.HasIndex("RecipientUserId");
 
-                    b.ToTable("Notifications", "notifications");
+                    b.ToTable("Notifications", "system");
                 });
 #pragma warning restore 612, 618
         }

@@ -13,11 +13,7 @@ public class Notification : AuditableEntity
     {
     }
 
-    public string? FromUserId { get; private set; }
-
-    public string? FromName { get; private set; }
-
-    public string ToUserId { get; private set; } = null!;
+    public string RecipientUserId { get; private set; } = null!;
 
     public string Title { get; private set; } = null!;
 
@@ -25,24 +21,28 @@ public class Notification : AuditableEntity
 
     public string? Url { get; private set; }
 
+    public string? SenderUserId { get; private set; }
+
+    public string? SenderName { get; private set; }
+
     public NotificationStatus Status { get; private set; }
 
     public static Notification Create(
-        string? fromUserId,
-        string? fromName,
         string toUserId,
         string title,
         string? message,
-        string? url) =>
+        string? url,
+        string? senderUserId,
+        string? senderName) =>
         new()
         {
-            FromUserId = fromUserId,
-            FromName = fromName,
-            ToUserId = toUserId,
+            RecipientUserId = toUserId,
             Title = title,
             Message = message,
             Url = url,
             Status = NotificationStatus.None,
+            SenderUserId = senderUserId,
+            SenderName = senderName,
         };
 
     /// <summary>

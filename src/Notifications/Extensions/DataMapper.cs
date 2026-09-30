@@ -8,14 +8,14 @@ internal static class DataMapper
     private static readonly Expression<Func<Notification, NotificationDto>> NotificationMapperExpression = x => new NotificationDto
     {
         Id = x.Id,
-        FromUserId = x.FromUserId,
-        FromName = x.FromName,
-        ToUserId = x.ToUserId,
+        ToUserId = x.RecipientUserId,
         Title = x.Title,
         Message = x.Message,
         Url = x.Url,
         Status = x.Status,
         Created = x.Created,
+        SenderUserId = x.SenderUserId,
+        SenderName = x.SenderName,
     };
 
     public static IQueryable<NotificationDto> MapToDto(this IQueryable<Notification> query) =>

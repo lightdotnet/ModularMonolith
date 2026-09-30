@@ -19,7 +19,7 @@ internal class SearchNotificationsQueryHandler(NotificationDbContext context)
 
         return context.Notifications
             .AsNoTracking()
-            .WhereIf(!string.IsNullOrEmpty(lookup.ToUserId), x => x.ToUserId == lookup.ToUserId)
+            .WhereIf(!string.IsNullOrEmpty(lookup.ToUserId), x => x.RecipientUserId == lookup.ToUserId)
             .WhereIf(lookup.Status.HasValue, x => x.Status == lookup.Status!.Value)
             .OrderByDescending(o => o.Created)
             .MapToDto()

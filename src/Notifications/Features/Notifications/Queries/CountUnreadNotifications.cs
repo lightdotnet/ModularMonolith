@@ -12,6 +12,6 @@ internal class CountUnreadNotificationsQueryHandler(NotificationDbContext contex
         CancellationToken cancellationToken) =>
         context.Notifications
             .AsNoTracking()
-            .Where(x => x.ToUserId == request.UserId && x.Status == NotificationStatus.None)
+            .Where(x => x.RecipientUserId == request.UserId && x.Status == NotificationStatus.None)
             .CountAsync(cancellationToken);
 }

@@ -8,15 +8,20 @@ using StarterKit.Modules.Notifications.Contracts.SystemNotifications;
 using StarterKit.Modules.Notifications.Endpoints;
 using StarterKit.Modules.Notifications.Features.Notifications.Commands;
 using StarterKit.Modules.Notifications.Features.Notifications.Queries;
+using StarterKit.Shared;
 using Xunit;
 
 namespace Notifications.Tests.Endpoints;
 
 public class NotificationControllerTests
 {
+    private const string CurrentUserId = "current-user-id";
+
     private static (NotificationController Controller, Mock<IMediator> Mediator) CreateSut()
     {
         var mediatorMock = new Mock<IMediator>();
+        var currentUserMock = new Mock<ICurrentUser>();
+        currentUserMock.SetupGet(x => x.UserId).Returns(CurrentUserId);
 
         var httpContext = new DefaultHttpContext
         {
@@ -25,7 +30,7 @@ public class NotificationControllerTests
                 .BuildServiceProvider(),
         };
 
-        var controller = new NotificationController
+        var controller = new NotificationController(currentUserMock.Object)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
         };
@@ -52,7 +57,7 @@ public class NotificationControllerTests
     }
 
     [Fact]
-    public async Task SendToUserId_ShouldDispatchSendCommand()
+    public async Task SendToUserId_ShouldDispatchSendCommand_WithCurrentUserAsSender()
     {
         // Arrange
         var (controller, mediatorMock) = CreateSut();
@@ -61,17 +66,14 @@ public class NotificationControllerTests
         mediatorMock
             .Setup(m => m.Send(
                 It.Is<SendNotificationCommand>(c =>
-                    c.FromUserId == "from-user"
-                    && c.FromName == "Sender"
-                    && c.ToUserId == "to-user"
+                    c.RecipientUserId == "to-user"
+                    && c.SenderUserId == CurrentUserId
                     && c.Message == message),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         // Act
         var response = await controller.SendToUserId(
-            "from-user",
-            "Sender",
             "to-user",
             message);
 

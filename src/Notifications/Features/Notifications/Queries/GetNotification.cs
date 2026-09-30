@@ -13,7 +13,7 @@ internal class GetNotificationQueryHandler(NotificationDbContext context)
         CancellationToken cancellationToken) =>
         context.Notifications
             .AsNoTracking()
-            .Where(x => x.Id == request.Id && x.ToUserId == request.UserId)
+            .Where(x => x.Id == request.Id && x.RecipientUserId == request.UserId)
             .MapToDto()
             .SingleOrDefaultAsync(cancellationToken);
 }

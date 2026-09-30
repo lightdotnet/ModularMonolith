@@ -1,3 +1,4 @@
+using StarterKit.Modules.Identity.Contracts;
 using StarterKit.Modules.Notifications.Domain;
 using StarterKit.Modules.Notifications.Persistence;
 using StarterKit.Modules.Notifications.SignalR;
@@ -5,10 +6,9 @@ using StarterKit.Modules.Notifications.SignalR;
 namespace StarterKit.Modules.Notifications.Features.Notifications.Commands;
 
 internal sealed record SendNotificationCommand(
-    string FromUserId,
-    string? FromName,
-    string ToUserId,
-    SystemMessage Message)
+    string RecipientUserId,
+    SystemMessage Message,
+    string? SenderUserId)
     : ICommand<IResult>;
 
 /// <summary>
@@ -16,20 +16,37 @@ internal sealed record SendNotificationCommand(
 /// </summary>
 internal class SendNotificationCommandHandler(
     NotificationDbContext context,
-    IHubService hub)
+    IHubService hub,
+    IIdentityModuleApi identityApi)
     : ICommandHandler<SendNotificationCommand, IResult>
 {
     public async Task<IResult> Handle(
         SendNotificationCommand request,
         CancellationToken cancellationToken)
     {
+        string? senderName = null;
+
+        if (!string.IsNullOrEmpty(request.SenderUserId))
+        {
+            var sender = await identityApi.GetUserAsync(request.SenderUserId, cancellationToken);
+
+            if (sender != null)
+            {
+                var fullName = $"{sender.FirstName} {sender.LastName}".Trim();
+
+                senderName = fullName.Length > 0
+                    ? fullName
+                    : sender.UserName;
+            }
+        }
+
         var entity = Notification.Create(
-            request.FromUserId,
-            request.FromName,
-            request.ToUserId,
+            request.RecipientUserId,
             request.Message.Title,
             request.Message.Message,
-            request.Message.Url);
+            request.Message.Url,
+            request.SenderUserId,
+            senderName);
 
         await context.Notifications.AddAsync(entity, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
@@ -38,7 +55,7 @@ internal class SendNotificationCommandHandler(
         // the persisted entry from the API. The payload itself is sent to the client too.
         await hub.SendAsync(
             request.Message,
-            request.ToUserId,
+            request.RecipientUserId,
             cancellationToken);
 
         return Result.Success();

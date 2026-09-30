@@ -15,7 +15,7 @@ internal sealed class NotificationDbContext(
     DbContextOptions<NotificationDbContext> options)
     : BaseDbContext(options)
 {
-    public const string Schema = "notifications";
+    public const string Schema = "system";
 
     public DbSet<Notification> Notifications => Set<Notification>();
 
@@ -45,17 +45,17 @@ internal sealed class NotificationDbContext(
         {
             entity.ToTable(name: "Notifications");
 
-            entity.HasIndex(x => x.ToUserId);
+            entity.HasIndex(x => x.RecipientUserId);
 
             entity.ConfigureAuditableEntity();
 
-            entity.Property(x => x.FromUserId).HasMaxLength(450);
-
-            entity.Property(x => x.FromName).HasMaxLength(200);
-
-            entity.Property(x => x.ToUserId).HasMaxLength(450);
+            entity.Property(x => x.RecipientUserId).HasMaxLength(450);
 
             entity.Property(x => x.Title).HasMaxLength(250);
+
+            entity.Property(x => x.SenderUserId).HasMaxLength(450);
+
+            entity.Property(x => x.SenderName).HasMaxLength(200);
         });
     }
 }
