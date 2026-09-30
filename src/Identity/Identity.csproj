@@ -8,6 +8,9 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Identity.Tests" />
     <InternalsVisibleTo Include="StarterKit.Modules.Identity.Web" />
+    <InternalsVisibleTo Include="MSSQL" />
+    <InternalsVisibleTo Include="PostgreSQL" />
+    <InternalsVisibleTo Include="Sqlite" />
   </ItemGroup>
 
   <ItemGroup>

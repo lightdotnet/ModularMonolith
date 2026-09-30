@@ -17,6 +17,11 @@
     <Project Path="src/Identity/Identity.csproj" />
     <Project Path="src/Identity.Web/Identity.Web.csproj" />
   </Folder>
+  <Folder Name="/src/_migrations/">
+    <Project Path="src/Migrations/MSSQL/MSSQL.csproj" />
+    <Project Path="src/Migrations/PostgreSQL/PostgreSQL.csproj" />
+    <Project Path="src/Migrations/Sqlite/Sqlite.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <File Path="tests/ModuleTests.props" />
     <Project Path="tests/Framework.Tests/Framework.Tests.csproj" />
