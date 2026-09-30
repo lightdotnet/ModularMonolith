@@ -5,7 +5,7 @@
 dotnet tool install --global dotnet-ef
 ```
 
-The migration commands below run from `src/Migrations/<Provider>` and use the global tool. The local tool manifest `src/Host/.config/dotnet-tools.json` (pinning `dotnet-ef`) applies only to commands run under `src/Host`.
+The migration commands below run from `src/Migrations/<Provider>` and use the global tool. The local tool manifest `src/StarterKit.WebApi/.config/dotnet-tools.json` (pinning `dotnet-ef`) applies only to commands run under `src/StarterKit.WebApi`.
 
 ### Add migrations
 ```

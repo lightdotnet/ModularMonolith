@@ -26,7 +26,7 @@ tools: Glob, Grep, Read, Write, Edit
 
 ## Expected Output
 
-- New or updated flat files under `docs/architecture/<doc-type>.md` or `docs/conventions/<doc-type>.md`, following the template structure and the writing rules in [sync-documentation](../workflows/sync-documentation.md).
+- New or updated files under `docs/architecture/<doc-type>.md` (per-project overviews under `docs/architecture/projects/<ProjectName>.md`) or `docs/conventions/<doc-type>.md`, following the template structure and the writing rules in [sync-documentation](../workflows/sync-documentation.md).
 - A short changelog of what was added/updated/removed during this pass (in the report, not in the file).
 - Explicit flags for anything that couldn't be verified and was left as `unknown` rather than guessed.
 

@@ -1,6 +1,6 @@
 # StarterKit — Modular Monolith Core for ASP.NET Core
 
-The core of the StarterKit Modular Monolith template: the reusable C#/.NET framework building blocks (built on the private "Light" framework family — `Lightsoft.*` packages), a composition-root host, and the Identity reference module, with their tests. Client apps are not part of this solution.
+The core of the StarterKit Modular Monolith template: the reusable C#/.NET framework building blocks (built on the private "Light" framework family — `Lightsoft.*` packages), a composition-root host with a .NET Aspire app host for local development, and the Identity reference module, with their tests. Client apps are not part of this solution.
 
 ## Structure
 
@@ -14,11 +14,13 @@ StarterKit.slnx
 │   ├── src/Persistence                     (EF Core building blocks)
 │   └── src/EventBusMassTransitRabbitMQ     (integration-event bus)
 ├── /src/_host/
-│   └── src/Host                            (StarterKit.Host — composition root, the only deployable)
+│   ├── src/StarterKit.WebApi               (composition root, the only deployable)
+│   ├── src/StarterKit.AppHost              (.NET Aspire app host — local orchestration and dashboard)
+│   └── src/StarterKit.ServiceDefaults      (.NET Aspire service defaults — telemetry, service discovery, resilience)
 ├── /src/identity-module/
 │   ├── src/Identity.Contracts              (the module's cross-module seam)
 │   ├── src/Identity                        (module implementation — JSON API, token issuance, persistence)
-│   └── src/Identity.Web                    (Razor Pages login and Microsoft login relay — co-hosted or standalone)
+│   └── src/Identity.Web                    (Razor Pages login, Microsoft login relay, and admin pages — co-hosted or standalone)
 ├── /src/_migrations/
 │   ├── src/Migrations/MSSQL                (EF migrations + migrate-and-seed console app, SQL Server)
 │   ├── src/Migrations/PostgreSQL           (same, PostgreSQL)
@@ -35,7 +37,9 @@ Project responsibilities and the dependency rules are in [CLAUDE.md](CLAUDE.md#1
 ```mermaid
 graph TD
     Client["Separate-origin client"]
-    Host["src/Host<br/>composition root"]
+    AppHost["StarterKit.AppHost<br/>Aspire (local dev)"]
+    WebApi["StarterKit.WebApi<br/>composition root"]
+    SD["StarterKit.ServiceDefaults"]
     Migrators["src/Migrations/*<br/>migrate + seed"]
 
     subgraph IdentityModule["Identity module"]
@@ -51,9 +55,11 @@ graph TD
         Shared["Shared<br/>(leaf)"]
     end
 
-    Client -. HTTP/JSON .-> Host
-    Host --> IdentityModule
-    Host --> Framework
+    Client -. HTTP/JSON .-> WebApi
+    AppHost -. runs .-> WebApi
+    WebApi --> SD
+    WebApi --> IdentityModule
+    WebApi --> Framework
     Migrators --> IdentityModule
     Migrators --> Framework
     IdW --> Id
@@ -68,14 +74,14 @@ graph TD
 
 ## Login Flow (client ↔ server)
 
-A separate-origin client has two sign-in paths that both end with the client holding the same token pair (access + refresh token). See [Identity](docs/architecture/Identity.md) for the module's mechanics — this is the shape, not the detail.
+A separate-origin client has two sign-in paths that both end with the client holding the same token pair (access + refresh token). See [Identity](docs/architecture/projects/Identity.md) for the module's mechanics — this is the shape, not the detail.
 
 ```mermaid
 sequenceDiagram
     actor U as Browser
     participant C as Client
-    participant W as Identity.Web (in Host)
-    participant I as Identity module (in Host)
+    participant W as Identity.Web (in WebApi)
+    participant I as Identity module (in WebApi)
     participant M as Microsoft Entra ID
 
     rect rgb(235, 245, 255)
@@ -89,7 +95,7 @@ sequenceDiagram
     rect rgb(240, 255, 240)
     note over U,M: Microsoft login (PKCE authorization-code relay)
     U->>C: start Microsoft sign-in
-    C-->>U: 302 → Identity.Web (state, PKCE code_challenge; client keeps the verifier)
+    C-->>U: 302 → Identity.Web (state, PKCE code_challenge, client keeps the verifier)
     U->>W: GET /Account/ExternalLoginStart
     W-->>U: 302 → Microsoft sign-in
     U->>M: authenticate
@@ -115,6 +121,7 @@ Access tokens are renewed through `POST api/v1/auth/token/refresh`. The client's
 | Data access | EF Core — provider-configurable via `DbProvider` (`InMemory` / `PostgreSQL` / `MSSQL` / `Sqlite`) |
 | Authentication | ASP.NET Core Identity; self-issued JWT (Bearer) for the API; cookie for the Razor Pages; optional Microsoft Entra ID (OIDC) external login |
 | Messaging | MassTransit over RabbitMQ for integration events; a no-op bus when disabled |
+| Observability / local orchestration | Serilog; OpenTelemetry via .NET Aspire service defaults; Aspire app host and dashboard for local development |
 | Vendor framework | `Lightsoft.*` package family (mediator, `Result`/`Paged` contracts, domain base types, ASP.NET Core authorization/modularity helpers, caching, Serilog, event bus, Active Directory) |
 | Validation / mapping | FluentValidation, Mapster |
 | Testing | xUnit v3 + Moq (via `tests/ModuleTests.props`) on Microsoft.Testing.Platform (selected by the root `global.json`) |
@@ -125,7 +132,8 @@ Package versions are managed centrally in [Directory.Packages.props](Directory.P
 
 ```bash
 dotnet build StarterKit.slnx
-dotnet run --project src/Host/Host.csproj
+dotnet run --project src/StarterKit.AppHost                              # API + Aspire dashboard
+dotnet run --project src/StarterKit.WebApi/StarterKit.WebApi.csproj      # or the API on its own
 dotnet test --solution StarterKit.slnx
 ```
 

@@ -14,17 +14,22 @@ dotnet build StarterKit.slnx
 
 ## Running Locally
 
+The API runs either under the Aspire app host, with the Aspire dashboard, or on its own:
+
 ```
-dotnet run --project src/Host/Host.csproj
+dotnet run --project src/StarterKit.AppHost
+dotnet run --project src/StarterKit.WebApi/StarterKit.WebApi.csproj
 ```
 
-The default `http` launch profile binds plain HTTP on `http://localhost:5000`, which is the primary Development endpoint — HTTPS redirection is skipped in `Development`, so no HTTPS listener is needed for local work (this also lets a server-to-server client call the API without hitting the untrusted dev certificate). The `https` profile additionally binds `https://localhost:5001` (ASP.NET dev certificate) for anyone who wants it.
+- **Under the AppHost**: starts `StarterKit.WebApi` as the resource `api` and opens the Aspire dashboard (logs, metrics, traces, and the resource's endpoints). The AppHost's launch profiles, dashboard URLs, and what it passes to the API: [../architecture/projects/Aspire.md § Running](../architecture/projects/Aspire.md#running).
+- **On its own**: the default `http` launch profile binds plain HTTP on `http://localhost:5000`, which is the primary Development endpoint — HTTPS redirection is skipped in `Development`, so no HTTPS listener is needed for local work (this also lets a server-to-server client call the API without hitting the untrusted dev certificate). The `https` profile additionally binds `https://localhost:5001` (ASP.NET dev certificate) for anyone who wants it. Run this way, the API exports no telemetry.
 
-`src/Host` is the composition root — see [../architecture/Host.md](../architecture/Host.md). Its local defaults:
+`src/StarterKit.WebApi` is the composition root — see [../architecture/projects/WebApi.md](../architecture/projects/WebApi.md). Its local defaults:
 
-- **Database**: `DbProvider` is `MSSQL` in `src/Host/appsettings.json`, pointing `ConnectionStrings:DefaultConnection` at a local `(localdb)\mssqllocaldb` instance, and `appsettings.Development.json` does not override it. A relational database needs its schema created first by the matching migrator — see [migrations.md § Migration sets](migrations.md#migration-sets). Switch to `InMemory` (no schema step, no database server) or `Sqlite`/`PostgreSQL` via `DbProvider` and a matching `ConnectionStrings:DefaultConnection` (commented-out PostgreSQL/Sqlite examples are in `appsettings.json`) if SQL Server LocalDB is not available.
+- **Database**: `DbProvider` is `MSSQL` in `src/StarterKit.WebApi/appsettings.json`, pointing `ConnectionStrings:DefaultConnection` at a local `(localdb)\mssqllocaldb` instance, and `appsettings.Development.json` does not override it. A relational database needs its schema created first by the matching migrator — see [migrations.md § Migration sets](migrations.md#migration-sets). Switch to `InMemory` (no schema step, no database server) or `Sqlite`/`PostgreSQL` via `DbProvider` and a matching `ConnectionStrings:DefaultConnection` (commented-out PostgreSQL/Sqlite examples are in `appsettings.json`) if SQL Server LocalDB is not available.
 - **Event bus**: `RabbitMQ:Enable` is `false`, so no broker is needed.
 - **Authentication**: `AllowAnonymous` is `false` in `appsettings.json` and not overridden in Development — requests need a valid JWT unless the endpoint is explicitly anonymous.
+- **Health**: `/hc` in every environment; `/health` and `/alive` in `Development` — see [../architecture/projects/Aspire.md § How StarterKit.WebApi Uses the Service Defaults](../architecture/projects/Aspire.md#how-starterkitwebapi-uses-the-service-defaults).
 
 An existing developer database that no longer matches the current migration ids must be reset first — see [migrations.md § Resetting a developer database](migrations.md#resetting-a-developer-database).
 
@@ -43,16 +48,16 @@ No external database or service is needed. Test conventions and coverage: [codin
 
 ## Local Setup
 
-- The checked-in connection string, JWT signing values (`Jwt:SecretKey`, `Jwt:Issuer`, token lifetimes), and Basic Auth value (`BasicAuth`) in `src/Host/appsettings.json` are starter-template placeholders, not production secrets — replace them before any real deployment.
-- `UserSecretsId` is set on `src/Host/Host.csproj` for local `dotnet user-secrets` overrides if preferred over editing `appsettings.Development.json` directly — e.g. the Microsoft Entra ID client secret:
+- The checked-in connection string, JWT signing values (`Jwt:SecretKey`, `Jwt:Issuer`, token lifetimes), and Basic Auth value (`BasicAuth`) in `src/StarterKit.WebApi/appsettings.json` are starter-template placeholders, not production secrets — replace them before any real deployment.
+- `UserSecretsId` is set on `src/StarterKit.WebApi/StarterKit.WebApi.csproj` for local `dotnet user-secrets` overrides if preferred over editing `appsettings.Development.json` directly — e.g. the Microsoft Entra ID client secret:
 
   ```
-  dotnet user-secrets set "Authentication:Microsoft:ClientSecret" "<SECRET_VALUE>" --project src/Host/Host.csproj
-  dotnet user-secrets list --project src/Host/Host.csproj
-  dotnet user-secrets remove "Authentication:Microsoft:ClientSecret" --project src/Host/Host.csproj
+  dotnet user-secrets set "Authentication:Microsoft:ClientSecret" "<SECRET_VALUE>" --project src/StarterKit.WebApi/StarterKit.WebApi.csproj
+  dotnet user-secrets list --project src/StarterKit.WebApi/StarterKit.WebApi.csproj
+  dotnet user-secrets remove "Authentication:Microsoft:ClientSecret" --project src/StarterKit.WebApi/StarterKit.WebApi.csproj
   ```
 
-- Configuration sections and their owners: [../architecture/Host.md § Configuration](../architecture/Host.md#configuration).
+- Configuration sections and their owners: [../architecture/projects/WebApi.md § Configuration](../architecture/projects/WebApi.md#configuration).
 
 ## Common Tasks
 

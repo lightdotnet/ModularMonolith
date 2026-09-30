@@ -35,7 +35,7 @@ It references only `Shared`.
 | Member | Role |
 |---|---|
 | `EntityTypeBuilderExtensions.ConfigureAuditableEntity` | Caps the string key and the audit-user columns of a `Shared` `AuditableEntity` at 450 characters (only the audit-user columns for `AuditableEntity<TId>`) |
-| `IndexBuilderExtensions.HasProviderFilter` | Filtered-index predicate with provider-specific quoting — see [migrations.md § Provider-aware filtered indexes](../conventions/migrations.md#provider-aware-filtered-indexes) |
+| `IndexBuilderExtensions.HasProviderFilter` | Filtered-index predicate with provider-specific quoting — see [migrations.md § Provider-aware filtered indexes](../../conventions/migrations.md#provider-aware-filtered-indexes) |
 | `SqliteDbContextExtensions.FixSqliteDateTimeOffset` | On Sqlite only, converts every `DateTimeOffset`/`DateTimeOffset?` property to Unix seconds (`long`) |
 
 **Queries and errors** (`Extensions/`):
@@ -68,7 +68,7 @@ It references only `Shared`.
 | `DbProvider` | `AddConfiguredDbContext`, `GetDbProvider` | `InMemory`, `PostgreSQL`, `MSSQL`, or `Sqlite`; an absent key reads as `InMemory` (the enum's default) |
 | `ConnectionStrings:<connectionName>` | `AddConfiguredDbContext` | Required for every provider except InMemory; module contexts pass a `DbConnectionNames` constant (`DefaultConnection`) |
 
-The migrators do not read `DbProvider`: each fixes its provider in its own registration — see [migrations.md § Migration sets](../conventions/migrations.md#migration-sets). Host defaults: [development-guide.md § Running Locally](../conventions/development-guide.md#running-locally).
+The migrators do not read `DbProvider`: each fixes its provider in its own registration — see [migrations.md § Migration sets](../../conventions/migrations.md#migration-sets). Host defaults: [development-guide.md § Running Locally](../../conventions/development-guide.md#running-locally).
 
 ## Usage
 
@@ -111,11 +111,11 @@ services.AddConfiguredDbContext<BillingDbContext>(
 
 ## Design Notes
 
-- **Save path is the context's job**: `BaseDbContext` only builds the model. A context gets audit and domain-event dispatch by calling `AuditEntries` and `DispatchDomainEvents` from its `SaveChanges` overrides, in that order, before committing. Domain events are therefore handled before the commit, sequentially, and — because the mediator runs notification handlers in-line — in the caller's DI scope, so a handler's changes to the same context are committed with the originating save. The solution-level save path, including integration events, is in [architecture.md § Persistence save path](architecture.md#persistence-save-path).
+- **Save path is the context's job**: `BaseDbContext` only builds the model. A context gets audit and domain-event dispatch by calling `AuditEntries` and `DispatchDomainEvents` from its `SaveChanges` overrides, in that order, before committing. Domain events are therefore handled before the commit, sequentially, and — because the mediator runs notification handlers in-line — in the caller's DI scope, so a handler's changes to the same context are committed with the originating save. The solution-level save path, including integration events, is in [architecture.md § Persistence save path](../architecture.md#persistence-save-path).
 - **Contexts that cannot derive the base** call the helpers directly — `IdentityDbContext` is the example, see [Identity § Design Notes](Identity.md#design-notes). No context in this solution derives from `BaseDbContext`.
 - **InMemory**: every InMemory context shares one database name (`InMemoryDb`).
 - **Sqlite `DateTimeOffset`**: Sqlite cannot order by `DateTimeOffset`, so the conversion stores Unix seconds. Stored values lose sub-second precision and their offset (they read back as UTC). The conversion is applied after the context's own model configuration and replaces any converter configured there.
-- **Pending model changes**: `AddConfiguredDbContext` configures EF Core's `PendingModelChangesWarning` to be logged, so a runtime context whose model differs from its migrations' snapshot does not fail when it migrates. The migrators configure the warning in their own registration — see [migrations.md § Migration sets](../conventions/migrations.md#migration-sets).
+- **Pending model changes**: `AddConfiguredDbContext` configures EF Core's `PendingModelChangesWarning` to be logged, so a runtime context whose model differs from its migrations' snapshot does not fail when it migrates. The migrators configure the warning in their own registration — see [migrations.md § Migration sets](../../conventions/migrations.md#migration-sets).
 - **Migrator identity**: `AddMigrationsServices` makes every audit stamp written by a migrator read `Migrator`. Its mediator registration covers the `Persistence` assembly plus the module assemblies each migrator passes (the migrators pass the Identity assembly), so a module's notification handlers run during migrate-and-seed.
 - **Cache repository contract**: an entity cached through `CacheRepositoryBase` must be written only through the repository — a save on the underlying context leaves the cache stale, and nothing enforces this. Cached instances are detached snapshots. The repository needs a relational provider (its cache key reads the connection's database name, which the InMemory provider cannot supply).
 - **Dynamic-table concurrency**: `DynamicTableRepository.Update` is last-writer-wins; no concurrency token is configured.
@@ -129,15 +129,15 @@ services.AddConfiguredDbContext<BillingDbContext>(
 | `Lightsoft.Caching` | package | `ICacheService` for the cache repositories |
 | `Microsoft.EntityFrameworkCore.InMemory`, `.Sqlite`, `.SqlServer`, `Npgsql.EntityFrameworkCore.PostgreSQL` | package | The four supported providers |
 
-Package versions: `Directory.Packages.props`. Full reference graph: [dependency-graph.md](dependency-graph.md).
+Package versions: `Directory.Packages.props`. Full reference graph: [dependency-graph.md](../dependency-graph.md).
 
 ## Depended On By
 
 | Project | Why |
 |---|---|
 | `Identity` | `AddConfiguredDbContext`, the save-path extensions, `FixSqliteDateTimeOffset`, `MigrateDatabaseAsync`, paging — see [Identity](Identity.md) |
-| `Host` | Project reference only; host code calls no `Persistence` member — the module contexts it composes register through `AddConfiguredDbContext` — see [Host](Host.md) |
-| `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | `AddMigrationsServices`, `DbConnectionNames` — see [migrations.md](../conventions/migrations.md) |
+| `StarterKit.WebApi` | Project reference only; host code calls no `Persistence` member — the module contexts it composes register through `AddConfiguredDbContext` — see [StarterKit.WebApi](WebApi.md) |
+| `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | `AddMigrationsServices`, `DbConnectionNames` — see [migrations.md](../../conventions/migrations.md) |
 | `tests/Framework.Tests` | Unit tests (Sqlite in-memory contexts where behaviour needs a database) |
 
 ## Notable Conventions

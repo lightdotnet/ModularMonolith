@@ -5,7 +5,7 @@ The short-form framework rules (packages, errors, API responses, DDD, events, DI
 ## Build & Tooling
 
 - `Directory.Build.props` sets `net10.0`, `ImplicitUsings=enable`, and `Nullable=enable` for every project.
-- Central package management via `Directory.Packages.props` (`ManagePackageVersionsCentrally=true`, `CentralPackageTransitivePinningEnabled=false`). The projects that opt out — the test projects through `tests/ModuleTests.props`, and the migration projects — are listed in [dependency-graph.md § Version Mismatches](../architecture/dependency-graph.md#version-mismatches).
+- Central package management via `Directory.Packages.props` (`ManagePackageVersionsCentrally=true`, `CentralPackageTransitivePinningEnabled=false`). The projects that opt out — the test projects through `tests/ModuleTests.props`, the migration projects, and `StarterKit.ServiceDefaults` — are listed in [dependency-graph.md § Version Mismatches](../architecture/dependency-graph.md#version-mismatches).
 - Vendor `Lightsoft.*` (namespace `Light.*`) types are a fixed external API, not renameable/refactorable project code.
 
 ## Style
@@ -19,12 +19,12 @@ The short-form framework rules (packages, errors, API responses, DDD, events, DI
 ## Structural Conventions
 
 - **Domain design is DDD-first** — model aggregates, invariants, value objects, and domain events before handlers ([CLAUDE.md § 7](../../CLAUDE.md#7-framework-conventions)).
-- **DI registration**: exceptions to the `DependencyInjection` naming convention are noted in each project's overview under Notable Conventions (e.g. the host composes through `ConfigureExtensions` — see [../architecture/Host.md § Notable Conventions](../architecture/Host.md#notable-conventions)).
+- **DI registration**: exceptions to the `DependencyInjection` naming convention are noted in each project's overview under Notable Conventions (e.g. the host composes through `ConfigureExtensions` — see [../architecture/projects/WebApi.md § Notable Conventions](../architecture/projects/WebApi.md#notable-conventions)).
 - **Validation — two-layer FluentValidation.** The `ValidationBehaviour<,>` pipeline behavior and the host's validator registration are in place; no project defines a validator yet. The shape to follow: each request DTO gets an `AbstractValidator<TRequest>` **in the same file**, holding field-shape rules only (`NotEmpty`, `MaximumLength`, `IsInEnum`); each mediator command gets a thin `AbstractValidator<TCommand>` **in the same file as the command+handler**, validating route-level primitives directly (e.g. `RuleFor(x => x.Id).NotEmpty()`) and delegating the DTO via `RuleFor(x => x.Model).SetValidator(new XRequestValidator())`. Queries generally don't need a validator.
-- **Logging**: `AppLogging` ([Infrastructure](../architecture/Infrastructure.md)) only for bootstrap/startup; standard `ILogger<T>` DI for request/runtime logging everywhere else.
+- **Logging**: `AppLogging` ([Infrastructure](../architecture/projects/Infrastructure.md)) only for bootstrap/startup; standard `ILogger<T>` DI for request/runtime logging everywhere else.
 - **Audience-split controllers**: an admin controller and a self-service controller hard-scoped via `ICurrentUser` over the same data — `Identity`'s `UserController` and `UserProfileController`.
 - **Seam vs. leaf**: a `<Module>.Contracts` seam references `Shared`, so "seam project" does not imply "leaf project"; `Shared` is the only leaf.
-- **A cross-module seam (`I<Module>…Api`/`I<Module>…Service`) is a DI-only interface on the module's `Contracts` project, implemented `internal` in the module**, for another module to call directly via constructor injection (not `Mediator.Send`, which stays `internal` to the owning module). `Identity`'s `IIdentityModuleApi` (implemented in `src/Identity/Api/`) is the reference — see [../architecture/Identity.md](../architecture/Identity.md).
+- **A cross-module seam (`I<Module>…Api`/`I<Module>…Service`) is a DI-only interface on the module's `Contracts` project, implemented `internal` in the module**, for another module to call directly via constructor injection (not `Mediator.Send`, which stays `internal` to the owning module). `Identity`'s `IIdentityModuleApi` (implemented in `src/Identity/Api/`) is the reference — see [../architecture/projects/Identity.md](../architecture/projects/Identity.md).
 - **Filtered indexes** are declared with `HasProviderFilter` — see [migrations.md § Provider-aware filtered indexes](migrations.md#provider-aware-filtered-indexes).
 
 ## Testing Conventions
@@ -40,7 +40,7 @@ The short-form framework rules (packages, errors, API responses, DDD, events, DI
 ## Deviations From Norms Elsewhere in the Repo
 
 - **`Identity`'s handlers delegate to service classes.** Its command handlers forward to `IUserService`/`IRoleService` instead of holding the logic (the search query uses `UserManager<User>` directly), and its read endpoints and token endpoints call services directly. New modules put behavior on the aggregate and logic in the handler.
-- **Migration projects version their own packages**, unlike every other `src/` project — see [dependency-graph.md § Version Mismatches](../architecture/dependency-graph.md#version-mismatches).
+- **Migration projects and `StarterKit.ServiceDefaults` version their own packages**, unlike every other `src/` project — see [dependency-graph.md § Version Mismatches](../architecture/dependency-graph.md#version-mismatches).
 
 ## Notes
 

@@ -10,7 +10,7 @@
 - controller endpoint mapping with a secure-by-default authorization requirement;
 - caching, CORS, health checks, Mapster configuration, and a static bootstrap logger.
 
-It references only `Shared`. It does not register authentication, the mediator, or validators; the host does — see [Host](Host.md).
+It references only `Shared`. It does not register authentication, the mediator, or validators; the host does — see [StarterKit.WebApi](WebApi.md).
 
 ## Public Surface
 
@@ -51,7 +51,7 @@ It references only `Shared`. It does not register authentication, the mediator, 
 | `CorsOrigins` | `AddCorsPolicy` | Allowed origins for `AllowCors`; the vendor policy allows any method and header, with credentials |
 | `BasicAuth` | `BasicAuthAttribute` | Expected Basic credentials (`user:password`) for endpoints carrying the attribute |
 
-`AllowAnonymous` is read by the host and passed to `MapEndpoints`. Section placement per host: [Host § Configuration](Host.md#configuration).
+`AllowAnonymous` is read by the host and passed to `MapEndpoints`. Section placement per host: [StarterKit.WebApi § Configuration](WebApi.md#configuration).
 
 ## Usage
 
@@ -78,13 +78,13 @@ public class InvoiceController
 }
 ```
 
-The module becomes part of a process when the host adds its assembly to the assembly scan list — see [architecture.md § Module composition](architecture.md#module-composition).
+The module becomes part of a process when the host adds its assembly to the assembly scan list — see [architecture.md § Module composition](../architecture.md#module-composition).
 
 ## Design Notes
 
-- **Response envelope**: the vendor `Ok<T>(data)` wraps `data` in `Result<T>.Success`, or passes a `Result`/`Result<T>` through unchanged, stamps `RequestId` with `HttpContext.TraceIdentifier`, and converts it to an `IActionResult` whose status comes from the result. A handler that returns a failed `Result` therefore produces the matching error status through the same `Ok(...)` call. Controllers never build the envelope by hand ([CLAUDE.md § 7](../../CLAUDE.md#7-framework-conventions)).
+- **Response envelope**: the vendor `Ok<T>(data)` wraps `data` in `Result<T>.Success`, or passes a `Result`/`Result<T>` through unchanged, stamps `RequestId` with `HttpContext.TraceIdentifier`, and converts it to an `IActionResult` whose status comes from the result. A handler that returns a failed `Result` therefore produces the matching error status through the same `Ok(...)` call. Controllers never build the envelope by hand ([CLAUDE.md § 7](../../../CLAUDE.md#7-framework-conventions)).
 - **Module instances per phase**: the vendor scanner creates each module through its parameterless constructor, separately for registration, middleware, and endpoint mapping, so instance state set in `Add` is not visible in `Use` or `Map`.
-- **Two endpoint hooks**: `AppModule.Map` and `AppModuleEndpoint.Map` are both discovered by scanning; the host decides where each is mapped (versioned group vs. root) — see [architecture.md § Module composition](architecture.md#module-composition).
+- **Two endpoint hooks**: `AppModule.Map` and `AppModuleEndpoint.Map` are both discovered by scanning; the host decides where each is mapped (versioned group vs. root) — see [architecture.md § Module composition](../architecture.md#module-composition).
 - **Secure by default**: with `allowAnonymous` `false`, every controller endpoint requires an authenticated user; an endpoint opts out with `[AllowAnonymous]`.
 - **CORS without origins**: when `CorsOrigins` is absent, no policy is registered while `UseCorsPolicy` still names `AllowCors`, so no CORS headers are emitted.
 - **Health checks**: `AddHealthChecksService` registers no individual check, so `/hc` reports process liveness only. `MapEndpoints`' authorization requirement applies to controllers, not to `/hc`.
@@ -100,13 +100,13 @@ The module becomes part of a process when the host adds its assembly to the asse
 | `Lightsoft.Serilog`, `Lightsoft.FileGenerator` | package | Serilog sinks for `AppLogging`; file generation registered by the host |
 | `AspNetCore.HealthChecks.UI.Client` | package | Health-check response writer |
 
-Package versions: `Directory.Packages.props`. Full reference graph: [dependency-graph.md](dependency-graph.md).
+Package versions: `Directory.Packages.props`. Full reference graph: [dependency-graph.md](../dependency-graph.md).
 
 ## Depended On By
 
 | Project | Why |
 |---|---|
-| `Host` | Composes every registration and middleware helper above — see [Host](Host.md) |
+| `StarterKit.WebApi` | Composes every registration and middleware helper above — see [StarterKit.WebApi](WebApi.md) |
 | `Identity` | `IdentityModule : AppModule`, controllers on `VersionedApiController` — see [Identity](Identity.md) |
 | `Identity.Web` | Its standalone host's composition (`AddSharedInfrastructure`, `AddAppCache`, `ServerCurrentUser`) |
 | `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | `AddSharedInfrastructure` for `IDateTime` in the migrate-and-seed apps |

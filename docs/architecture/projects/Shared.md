@@ -72,8 +72,8 @@ The vendor `Result`/`Result<T>`/`Paged<T>` contracts (`Light.Contracts`) and ext
 
 - **Permission authorization**: an endpoint names a permission as its policy (the vendor `[MustHavePermission("…")]` attribute sets `Policy`). The vendor provider first returns a normally registered policy of that name; otherwise it builds and caches a policy holding one `PermissionRequirement` for that name — any name is accepted, since `Shared`'s `PolicyProvider` does not restrict `CheckPermissionValidAsync`. The handler succeeds when the principal has a `permission` claim with that value or is a super user. A misspelled permission therefore fails closed for every user except `super`.
 - **Super user**: `super` bypasses every permission check, both in the handler and in `CurrentUserBase.HasPermission`. The rule is a hard-coded list, not configuration or a claim.
-- **Validation vs. domain rules**: `ValidationBehaviour` is the input-shape gate for mediator requests; the value objects guard only their own domain invariants. Both throw the vendor `ValidationException`, which the host's exception handler turns into an error response — see [architecture.md § HTTP request pipeline](architecture.md#http-request-pipeline).
-- **Domain vs. integration events**: `DomainEvent` stays in-process and is dispatched by `Persistence`; `IntegrationEvent` crosses module boundaries through `IEventBus`. The rule is in [CLAUDE.md § 7](../../CLAUDE.md#7-framework-conventions).
+- **Validation vs. domain rules**: `ValidationBehaviour` is the input-shape gate for mediator requests; the value objects guard only their own domain invariants. Both throw the vendor `ValidationException`, which the host's exception handler turns into an error response — see [architecture.md § HTTP request pipeline](../architecture.md#http-request-pipeline).
+- **Domain vs. integration events**: `DomainEvent` stays in-process and is dispatched by `Persistence`; `IntegrationEvent` crosses module boundaries through `IEventBus`. The rule is in [CLAUDE.md § 7](../../../CLAUDE.md#7-framework-conventions).
 - **Value objects mutated in place**: `ActiveStatus.Update` (public) and `Money`/`VatPercentage.Update` (internal) change the tracked owned instance instead of replacing it.
 
 ## Dependencies
@@ -87,7 +87,7 @@ The vendor `Result`/`Result<T>`/`Paged<T>` contracts (`Light.Contracts`) and ext
 | `Lightsoft.AspNetCore.Authorization` | package | Permission policy provider, handler, requirement, and registration helpers |
 | `FluentValidation`, `Mapster` | package | Validators for `ValidationBehaviour`; mapping (configured in `Infrastructure`) |
 
-No project reference. Package versions: `Directory.Packages.props`. Full reference graph: [dependency-graph.md](dependency-graph.md).
+No project reference. Package versions: `Directory.Packages.props`. Full reference graph: [dependency-graph.md](../dependency-graph.md).
 
 ## Depended On By
 
@@ -98,7 +98,7 @@ No project reference. Package versions: `Directory.Packages.props`. Full referen
 | `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | Composition of the migrate-and-seed apps |
 | `tests/Framework.Tests`, `tests/Identity.Tests` | Unit tests |
 
-`Host` reaches `Shared` transitively.
+`StarterKit.WebApi` reaches `Shared` transitively.
 
 ## Notable Conventions
 

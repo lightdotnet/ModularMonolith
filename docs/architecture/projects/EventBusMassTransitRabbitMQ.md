@@ -8,7 +8,7 @@
 - base consumer and consumer-definition types that fix the framework's delivery policy (concurrency, retries, outbox, per-module queues);
 - a base type for a module's consumer registration, discovered by assembly scanning.
 
-The events it carries derive from `Shared`'s `IntegrationEvent` — see [Shared](Shared.md). When to use an integration event rather than a domain event is in [CLAUDE.md § 7](../../CLAUDE.md#7-framework-conventions).
+The events it carries derive from `Shared`'s `IntegrationEvent` — see [Shared](Shared.md). When to use an integration event rather than a domain event is in [CLAUDE.md § 7](../../../CLAUDE.md#7-framework-conventions).
 
 ## Public Surface
 
@@ -102,13 +102,13 @@ Publish by injecting `IEventBus` and calling `Publish(new OrderPlacedIntegration
 | `Shared` | project | `IntegrationEvent` base type (constraint on the consumer bases, excluded from topology); vendor `Lightsoft.EventBus` abstractions (`IEventBus`, `IIntegrationEvent`) flow through it |
 | `Lightsoft.EventBus.MassTransit.RabbitMQ` | package | `AddRabbitMQEventBus`, MassTransit/RabbitMQ transport, `Consumer<T>`/`ConsumerDefinition<TEvent, TConsumer>` bases, `ModuleConsumer` and its scanning |
 
-Package versions: `Directory.Packages.props`. Full reference graph: [dependency-graph.md](dependency-graph.md).
+Package versions: `Directory.Packages.props`. Full reference graph: [dependency-graph.md](../dependency-graph.md).
 
 ## Depended On By
 
 | Project | Why |
 |---|---|
-| `Host` | Calls `AddEventBus` once with its module assembly list — see [Host](Host.md) |
+| `StarterKit.WebApi` | Calls `AddEventBus` once with its module assembly list — see [StarterKit.WebApi](WebApi.md) |
 | `Identity.Web` | Its standalone host calls `AddEventBus` with no assemblies so `IdentityDbContext` resolves — see [Identity](Identity.md) |
 | `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | Call `AddEventBus` with no assemblies; their configuration has no `RabbitMQ` section, so they get `NoOpEventBus` |
 | `tests/Framework.Tests` | Unit tests of the registration, the no-op bus, the settings binding, and the consumer-definition policy |

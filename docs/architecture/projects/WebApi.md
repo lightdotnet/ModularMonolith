@@ -1,13 +1,13 @@
-# Project Overview: Host
+# Project Overview: StarterKit.WebApi
 
 ## Purpose
 
-`src/Host` (assembly/namespace `StarterKit.Host`) is the **composition root and the only deployable** in the solution. It composes the framework projects and the Identity module into one ASP.NET Core process that serves both:
+`src/StarterKit.WebApi` (assembly/namespace `StarterKit.WebApi`) is the **composition root and the only deployable** in the solution. It composes the framework projects and the Identity module into one ASP.NET Core process that serves both:
 
 - the versioned JSON API (`/api/v{version}/…`) contributed by modules, authenticated with Bearer tokens;
 - the Identity Razor Pages (`/Account/…`, `/signin-oidc`) contributed by `Identity.Web`, authenticated with the Identity application cookie.
 
-It holds no business logic: everything it registers comes from a framework project or a module.
+It holds no business logic: everything it registers comes from a framework project, a module, or the Aspire service defaults. For local development it can also run under the Aspire app host — see [Aspire](Aspire.md).
 
 ## Public Surface
 
@@ -15,28 +15,30 @@ The host is an application, not a library; its surface is its composition.
 
 | Area | Role |
 |---|---|
-| `Program` | Configures Serilog, calls `ConfigureServices`, adds lowercase controllers and the default JSON / invalid-model-state handling, then `ConfigurePipelines` and endpoint mapping. `AllowAnonymous` (configuration) is passed to endpoint mapping. |
-| `ConfigureExtensions.ConfigureServices` | Registers everything discovered from the **assembly scan list** ([architecture.md § Module composition](architecture.md#module-composition)), the shared infrastructure (exception handler, API versioning, Swagger, caching, health checks, CORS, current user, permission policies), the rate limiter, `AddIdentityWeb`, and `AddApiAuthentication`. |
-| `ConfigureExtensions.ConfigurePipelines` | Builds the middleware pipeline and maps health checks, module endpoints, and the Identity Razor Pages — order in [architecture.md § HTTP request pipeline](architecture.md#http-request-pipeline). |
+| `Program` | Clears the default logging providers, applies the Aspire service defaults (`AddServiceDefaults`), configures Serilog with `writeToProviders: true` (logging details in [Aspire § How StarterKit.WebApi Uses the Service Defaults](Aspire.md#how-starterkitwebapi-uses-the-service-defaults)), calls `ConfigureServices`, adds lowercase controllers and the default JSON / invalid-model-state handling, then `ConfigurePipelines`, WebSockets, endpoint mapping, and `MapDefaultEndpoints`. `AllowAnonymous` (configuration) is passed to endpoint mapping. |
+| `ConfigureExtensions.ConfigureServices` | Registers everything discovered from the **assembly scan list** ([architecture.md § Module composition](../architecture.md#module-composition)), the shared infrastructure (exception handler, API versioning, Swagger, caching, health checks, CORS, current user, permission policies), the rate limiter, `AddIdentityWeb`, and `AddApiAuthentication`. |
+| `ConfigureExtensions.ConfigurePipelines` | Builds the middleware pipeline and maps health checks, module endpoints, and the Identity Razor Pages — order in [architecture.md § HTTP request pipeline](../architecture.md#http-request-pipeline). |
 | `Authentication.ApiAuthenticationExtensions.AddApiAuthentication` | Co-host authentication: the Bearer scheme, a hub-only `HubBearer` scheme, and the `Identity.CookieOrBearer` policy scheme described under [Design Notes](#design-notes). |
+
+Health endpoints: `/hc` in every environment (the deployment health endpoint), plus `/health` and `/alive` in `Development` only for Aspire — see [Aspire § How StarterKit.WebApi Uses the Service Defaults](Aspire.md#how-starterkitwebapi-uses-the-service-defaults).
 
 ## Configuration
 
-Top-level sections the host reads directly or passes to the projects it composes (`src/Host/appsettings*.json`):
+Top-level sections the host reads directly or passes to the projects it composes (`src/StarterKit.WebApi/appsettings*.json`):
 
 | Section | Owner |
 |---|---|
 | `DbProvider`, `ConnectionStrings` | `Persistence` — the Identity context uses `DefaultConnection` |
 | `Jwt` | Identity module (token issuance) and the host's Bearer schemes; required — startup fails if it is missing or has no `SecretKey` |
-| `Authentication:Microsoft`, `ExternalLoginRelay` | Identity / Identity.Web — see [Identity](Identity.md) |
+| `Authentication:Microsoft`, `ExternalLoginRelay`, `IdentityWeb` | Identity / Identity.Web — see [Identity](Identity.md) |
 | `MemberOfDomain` | Identity (Active Directory) |
 | `RabbitMQ` | [EventBusMassTransitRabbitMQ § Configuration](EventBusMassTransitRabbitMQ.md#configuration) |
 | `CorsOrigins`, `Caching`, `Swagger`, `RequestLogging`, `Serilog` | Framework infrastructure and vendor packages |
-| `AllowAnonymous` | Host — endpoint mapping |
+| `AllowAnonymous` | `StarterKit.WebApi` — endpoint mapping |
 | `BasicAuth` | [Infrastructure](Infrastructure.md) — `BasicAuthAttribute` credentials |
-| `Notifications:Hub:Path` | Host — hub path used by the authentication scheme routing |
+| `Notifications:Hub:Path` | `StarterKit.WebApi` — hub path used by the authentication scheme routing |
 
-Default values and local provider switching: [development-guide.md § Running Locally](../conventions/development-guide.md#running-locally).
+Default values and local provider switching: [development-guide.md § Running Locally](../../conventions/development-guide.md#running-locally).
 
 ## Design Notes
 
@@ -58,15 +60,16 @@ Default values and local provider switching: [development-guide.md § Running Lo
 | `EventBusMassTransitRabbitMQ` | project | `AddEventBus` |
 | `Identity` | project | `IdentityModule` and its assembly in the scan list; JWT options for the Bearer schemes |
 | `Identity.Web` | project | `AddIdentityWeb` / `UseIdentityWeb` (Razor Pages) |
+| `StarterKit.ServiceDefaults` | project | `AddServiceDefaults` / `MapDefaultEndpoints` — see [Aspire](Aspire.md) |
 | `Lightsoft.AspNetCore.Extensions`, `Lightsoft.AspNetCore.Swagger` | package | Vendor host helpers (JWT auth, exception handling, request logging, Swagger) |
 | `Microsoft.AspNetCore.Authentication.JwtBearer` | package | `HubBearer` scheme |
 | `FluentValidation.DependencyInjectionExtensions`, `AspNetCore.HealthChecks.UI.Client`, `Spectre.Console` | package | Validator registration, health-check output, startup banner |
 
-Package versions: `Directory.Packages.props`. Full reference graph: [dependency-graph.md](dependency-graph.md).
+Package versions: `Directory.Packages.props`. Full reference graph: [dependency-graph.md](../dependency-graph.md).
 
 ## Depended On By
 
-No project references it. Tests do not reference it.
+`StarterKit.AppHost` references it, to run it as the `api` resource — see [Aspire](Aspire.md). No other project references it. Tests do not reference it.
 
 ## Notable Conventions
 

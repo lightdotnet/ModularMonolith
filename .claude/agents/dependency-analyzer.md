@@ -23,7 +23,7 @@ tools: Glob, Grep, Read, Bash
 
 - `.csproj` files for `<ProjectReference>` and `<PackageReference>` entries in scope.
 - `StarterKit.slnx` for which projects are actually included.
-- `Directory.Packages.props`/`Directory.Build.props` for central version management. Two known opt-outs (`ManagePackageVersionsCentrally=false`): `tests/ModuleTests.props` for the test projects, and the three migrators under `src/Migrations/{MSSQL,PostgreSQL,Sqlite}`, which set `Version="$(AspnetVersion)"` on each `PackageReference`.
+- `Directory.Packages.props`/`Directory.Build.props` for central version management. Three known opt-outs (`ManagePackageVersionsCentrally=false`): `tests/ModuleTests.props` for the test projects; the three migrators under `src/Migrations/{MSSQL,PostgreSQL,Sqlite}`, which set `Version="$(AspnetVersion)"` on each `PackageReference`; and `src/StarterKit.ServiceDefaults`, which sets a literal `Version=` on each `PackageReference`. `src/StarterKit.AppHost` pins its Aspire version on its `Sdk` attribute.
 
 ## Expected Output
 

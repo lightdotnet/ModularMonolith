@@ -12,7 +12,7 @@ See `CLAUDE.md` §0. The user writes requests in Vietnamese — treat that as co
 
 ## Repository Shape Assumptions
 
-- **One .NET solution** (`StarterKit.slnx` at the repo root) holding the framework projects, the `Host` composition root, and the Identity module under `src/`, and their tests under `tests/` — see `CLAUDE.md` §1 and §3.
+- **One .NET solution** (`StarterKit.slnx` at the repo root) holding the framework projects, the `StarterKit.WebApi` composition root with its Aspire app host and service defaults (`StarterKit.AppHost`, `StarterKit.ServiceDefaults`), and the Identity module under `src/`, and their tests under `tests/` — see `CLAUDE.md` §1 and §3.
 - **Identity is the only business module and there are no client apps on this branch.** Don't describe or assume any other module, host, or client exists — verify with `Glob`/`Grep` first. Code comments or configuration may mention modules or clients that live elsewhere (e.g. a Notifications module, an admin client); that is not evidence they exist here.
 
 ## Context-Loading Strategy
