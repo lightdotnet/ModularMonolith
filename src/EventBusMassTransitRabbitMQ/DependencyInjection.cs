@@ -7,7 +7,7 @@ using System.Reflection;
 
 namespace StarterKit.EventBusMassTransitRabbitMQ;
 
-public static class Startup
+public static class DependencyInjection
 {
     public static IServiceCollection AddEventBus(
         this IServiceCollection services,
