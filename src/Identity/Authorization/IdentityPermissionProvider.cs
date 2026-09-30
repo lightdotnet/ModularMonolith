@@ -15,7 +15,5 @@ internal sealed class IdentityPermissionProvider : IPermissionDefinitionProvider
         yield return new(IdentityPermissions.Roles.View, "View Roles", "roles");
 
         yield return new(IdentityPermissions.Roles.Manage, "Manage Roles", "roles");
-
-        yield return new(IdentityPermissions.Permissions.View, "View Permissions", "permissions");
     }
 }

@@ -21,9 +21,4 @@ internal static class IdentityPermissions
 
         public const string Manage = $"{Group}.roles.manage";
     }
-
-    public static class Permissions
-    {
-        public const string View = $"{Group}.permissions.view";
-    }
 }
