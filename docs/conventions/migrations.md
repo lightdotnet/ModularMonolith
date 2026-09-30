@@ -43,14 +43,14 @@ Each provider directory under `src/Migrations/` is a console app holding one fol
 
 | Modules | MSSQL | PostgreSQL | Sqlite |
 |---|---|---|---|
-| `Identity` | one `CreateIdentitySchema` baseline | baseline plus `AddUserCreatedIndex` | baseline plus `AddUserCreatedIndex` |
-| `Notifications` | one `CreateNotificationSchema` baseline | not carried | not carried |
+| `Identity` | one `CreateIdentitySchema` baseline | one `CreateIdentitySchema` baseline | baseline plus `AddUserCreatedIndex` |
+| `Notifications` | one `CreateNotificationSchema` baseline | one `CreateNotificationSchema` baseline | not carried |
 
 A baseline is generated from the module's current model, so its model snapshot is the source of truth for that module and provider.
 
-`Notifications` is wired into the MSSQL migrator only: the PostgreSQL and Sqlite projects do not reference the module, register its context, or receive its `InternalsVisibleTo` grant, so a host running on either provider has no `notifications` schema.
+`Notifications` is wired into the MSSQL and PostgreSQL migrators. The Sqlite project does not reference the module or register its context (it holds only the module's `InternalsVisibleTo` grant), so a host running on Sqlite has no `system` schema for notifications.
 
-For `Identity`, `dotnet ef migrations has-pending-model-changes` reports no pending changes for MSSQL and pending changes for PostgreSQL and Sqlite: their snapshots store `User.AuthProvider` as a string, while the model maps it as an `int` enum. Those two providers are regenerated only on the user's explicit command.
+For `Identity`, `dotnet ef migrations has-pending-model-changes` reports no pending changes for MSSQL and PostgreSQL and pending changes for Sqlite: its snapshot stores `User.AuthProvider` as a string, while the model maps it as an `int` enum. Sqlite is regenerated only on the user's explicit command.
 
 ## Provider-aware filtered indexes
 
