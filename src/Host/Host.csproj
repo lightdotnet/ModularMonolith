@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+	<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+	<RootNamespace>StarterKit.Host</RootNamespace>
+	<AssemblyName>StarterKit.Host</AssemblyName>
+	<UserSecretsId>6bfa1f49-26a0-487e-93ae-9201dcad2491</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<PackageReference Include="AspNetCore.HealthChecks.UI.Client" />
+	<PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+	<PackageReference Include="Lightsoft.AspNetCore.Extensions" />
+	<PackageReference Include="Lightsoft.AspNetCore.Swagger" />
+	<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+	<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
+	<PackageReference Include="Spectre.Console" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EventBusMassTransitRabbitMQ\EventBusMassTransitRabbitMQ.csproj" />
+    <ProjectReference Include="..\Identity\Identity.csproj" />
+    <ProjectReference Include="..\Identity.Web\Identity.Web.csproj" />
+    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\Persistence\Persistence.csproj" />
+  </ItemGroup>
+
+</Project>
