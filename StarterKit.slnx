@@ -4,7 +4,9 @@
     <File Path="Directory.Packages.props" />
   </Folder>
   <Folder Name="/src/_host/">
-    <Project Path="src/Host/Host.csproj" />
+    <Project Path="src/StarterKit.WebApi/StarterKit.WebApi.csproj" />
+    <Project Path="src/StarterKit.AppHost/StarterKit.AppHost.csproj" Id="3cad9f77-5df6-4bd7-b05f-b2fa870e0e3f" />
+    <Project Path="src/StarterKit.ServiceDefaults/StarterKit.ServiceDefaults.csproj" Id="90c9a63c-8d7e-44b0-8409-ddb612fe6817" />
   </Folder>
   <Folder Name="/src/_framework/">
     <Project Path="src/EventBusMassTransitRabbitMQ/EventBusMassTransitRabbitMQ.csproj" />
@@ -12,6 +14,7 @@
     <Project Path="src/Persistence/Persistence.csproj" />
     <Project Path="src/Shared/Shared.csproj" />
   </Folder>
+  <Folder Name="/src/" />
   <Folder Name="/src/identity-module/">
     <Project Path="src/Identity.Contracts/Identity.Contracts.csproj" />
     <Project Path="src/Identity/Identity.csproj" />

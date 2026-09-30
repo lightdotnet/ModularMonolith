@@ -1,4 +1,4 @@
-namespace StarterKit.Host.Authentication;
+namespace StarterKit.WebApi.Authentication;
 
 /// <summary>
 /// Host-local binding of the SignalR hub path (<c>Notifications:Hub</c>) used by the

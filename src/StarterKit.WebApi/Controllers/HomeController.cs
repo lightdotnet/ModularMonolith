@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace StarterKit.Host.Controllers;
+namespace StarterKit.WebApi.Controllers;
 
 #if DEBUG
 [Route("/hello")]

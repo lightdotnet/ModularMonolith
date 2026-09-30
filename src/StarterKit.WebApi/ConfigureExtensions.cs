@@ -6,7 +6,7 @@ using Light.AspNetCore.Swagger;
 using Light.Mediator;
 using Microsoft.AspNetCore.RateLimiting;
 using StarterKit.EventBusMassTransitRabbitMQ;
-using StarterKit.Host.Authentication;
+using StarterKit.WebApi.Authentication;
 using StarterKit.Infrastructure;
 using StarterKit.Infrastructure.Caching;
 using StarterKit.Infrastructure.Cors;
@@ -20,7 +20,7 @@ using StarterKit.Shared.Authorization;
 using System.Reflection;
 using System.Threading.RateLimiting;
 
-namespace StarterKit.Host;
+namespace StarterKit.WebApi;
 
 public static class ConfigureExtensions
 {

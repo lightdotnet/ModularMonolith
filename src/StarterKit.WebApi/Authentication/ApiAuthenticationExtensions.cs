@@ -11,11 +11,11 @@ using StarterKit.Modules.Identity.Authentication.Jwt;
 using StarterKit.Shared.Constants;
 using System.Text;
 
-namespace StarterKit.Host.Authentication;
+namespace StarterKit.WebApi.Authentication;
 
 /// <summary>
 /// Co-host only. Adds the Bearer scheme and the policy scheme that lets the single
-/// StarterKit.Host process serve both the JSON API (Bearer / SignalR hub) and the
+/// StarterKit.WebApi process serve both the JSON API (Bearer / SignalR hub) and the
 /// Identity Razor Pages (application cookie) behind one authentication pipeline.
 /// The standalone Identity.Web host never calls this.
 /// </summary>

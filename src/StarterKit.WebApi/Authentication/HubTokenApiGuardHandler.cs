@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 using StarterKit.Modules.Identity.Authentication.Jwt;
 using System.IdentityModel.Tokens.Jwt;
 
-namespace StarterKit.Host.Authentication;
+namespace StarterKit.WebApi.Authentication;
 
 /// <summary>
 /// Co-host only. Keeps the dedicated short-lived SignalR hub token (identified by its

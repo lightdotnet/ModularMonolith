@@ -2,8 +2,8 @@
 
   <PropertyGroup>
 	<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-	<RootNamespace>StarterKit.Host</RootNamespace>
-	<AssemblyName>StarterKit.Host</AssemblyName>
+	<RootNamespace>StarterKit.WebApi</RootNamespace>
+	<AssemblyName>StarterKit.WebApi</AssemblyName>
 	<UserSecretsId>6bfa1f49-26a0-487e-93ae-9201dcad2491</UserSecretsId>
   </PropertyGroup>
 
@@ -23,6 +23,7 @@
     <ProjectReference Include="..\Identity.Web\Identity.Web.csproj" />
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
     <ProjectReference Include="..\Persistence\Persistence.csproj" />
+    <ProjectReference Include="..\StarterKit.ServiceDefaults\StarterKit.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>
