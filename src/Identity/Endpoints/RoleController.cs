@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StarterKit.Infrastructure.Endpoints;
-using StarterKit.Modules.Identity.Features.Roles.Commands;
-using StarterKit.Modules.Identity.Models;
-using StarterKit.Modules.Identity.Services;
+using StarterKit.Modules.Identity.Application.Common.Models;
+using StarterKit.Modules.Identity.Application.Roles.Commands;
+using StarterKit.Modules.Identity.Application.Roles.Services;
 
 namespace StarterKit.Modules.Identity.Endpoints;
 

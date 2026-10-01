@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using StarterKit.Modules.Identity.Authentication.ExternalLogin;
+using StarterKit.Modules.Identity.Application.Authentication.ExternalLogin;
 using StarterKit.Modules.Identity.Domain;
 
 namespace StarterKit.Modules.Identity.Web.Pages.Account;

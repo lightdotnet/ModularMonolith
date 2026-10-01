@@ -3,8 +3,9 @@ using Light.Smtp;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StarterKit.Modules.Notifications.Api;
-using StarterKit.Modules.Notifications.Persistence;
-using StarterKit.Modules.Notifications.Services;
+using StarterKit.Modules.Notifications.Application.Common;
+using StarterKit.Modules.Notifications.Infrastructure.Mail;
+using StarterKit.Modules.Notifications.Infrastructure.Persistence;
 using StarterKit.Persistence;
 
 namespace StarterKit.Modules.Notifications;
@@ -12,10 +13,11 @@ namespace StarterKit.Modules.Notifications;
 public static class DependencyInjection
 {
     /// <summary>
-    /// Registers the notification store (<c>NotificationDbContext</c>) and the
+    /// Registers the notification store (<c>NotificationDbContext</c>, exposed to the use cases as
+    /// <see cref="INotificationDbContext"/>) and the
     /// <see cref="INotificationsModuleApi"/> seam. The use cases are mediator handlers, picked up by
     /// the host's mediator assembly scan. The SignalR hub and its push service are registered
-    /// separately by <see cref="SignalR.SignalRModule"/>.
+    /// separately by <see cref="Infrastructure.SignalR.SignalRModule"/>.
     /// </summary>
     public static IServiceCollection AddNotificationsServices(
         this IServiceCollection services,
@@ -24,6 +26,8 @@ public static class DependencyInjection
         services.AddConfiguredDbContext<NotificationDbContext>(
             configuration,
             DbConnectionNames.Default);
+
+        services.AddScoped<INotificationDbContext>(sp => sp.GetRequiredService<NotificationDbContext>());
 
         services.AddScoped<INotificationsModuleApi, NotificationsModuleApi>();
 

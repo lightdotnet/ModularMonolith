@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using StarterKit.Modules.Identity.Authorization;
+using StarterKit.Modules.Identity.Contracts.Authorization;
 using StarterKit.Modules.Identity.Web.Admin;
 using StarterKit.Modules.Identity.Web.TagHelpers;
 

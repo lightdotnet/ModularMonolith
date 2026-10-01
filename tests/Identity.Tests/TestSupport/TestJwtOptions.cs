@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Options;
-using StarterKit.Modules.Identity.Authentication.Jwt;
+using StarterKit.Modules.Identity.Infrastructure.Authentication.Jwt;
 
 namespace Identity.Tests.TestSupport;
 

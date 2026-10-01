@@ -1,12 +1,11 @@
 using Microsoft.AspNetCore.Identity;
+using StarterKit.Modules.Identity.Application.Common.Models;
+using StarterKit.Modules.Identity.Application.Users.Services;
 using StarterKit.Modules.Identity.Contracts;
 using StarterKit.Modules.Identity.Domain;
-using StarterKit.Modules.Identity.Models;
-using StarterKit.Modules.Identity.Persistence;
-using StarterKit.Modules.Identity.Services;
+using StarterKit.Modules.Identity.Infrastructure.Persistence;
 using StarterKit.Shared;
 using StarterKit.Shared.Constants;
-using System.Linq.Expressions;
 
 namespace StarterKit.Modules.Identity.Api;
 
@@ -16,24 +15,13 @@ namespace StarterKit.Modules.Identity.Api;
 internal sealed class IdentityModuleApi(
     IdentityDbContext context,
     UserManager<User> userManager,
-    IUserService userService)
+    IUserService userService,
+    IUserQueryService userQuery)
     : IIdentityModuleApi
 {
-    private static readonly Expression<Func<User, UserSummary>> ToSummary = u => new UserSummary(
-        u.Id,
-        u.UserName ?? string.Empty,
-        u.Email ?? string.Empty,
-        u.FirstName,
-        u.LastName,
-        u.Status.Value == ActiveStatus.State.Active);
-
     public Task<UserSummary?> GetUserAsync(string userId, CancellationToken ct = default)
     {
-        return context.Users
-            .AsNoTracking()
-            .Where(u => u.Id == userId)
-            .Select(ToSummary)
-            .FirstOrDefaultAsync(ct);
+        return userQuery.GetSummaryAsync(userId, ct);
     }
 
     public async Task<IReadOnlyList<UserSummary>> GetUsersAsync(
@@ -43,22 +31,12 @@ internal sealed class IdentityModuleApi(
         if (userIds.Count == 0)
             return [];
 
-        return await context.Users
-            .AsNoTracking()
-            .Where(u => userIds.Contains(u.Id))
-            .Select(ToSummary)
-            .ToListAsync(ct);
+        return await userQuery.GetSummariesAsync(userIds, ct);
     }
 
-    public async Task<UserSummary?> FindByEmailAsync(string email, CancellationToken ct = default)
+    public Task<UserSummary?> FindByEmailAsync(string email, CancellationToken ct = default)
     {
-        var normalizedEmail = userManager.NormalizeEmail(email);
-
-        return await context.Users
-            .AsNoTracking()
-            .Where(u => u.NormalizedEmail == normalizedEmail)
-            .Select(ToSummary)
-            .FirstOrDefaultAsync(ct);
+        return userQuery.FindSummaryByEmailAsync(email, ct);
     }
 
     public async Task<IReadOnlyList<string>> GetUserIdsWithPermissionAsync(

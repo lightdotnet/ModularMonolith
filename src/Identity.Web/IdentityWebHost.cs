@@ -7,7 +7,7 @@ using StarterKit.EventBusMassTransitRabbitMQ;
 using StarterKit.Infrastructure;
 using StarterKit.Infrastructure.Caching;
 using StarterKit.Infrastructure.Services;
-using StarterKit.Modules.Identity.Authorization;
+using StarterKit.Modules.Identity.Contracts.Authorization;
 using StarterKit.Shared;
 using StarterKit.Shared.Authorization;
 

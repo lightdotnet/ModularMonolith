@@ -6,8 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using StarterKit.Modules.Notifications.Contracts.SystemNotifications;
 using StarterKit.Modules.Notifications.Endpoints;
-using StarterKit.Modules.Notifications.Features.Notifications.Commands;
-using StarterKit.Modules.Notifications.Features.Notifications.Queries;
+using StarterKit.Modules.Notifications.Application.Notifications.Commands;
+using StarterKit.Modules.Notifications.Application.Notifications.Queries;
 using StarterKit.Shared;
 using Xunit;
 

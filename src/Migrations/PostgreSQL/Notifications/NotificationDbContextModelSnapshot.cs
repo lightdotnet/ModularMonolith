@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using StarterKit.Modules.Notifications.Persistence;
+using StarterKit.Modules.Notifications.Infrastructure.Persistence;
 
 #nullable disable
 

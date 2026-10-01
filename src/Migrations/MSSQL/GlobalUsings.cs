@@ -1,3 +1,3 @@
 global using Microsoft.EntityFrameworkCore;
-global using StarterKit.Modules.Identity.Persistence;
-global using StarterKit.Modules.Notifications.Persistence;
+global using StarterKit.Modules.Identity.Infrastructure.Persistence;
+global using StarterKit.Modules.Notifications.Infrastructure.Persistence;

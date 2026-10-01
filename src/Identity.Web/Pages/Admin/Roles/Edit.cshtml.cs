@@ -1,10 +1,10 @@
 using Light.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using StarterKit.Modules.Identity.Authorization;
-using StarterKit.Modules.Identity.Features.Roles.Commands;
-using StarterKit.Modules.Identity.Models;
-using StarterKit.Modules.Identity.Services;
+using StarterKit.Modules.Identity.Application.Common.Models;
+using StarterKit.Modules.Identity.Application.Roles.Commands;
+using StarterKit.Modules.Identity.Application.Roles.Services;
+using StarterKit.Modules.Identity.Contracts.Authorization;
 using StarterKit.Modules.Identity.Web.Admin;
 using System.ComponentModel.DataAnnotations;
 

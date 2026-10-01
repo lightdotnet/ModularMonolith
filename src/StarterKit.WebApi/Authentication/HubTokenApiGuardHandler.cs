@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
-using StarterKit.Modules.Identity.Authentication.Jwt;
+using StarterKit.Modules.Identity.Infrastructure.Authentication.Jwt;
 using StarterKit.Modules.Notifications.Contracts.SystemNotifications;
 using System.IdentityModel.Tokens.Jwt;
 

@@ -1,4 +1,4 @@
-using StarterKit.Modules.Identity.Models;
+using StarterKit.Modules.Identity.Application.Common.Models;
 using StarterKit.Shared.Constants;
 
 namespace StarterKit.Modules.Identity.Web.Admin;

@@ -1,10 +1,11 @@
 using Light.ActiveDirectory.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using StarterKit.Infrastructure.Endpoints;
-using StarterKit.Modules.Identity.Features.Users.Commands;
-using StarterKit.Modules.Identity.Features.Users.Queries;
-using StarterKit.Modules.Identity.Models;
-using StarterKit.Modules.Identity.Services;
+using StarterKit.Modules.Identity.Application.Common.Models;
+using StarterKit.Modules.Identity.Application.Users.Commands;
+using StarterKit.Modules.Identity.Application.Users.Queries;
+using StarterKit.Modules.Identity.Application.Users.Services;
+using StarterKit.Modules.Identity.Domain;
 using StarterKit.Shared;
 
 namespace StarterKit.Modules.Identity.Endpoints;
@@ -13,6 +14,7 @@ namespace StarterKit.Modules.Identity.Endpoints;
 [MustHavePermission(IdentityPermissions.Users.View)]
 public class UserController(
     IUserService userService,
+    IUserQueryService userQuery,
     IActiveDirectoryService activeDirectoryService)
     : VersionedApiController
 {
@@ -25,7 +27,7 @@ public class UserController(
     [HttpGet]
     public async Task<IActionResult> GetAsync()
     {
-        return Ok(await userService.GetAllAsync());
+        return Ok(await userQuery.GetAllAsync());
     }
 
     [HttpGet("{id}")]
@@ -84,7 +86,7 @@ public class UserController(
     [HttpPut("sync_domain_users")]
     public async Task<IActionResult> SyncDomainUsersAsync()
     {
-        var users = await userService.GetAllAsync();
+        var users = await userQuery.GetAllAsync();
 
         var domainUsers = users.Where(x => x.AuthProvider == AuthProviderWire.ActiveDirectory);
 

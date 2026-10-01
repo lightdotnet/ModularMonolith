@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
-using StarterKit.Modules.Identity.Authentication.ExternalLogin;
+using StarterKit.Modules.Identity.Application.Authentication.ExternalLogin;
 
 namespace StarterKit.Modules.Identity.Web.Pages.Account;
 

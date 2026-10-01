@@ -1,8 +1,8 @@
 using Light.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using StarterKit.Infrastructure.Endpoints;
-using StarterKit.Modules.Identity.Authentication.Jwt;
-using StarterKit.Modules.Identity.Services;
+using StarterKit.Modules.Identity.Application.Authentication;
+using StarterKit.Modules.Identity.Application.Users.Services;
 using StarterKit.Shared;
 
 namespace StarterKit.Modules.Identity.Endpoints;

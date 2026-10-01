@@ -2,9 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using StarterKit.Infrastructure.Endpoints;
-using StarterKit.Modules.Identity.Authentication.ExternalLogin;
-using StarterKit.Modules.Identity.Authentication.Jwt;
-using StarterKit.Modules.Identity.Models;
+using StarterKit.Modules.Identity.Application.Authentication;
+using StarterKit.Modules.Identity.Application.Authentication.ExternalLogin;
+using StarterKit.Modules.Identity.Application.Common.Models;
 using StarterKit.Shared;
 
 namespace StarterKit.Modules.Identity.Endpoints;

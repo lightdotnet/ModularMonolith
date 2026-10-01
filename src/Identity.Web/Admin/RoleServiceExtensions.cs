@@ -1,5 +1,5 @@
-using StarterKit.Modules.Identity.Models;
-using StarterKit.Modules.Identity.Services;
+using StarterKit.Modules.Identity.Application.Common.Models;
+using StarterKit.Modules.Identity.Application.Roles.Services;
 
 namespace StarterKit.Modules.Identity.Web.Admin;
 

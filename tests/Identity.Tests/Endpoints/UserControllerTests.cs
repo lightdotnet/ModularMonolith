@@ -5,11 +5,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using StarterKit.Modules.Identity.Application.Common.Models;
+using StarterKit.Modules.Identity.Application.Users.Commands;
+using StarterKit.Modules.Identity.Application.Users.Queries;
+using StarterKit.Modules.Identity.Application.Users.Services;
 using StarterKit.Modules.Identity.Endpoints;
-using StarterKit.Modules.Identity.Features.Users.Commands;
-using StarterKit.Modules.Identity.Features.Users.Queries;
-using StarterKit.Modules.Identity.Models;
-using StarterKit.Modules.Identity.Services;
 using Xunit;
 
 namespace Identity.Tests.Endpoints;
@@ -20,9 +20,11 @@ public class UserControllerTests
         UserController Controller,
         Mock<IUserService> UserService,
         Mock<IActiveDirectoryService> ActiveDirectory,
-        Mock<IMediator> Mediator) CreateSut()
+        Mock<IMediator> Mediator,
+        Mock<IUserQueryService> UserQuery) CreateSut()
     {
         var userServiceMock = new Mock<IUserService>();
+        var userQueryMock = new Mock<IUserQueryService>();
         var adServiceMock = new Mock<IActiveDirectoryService>();
         var mediatorMock = new Mock<IMediator>();
 
@@ -33,18 +35,21 @@ public class UserControllerTests
                 .BuildServiceProvider(),
         };
 
-        var controller = new UserController(userServiceMock.Object, adServiceMock.Object)
+        var controller = new UserController(
+            userServiceMock.Object,
+            userQueryMock.Object,
+            adServiceMock.Object)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
         };
-        return (controller, userServiceMock, adServiceMock, mediatorMock);
+        return (controller, userServiceMock, adServiceMock, mediatorMock, userQueryMock);
     }
 
     [Fact]
     public async Task SearchAsync_ShouldDispatchQuery()
     {
         // Arrange: PagedResult<T> derives from ResultBase, so Ok(...) passes it through unwrapped.
-        var (controller, _, _, mediatorMock) = CreateSut();
+        var (controller, _, _, mediatorMock, _) = CreateSut();
         var request = new SearchUserRequest { SearchValue = "jane", PageNumber = 2, PageSize = 5 };
         var expected = new PagedResult<UserDto>([], 2, 5, 0);
         mediatorMock
@@ -62,18 +67,20 @@ public class UserControllerTests
     [Fact]
     public async Task GetAsync_ShouldReturnAllUsers()
     {
-        // Arrange: plain IEnumerable<UserDto> is not a ResultBase, so ApiControllerBase.Ok wraps it
-        // in a Result<IEnumerable<UserDto>> before returning it.
-        var (controller, userServiceMock, _, _) = CreateSut();
+        // Arrange: plain IReadOnlyList<UserDto> is not a ResultBase, so ApiControllerBase.Ok wraps it
+        // in a Result<IReadOnlyList<UserDto>> before returning it.
+        var (controller, _, _, _, userQueryMock) = CreateSut();
         var expected = new List<UserDto> { new() { Id = "1", UserName = "jane" } };
-        userServiceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(expected);
+        userQueryMock
+            .Setup(s => s.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
 
         // Act
         var response = await controller.GetAsync();
 
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(response);
-        var wrapped = Assert.IsType<Result<IEnumerable<UserDto>>>(objectResult.Value);
+        var wrapped = Assert.IsType<Result<IReadOnlyList<UserDto>>>(objectResult.Value);
         Assert.Same(expected, wrapped.Data);
     }
 
@@ -81,7 +88,7 @@ public class UserControllerTests
     public async Task GetAsync_ById_ShouldReturnServiceResult()
     {
         // Arrange
-        var (controller, userServiceMock, _, _) = CreateSut();
+        var (controller, userServiceMock, _, _, _) = CreateSut();
         var expected = Result<UserDto>.NotFound("User missing not found");
         userServiceMock.Setup(s => s.GetByIdAsync("missing")).ReturnsAsync(expected);
 
@@ -97,7 +104,7 @@ public class UserControllerTests
     public async Task GetByUsernameAsync_ShouldReturnServiceResult()
     {
         // Arrange
-        var (controller, userServiceMock, _, _) = CreateSut();
+        var (controller, userServiceMock, _, _, _) = CreateSut();
         var expected = Result<UserDto>.Success(new UserDto { Id = "1", UserName = "jane" });
         userServiceMock.Setup(s => s.GetByUserNameAsync("jane")).ReturnsAsync(expected);
 
@@ -113,7 +120,7 @@ public class UserControllerTests
     public async Task PutAsync_ShouldReturnError_WhenRouteAndBodyIdsDoNotMatch()
     {
         // Arrange
-        var (controller, _, _, mediatorMock) = CreateSut();
+        var (controller, _, _, mediatorMock, _) = CreateSut();
         var request = new UserDto { Id = "other-id", UserName = "jane" };
 
         // Act
@@ -132,7 +139,7 @@ public class UserControllerTests
     public async Task PutAsync_ShouldDispatchCommand_WhenIdsMatch()
     {
         // Arrange
-        var (controller, _, _, mediatorMock) = CreateSut();
+        var (controller, _, _, mediatorMock, _) = CreateSut();
         var request = new UserDto { Id = "user-1", UserName = "jane" };
         var expected = Result.Success();
         mediatorMock
@@ -151,7 +158,7 @@ public class UserControllerTests
     public async Task DeleteAsync_ShouldDispatchCommand()
     {
         // Arrange
-        var (controller, _, _, mediatorMock) = CreateSut();
+        var (controller, _, _, mediatorMock, _) = CreateSut();
         var expected = Result.Success();
         mediatorMock
             .Setup(m => m.Send(It.Is<DeleteUserCommand>(c => c.Id == "user-1"), It.IsAny<CancellationToken>()))
@@ -169,7 +176,7 @@ public class UserControllerTests
     public async Task ForcePasswordAsync_ShouldDispatchCommand()
     {
         // Arrange
-        var (controller, _, _, mediatorMock) = CreateSut();
+        var (controller, _, _, mediatorMock, _) = CreateSut();
         var expected = Result.Success();
         mediatorMock
             .Setup(m => m.Send(

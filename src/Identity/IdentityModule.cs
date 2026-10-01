@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StarterKit.Infrastructure.Modularity;
-using StarterKit.Modules.Identity.Authentication.Jwt;
+using StarterKit.Modules.Identity.Infrastructure.Authentication.Jwt;
 
 namespace StarterKit.Modules.Identity;
 

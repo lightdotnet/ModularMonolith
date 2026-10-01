@@ -3,7 +3,7 @@ using Light.Mediator;
 using Moq;
 using StarterKit.Modules.Notifications.Api;
 using StarterKit.Modules.Notifications.Contracts.SystemNotifications;
-using StarterKit.Modules.Notifications.Features.Notifications.Commands;
+using StarterKit.Modules.Notifications.Application.Notifications.Commands;
 using StarterKit.Shared;
 using Xunit;
 

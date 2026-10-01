@@ -1,4 +1,4 @@
-using StarterKit.Modules.Notifications.Features.Notifications.Commands;
+using StarterKit.Modules.Notifications.Application.Notifications.Commands;
 using StarterKit.Shared;
 
 namespace StarterKit.Modules.Notifications.Api;

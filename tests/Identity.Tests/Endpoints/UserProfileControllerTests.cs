@@ -3,10 +3,10 @@ using Light.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
-using StarterKit.Modules.Identity.Authentication.Jwt;
+using StarterKit.Modules.Identity.Application.Authentication;
+using StarterKit.Modules.Identity.Application.Common.Models;
+using StarterKit.Modules.Identity.Application.Users.Services;
 using StarterKit.Modules.Identity.Endpoints;
-using StarterKit.Modules.Identity.Models;
-using StarterKit.Modules.Identity.Services;
 using StarterKit.Shared;
 using Xunit;
 

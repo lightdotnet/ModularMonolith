@@ -15,7 +15,11 @@ public class IdentityModuleApiTests
     private static IdentityTestHost CreateHost() => new(useInMemoryProvider: true);
 
     private static IdentityModuleApi CreateApi(IdentityTestHost host) =>
-        new(host.Context, host.UserManager, host.CreateUserService());
+        new(
+            host.Context,
+            host.UserManager,
+            host.CreateUserService(),
+            host.CreateUserQueryService());
 
     private static async Task<User> CreateUserAsync(IdentityTestHost host, User user)
     {

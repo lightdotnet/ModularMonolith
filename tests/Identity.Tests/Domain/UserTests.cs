@@ -1,5 +1,4 @@
 using StarterKit.Modules.Identity.Domain;
-using StarterKit.Modules.Identity.Models;
 using StarterKit.Shared;
 using Xunit;
 

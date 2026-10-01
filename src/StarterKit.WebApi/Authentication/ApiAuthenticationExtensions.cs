@@ -7,9 +7,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
-using StarterKit.Modules.Identity.Authentication.Jwt;
+using StarterKit.Modules.Identity.Infrastructure.Authentication.Jwt;
 using StarterKit.Modules.Notifications.Contracts.SystemNotifications;
-using StarterKit.Modules.Notifications.SignalR;
+using StarterKit.Modules.Notifications.Infrastructure.SignalR;
 using StarterKit.Shared.Constants;
 using System.Text;
 

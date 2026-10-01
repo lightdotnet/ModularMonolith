@@ -5,8 +5,8 @@ using Moq;
 using StarterKit.Modules.Identity.Contracts;
 using StarterKit.Modules.Notifications.Contracts.SystemNotifications;
 using StarterKit.Modules.Notifications.Domain;
-using StarterKit.Modules.Notifications.Persistence;
-using StarterKit.Modules.Notifications.SignalR;
+using StarterKit.Modules.Notifications.Infrastructure.Persistence;
+using StarterKit.Modules.Notifications.Application.Common;
 using StarterKit.Shared;
 
 namespace Notifications.Tests.TestSupport;

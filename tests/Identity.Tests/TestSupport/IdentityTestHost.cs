@@ -1,15 +1,18 @@
 using Light.EventBus.Abstractions;
+using Light.Extensions.Caching;
 using Light.Mediator;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using StarterKit.Modules.Identity.Authorization;
+using StarterKit.Modules.Identity.Application.Authorization;
+using StarterKit.Modules.Identity.Application.Common;
+using StarterKit.Modules.Identity.Application.Common.Models;
+using StarterKit.Modules.Identity.Application.Users.Services;
 using StarterKit.Modules.Identity.Domain;
-using StarterKit.Modules.Identity.IntegrationEvents;
-using StarterKit.Modules.Identity.Persistence;
-using StarterKit.Modules.Identity.Services;
+using StarterKit.Modules.Identity.Infrastructure.Persistence;
 using StarterKit.Shared;
 
 namespace Identity.Tests.TestSupport;
@@ -105,6 +108,25 @@ internal sealed class IdentityTestHost : IDisposable
     public RoleManager<Role> RoleManager { get; }
 
     public UserService CreateUserService() => new(UserManager, IntegrationEvents, DateTime);
+
+    /// <summary>
+    /// A <see cref="UserQueryService"/> over a real <see cref="UserService"/> and a cache that
+    /// always misses, so every read goes to the store.
+    /// </summary>
+    public UserQueryService CreateUserQueryService()
+    {
+        var cacheMock = new Mock<ICacheService>();
+        cacheMock
+            .Setup(c => c.TryGetAsync<List<UserDto>>(
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((List<UserDto>?)null);
+
+        return new UserQueryService(
+            CreateUserService(),
+            cacheMock.Object,
+            NullLogger<UserQueryService>.Instance);
+    }
 
     public PermissionGrantGuard CreatePermissionGrantGuard() => new(CurrentUser, UserManager, RoleManager);
 

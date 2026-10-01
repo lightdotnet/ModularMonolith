@@ -4,10 +4,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using StarterKit.Modules.Identity.Application.Common.Models;
+using StarterKit.Modules.Identity.Application.Roles.Commands;
+using StarterKit.Modules.Identity.Application.Roles.Services;
 using StarterKit.Modules.Identity.Endpoints;
-using StarterKit.Modules.Identity.Features.Roles.Commands;
-using StarterKit.Modules.Identity.Models;
-using StarterKit.Modules.Identity.Services;
 using Xunit;
 
 namespace Identity.Tests.Endpoints;

@@ -1,7 +1,6 @@
 using Light.Domain;
 using Light.Domain.Entities.Interfaces;
 using Microsoft.AspNetCore.Identity;
-using StarterKit.Modules.Identity.Models;
 using StarterKit.Shared;
 
 namespace StarterKit.Modules.Identity.Domain;

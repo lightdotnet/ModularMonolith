@@ -4,10 +4,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
-using StarterKit.Modules.Identity.Authentication.ExternalLogin;
+using StarterKit.Modules.Identity.Application.Authentication.ExternalLogin;
 using StarterKit.Modules.Identity.Domain;
 // Disambiguate from Microsoft.AspNetCore.Authentication.IAuthenticationService.
-using IAuthenticationService = StarterKit.Modules.Identity.Authentication.Jwt.IAuthenticationService;
+using IAuthenticationService = StarterKit.Modules.Identity.Application.Authentication.IAuthenticationService;
 
 namespace StarterKit.Modules.Identity.Web.Pages.Account;
 

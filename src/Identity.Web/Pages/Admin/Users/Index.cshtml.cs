@@ -1,10 +1,10 @@
 using Light.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using StarterKit.Modules.Identity.Authorization;
-using StarterKit.Modules.Identity.Features.Users.Commands;
-using StarterKit.Modules.Identity.Features.Users.Queries;
-using StarterKit.Modules.Identity.Models;
+using StarterKit.Modules.Identity.Application.Common.Models;
+using StarterKit.Modules.Identity.Application.Users.Commands;
+using StarterKit.Modules.Identity.Application.Users.Queries;
+using StarterKit.Modules.Identity.Contracts.Authorization;
 using StarterKit.Shared.Authorization;
 
 namespace StarterKit.Modules.Identity.Web.Pages.Admin.Users;

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using StarterKit.Infrastructure.Endpoints;
-using StarterKit.Modules.Notifications.Features.Notifications.Commands;
-using StarterKit.Modules.Notifications.Features.Notifications.Queries;
+using StarterKit.Modules.Notifications.Application.Notifications.Commands;
+using StarterKit.Modules.Notifications.Application.Notifications.Queries;
 using StarterKit.Shared;
 
 namespace StarterKit.Modules.Notifications.Endpoints;

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using StarterKit.Modules.Notifications.Persistence;
+using StarterKit.Modules.Notifications.Infrastructure.Persistence;
 
 #nullable disable
 

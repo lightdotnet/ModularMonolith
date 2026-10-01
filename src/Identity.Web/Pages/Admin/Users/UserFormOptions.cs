@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc.Rendering;
-using StarterKit.Modules.Identity.Extensions;
+using StarterKit.Modules.Identity.Application.Common.Mappings;
 using StarterKit.Shared;
 
 namespace StarterKit.Modules.Identity.Web.Pages.Admin.Users;

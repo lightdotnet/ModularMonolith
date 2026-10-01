@@ -3,13 +3,16 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StarterKit.Modules.Identity.Api;
-using StarterKit.Modules.Identity.Authentication;
-using StarterKit.Modules.Identity.Authentication.ExternalLogin;
+using StarterKit.Modules.Identity.Application.Authentication.ExternalLogin;
+using StarterKit.Modules.Identity.Application.Authorization;
+using StarterKit.Modules.Identity.Application.Common;
+using StarterKit.Modules.Identity.Application.Roles.Services;
+using StarterKit.Modules.Identity.Application.Users.Services;
 using StarterKit.Modules.Identity.Contracts;
 using StarterKit.Modules.Identity.Domain;
-using StarterKit.Modules.Identity.IntegrationEvents;
-using StarterKit.Modules.Identity.Persistence;
-using StarterKit.Modules.Identity.Services;
+using StarterKit.Modules.Identity.Infrastructure.Authentication;
+using StarterKit.Modules.Identity.Infrastructure.Authentication.ExternalLogin;
+using StarterKit.Modules.Identity.Infrastructure.Persistence;
 using StarterKit.Persistence;
 using System.Runtime.InteropServices;
 
@@ -62,7 +65,11 @@ public static class DependencyInjection
 
         services.AddScoped<IntegrationEventCollector>();
 
-        services.AddTransient<IUserService, UserService>();
+        // UserService is decorated so every successful user write reloads the cached user list;
+        // ReloadUserCacheHandler is registered by the host's mediator assembly scan.
+        services.AddTransient<UserService>();
+        services.AddTransient<IUserService, UserCacheReloadingUserService>();
+        services.AddScoped<IUserQueryService, UserQueryService>();
         services.AddTransient<IRoleService, RoleService>();
         services.AddScoped<PermissionGrantGuard>();
         services.AddScoped<IExternalLoginService, ExternalLoginService>();
