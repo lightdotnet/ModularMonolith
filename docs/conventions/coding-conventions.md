@@ -13,12 +13,20 @@ The short-form framework rules (packages, errors, API responses, DDD, events, DI
 - No root `.editorconfig`.
 - File-scoped namespaces consistently.
 - PascalCase for all constants and enum members (no `SCREAMING_SNAKE_CASE`).
-- Folder names mirror the trailing namespace segment (e.g. `src/Identity/Features/Users/Commands/` ⇒ `StarterKit.Modules.Identity.Features.Users.Commands`).
+- Folder names mirror the trailing namespace segment (e.g. `src/Identity/Application/Users/Commands/` ⇒ `StarterKit.Modules.Identity.Application.Users.Commands`).
 - CQRS command/query types: `internal sealed record` (never `public` — the controller is in the same assembly and the type is not part of any seam), one file per feature named after the feature (`CreateUser.cs`, not `CreateUserCommand.cs`), holding the command/query, its validator (see § Validation below), and its handler. A command/query wraps the request DTO (`CreateUserCommand(CreateUserRequest Model)`) or takes primitives for trivial payloads (`DeleteUserCommand(string Id)`); the controller binds the DTO and constructs the command/query.
 
 ## Structural Conventions
 
 - **Domain design is DDD-first** — model aggregates, invariants, value objects, and domain events before handlers ([CLAUDE.md § 7](../../CLAUDE.md#7-framework-conventions)). The use-case logic lives in the mediator handler, which loads the aggregate, calls its behaviour, and saves; a module has no internal service between handler and aggregate. Infrastructure adapters (SignalR push, SMTP mail) stay services. `Notifications` is the reference — see [../architecture/projects/Notifications.md § Design Notes](../architecture/projects/Notifications.md#design-notes).
+- **Module-internal layout** — a module implementation project is layered by folder, with namespaces following the folders. `Identity` and `Notifications` follow it.
+  - `Domain/` — entities/aggregates and domain events.
+  - `Application/` — `Common/` for module-wide internal interfaces, mappings, and extensions; one folder per aggregate/area with `Commands/`, `Queries/`, `EventHandlers/`, `IntegrationEvents/[Consumers/]`, and `Services/` as needed.
+  - `Infrastructure/` — `Persistence/` plus one folder per adapter.
+  - At the project root: `Api/` (the `.Contracts` facade implementation), `Endpoints/` (controllers), `<Module>Module.cs` (the module's `AppModule`, plus its `AppModuleConsumer` if it has one), and `DependencyInjection.cs`.
+  - Dependencies point inward — `Domain` ← `Application` ← `Infrastructure`/`Api`/`Endpoints`. All layers share one assembly, so the direction is held by review, not by the compiler.
+  - `Application` reaches the store and the adapters through `internal` interfaces in `Application/Common`, implemented in `Infrastructure` (e.g. `Notifications`' `INotificationDbContext` and `IHubService`).
+  - The module's permission catalog (`<Module>Permissions`, `<Module>PermissionProvider`) is `public` in `<Module>.Contracts/Authorization/`.
 - **DI registration**: exceptions to the `DependencyInjection` naming convention are noted in each project's overview under Notable Conventions (e.g. the host composes through `ConfigureExtensions` — see [../architecture/projects/WebApi.md § Notable Conventions](../architecture/projects/WebApi.md#notable-conventions)).
 - **Validation — two-layer FluentValidation.** The `ValidationBehaviour<,>` pipeline behavior and the host's validator registration are in place; no project defines a validator yet. The shape to follow: each request DTO gets an `AbstractValidator<TRequest>` **in the same file**, holding field-shape rules only (`NotEmpty`, `MaximumLength`, `IsInEnum`); each mediator command gets a thin `AbstractValidator<TCommand>` **in the same file as the command+handler**, validating route-level primitives directly (e.g. `RuleFor(x => x.Id).NotEmpty()`) and delegating the DTO via `RuleFor(x => x.Model).SetValidator(new XRequestValidator())`. Queries generally don't need a validator.
 - **Logging**: `AppLogging` ([Infrastructure](../architecture/projects/Infrastructure.md)) only for bootstrap/startup; standard `ILogger<T>` DI for request/runtime logging everywhere else.
@@ -35,7 +43,7 @@ The short-form framework rules (packages, errors, API responses, DDD, events, DI
 
 - Framework: xUnit v3 + Moq, pinned by `tests/ModuleTests.props`; how to run them: [development-guide.md § Running Tests](development-guide.md#running-tests).
 - Coverage: `tests/Framework.Tests` covers the framework projects; each module has one `tests/<Module>.Tests` project (`tests/Identity.Tests`, `tests/Notifications.Tests`).
-- Layout: a test project mirrors its source projects' folder structure — `tests/Framework.Tests/<ProjectName>/...` for the framework projects and `tests/<Module>.Tests/<Area>/...` for a module; a module test project adds a `TestSupport/` folder for shared test infrastructure.
+- Layout: a test project mirrors its source projects' folder structure. `tests/Framework.Tests/<ProjectName>/...` covers the framework projects; a module test project mirrors the module-internal layout (`Domain/`, `Application/...`, `Infrastructure/...`, `Api/`, `Endpoints/`), with `Web/` for the tests of the module's `.Web` project and `TestSupport/` for shared test helpers.
 - Naming: `<TypeUnderTest>Tests` classes; `MethodOrMember_ShouldExpectedBehavior_WhenCondition` methods; `// Arrange`/`// Act`/`// Assert` comments.
 - Doubles: `Framework.Tests` mostly uses hand-written private fakes (e.g. a recording `IPublisher`, a `CurrentUserBase` subclass), with `Moq` where a logger or similar dependency needs a double, and a Sqlite in-memory `DbContext` for persistence behavior. The module test projects use `Moq` for the module's services and framework dependencies, hand-written `FakeCurrentUser`/`FakeDateTime`, and run persistence-dependent tests against a real Sqlite in-memory `DbContext` via a test host in `TestSupport/` (`IdentityTestHost`, `NotificationsTestHost`). `Notifications.Tests` runs its handlers against the real context with a mocked `IHubService`.
 - Internal access: a source project grants `InternalsVisibleTo` to its test project so tests reach `internal` types.
@@ -43,7 +51,7 @@ The short-form framework rules (packages, errors, API responses, DDD, events, DI
 
 ## Deviations From Norms Elsewhere in the Repo
 
-- **`Identity`'s handlers delegate to service classes.** Its command handlers forward to `IUserService`/`IRoleService` instead of holding the logic (the search query uses `UserManager<User>` directly), its read endpoints and token endpoints call services directly, and its `IIdentityModuleApi` implementation reads the context and calls services instead of dispatching mediator requests. Other modules follow the handler-centric rule under § Structural Conventions.
+- **`Identity`'s handlers delegate to service classes.** Its command handlers forward to `IUserService`/`IRoleService` instead of holding the logic (the search query reads the cached user list through `IUserQueryService`), its read endpoints and token endpoints call services directly, and its `IIdentityModuleApi` implementation reads the cached user list and the context and calls services instead of dispatching mediator requests. Other modules follow the handler-centric rule under § Structural Conventions.
 - **Migration projects, `StarterKit.ServiceDefaults`, and `StarterKit.AppHost` version their own packages**, unlike every other `src/` project — see [dependency-graph.md § Version Mismatches](../architecture/dependency-graph.md#version-mismatches).
 
 ## Notes
@@ -51,4 +59,4 @@ The short-form framework rules (packages, errors, API responses, DDD, events, DI
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-30_
+_Last synced: 2026-10-01_

@@ -4,7 +4,7 @@ Cross-cutting facts that span both `src/` and `clients/*` — the integration bo
 
 ## Shape
 
-- **Backend** (`src/`): ASP.NET Core, C#, Modular Monolith — flat projects under `src/`, composed into one host, `StarterKit.WebApi` (see [StarterKit.WebApi](architecture/projects/WebApi.md)). The host serves the JSON API, the Notifications SignalR hub, and the `Identity.Web` Razor Pages (login and the Microsoft external-login relay) — server-rendered HTML for interactive sign-in, not part of the JSON API a client consumes.
+- **Backend** (`src/`): ASP.NET Core, C#, Modular Monolith — flat projects under `src/`, composed into one host, `StarterKit.WebApi` (see [StarterKit.WebApi](architecture/projects/WebApi.md)). The host serves the JSON API, the Notifications SignalR hub, and the `Identity.Web` Razor Pages (login, the Microsoft external-login relay, and the admin pages) — server-rendered HTML, not part of the JSON API a client consumes.
 - **Clients** (`clients/`): frontend apps, each in `clients/<app-name>/`. Currently one: `clients/admin/`, a Next.js (App Router) TypeScript/React admin console consuming the Identity and Notifications modules.
 - **Integration**: each client app is a separate-origin consumer of the backend over HTTP (JSON API + SignalR), never a UI rendered by the backend. No shared source, no shared DB access, no in-process calls between `src/` and `clients/*`.
 
@@ -23,4 +23,4 @@ Cross-cutting facts that span both `src/` and `clients/*` — the integration bo
 - **Microsoft login relay (PKCE authorization-code exchange).** A second sign-in path alongside the direct password/AD login: the browser is redirected through `Identity.Web` (a browser-reachable origin — `IDENTITY_WEB_BASE_URL` on the client, not the server-to-server `IDENTITY_API_BASE_URL`) to complete Microsoft Entra ID OIDC, then handed back to the client with a one-time, PKCE-bound code instead of a token. The client exchanges that code server-to-server (`POST api/v1/auth/token/external`) for the same `TokenDto` shape a normal login returns, converging on the identical session-establishment step either way. The client's callback URL (`/login/microsoft/callback` for admin) must be allow-listed in `ExternalLoginRelay:AllowedRedirectUris`. The flow is diagrammed in [README § Login Flow](../README.md#login-flow-client--server); the two sides' mechanics are in [clients/admin/docs/architecture/overview.md § Auth Flow](../clients/admin/docs/architecture/overview.md#auth-flow) and [Identity § Design Notes](architecture/projects/Identity.md#design-notes).
 
 ---
-_Last synced: 2026-09-30_
+_Last synced: 2026-10-01_

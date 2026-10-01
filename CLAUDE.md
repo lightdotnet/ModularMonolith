@@ -12,8 +12,8 @@ This file is the entry point for every Claude Code session in this repository. R
 
 This branch (`dev/core`) holds the **core of the StarterKit Modular Monolith template**: the reusable C#/.NET framework building blocks, one composition-root host (the only deployable) plus the .NET Aspire app host and service defaults that run it in local development, two business modules (Identity — the reference module — and Notifications), and the per-provider migrator apps, plus their tests. It contains no other business modules, and one client app — `clients/admin`, a Next.js admin console consuming the Identity and Notifications APIs over HTTP (outside the .NET solution; see [clients/admin/CLAUDE.md](clients/admin/CLAUDE.md)). Don't assume anything else exists; verify before describing structure.
 
-- **One solution** — `StarterKit.slnx` at the repo root, targeting .NET 10 (`net10.0`), with solution folders `/src/_framework/`, `/src/_host/`, `/src/identity-module/`, `/src/notifications-module/`, `/src/_migrations/`, and `/tests/`.
-- **Flat layout** — every project sits directly under `src/` (or `tests/`) (the migrators under `src/Migrations/`). Framework and module projects use a short folder name (`src/Shared`, `src/Identity`); the host-level projects in `/src/_host/` use their full `StarterKit.*` name as the folder name, Aspire-style (`src/StarterKit.WebApi`, `src/StarterKit.AppHost`, `src/StarterKit.ServiceDefaults`). Assembly/root namespaces carry the full name: `StarterKit.<Project>` for framework and host-level projects, `StarterKit.Modules.<Module>[.Contracts|.Web]` for module projects. The migrator assemblies keep their folder names.
+- **One solution** — `StarterKit.slnx` at the repo root, targeting .NET 10 (`net10.0`), with solution folders `/Solution Items/` (the root build props), `/src/_framework/`, `/src/` (the host-level projects), `/src/identity-module/`, `/src/notifications-module/`, `/src/_migrations/`, and `/tests/`.
+- **Flat layout** — every project sits directly under `src/` (or `tests/`) (the migrators under `src/Migrations/`). Framework and module projects use a short folder name (`src/Shared`, `src/Identity`); the host-level projects, directly in the `/src/` solution folder, use their full `StarterKit.*` name as the folder name, Aspire-style (`src/StarterKit.WebApi`, `src/StarterKit.AppHost`, `src/StarterKit.ServiceDefaults`). Assembly/root namespaces carry the full name: `StarterKit.<Project>` for framework and host-level projects, `StarterKit.Modules.<Module>[.Contracts|.Web]` for module projects. The migrator assemblies keep their folder names.
 
 | Project | Assembly | Responsibility |
 |---|---|---|
@@ -25,10 +25,10 @@ This branch (`dev/core`) holds the **core of the StarterKit Modular Monolith tem
 | `src/StarterKit.AppHost` | `StarterKit.AppHost` | .NET Aspire app host: runs `StarterKit.WebApi` with the Aspire dashboard for local development; not deployed — see [Aspire](docs/architecture/projects/Aspire.md) |
 | `src/StarterKit.ServiceDefaults` | `StarterKit.ServiceDefaults` | .NET Aspire service defaults applied by `StarterKit.WebApi`: OpenTelemetry, service discovery, HttpClient resilience, Development-only health endpoints — see [Aspire](docs/architecture/projects/Aspire.md) |
 | `src/Identity` | `StarterKit.Modules.Identity` | Identity module implementation: ASP.NET Core Identity store, self-issued JWT/refresh/session/hub tokens, external login, Active Directory, user/role endpoints — see [Identity](docs/architecture/projects/Identity.md) |
-| `src/Identity.Contracts` | `StarterKit.Modules.Identity.Contracts` | Identity's cross-module seam: `IIdentityModuleApi`, `UserSummary`, integration events |
-| `src/Identity.Web` | `StarterKit.Modules.Identity.Web` | Identity's Razor Pages: login and the Microsoft external-login relay; co-hosted by `StarterKit.WebApi` or run standalone |
+| `src/Identity.Contracts` | `StarterKit.Modules.Identity.Contracts` | Identity's cross-module seam: `IIdentityModuleApi`, `UserSummary`, integration events, the permission catalog (`IdentityPermissions`/`IdentityPermissionProvider`) |
+| `src/Identity.Web` | `StarterKit.Modules.Identity.Web` | Identity's Razor Pages: login, the Microsoft external-login relay, and the admin pages for users, roles, and permissions; co-hosted by `StarterKit.WebApi` or run standalone |
 | `src/Notifications` | `StarterKit.Modules.Notifications` | Notifications module implementation: notification storage, SignalR hub for real-time push, SMTP mail, welcome-mail consumer of Identity's `UserProvisionedIntegrationEvent` — see [Notifications](docs/architecture/projects/Notifications.md) |
-| `src/Notifications.Contracts` | `StarterKit.Modules.Notifications.Contracts` | Notifications' cross-module seam: `INotificationsModuleApi`, `IMailService`, system-notification DTOs, `NotificationHubOptions` |
+| `src/Notifications.Contracts` | `StarterKit.Modules.Notifications.Contracts` | Notifications' cross-module seam: `INotificationsModuleApi`, `IMailService`, system-notification DTOs, `NotificationHubOptions`, the permission catalog (`NotificationPermissions`/`NotificationPermissionProvider`) |
 | `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` | `MSSQL`, `PostgreSQL`, `Sqlite` | Per-provider EF Core migrations and migrate-and-seed console apps — see [migrations.md](docs/conventions/migrations.md) |
 
 - **Tests** — `tests/Framework.Tests` (framework projects), `tests/Identity.Tests` (Identity module), and `tests/Notifications.Tests` (Notifications module), all configured by `tests/ModuleTests.props`; layout and conventions are in [coding-conventions.md § Testing Conventions](docs/conventions/coding-conventions.md#testing-conventions).
@@ -145,4 +145,4 @@ The short-form rules; the detail behind them is in [coding-conventions.md](docs/
 | "Run a ROT review of .claude" | [.claude/ROT.md](.claude/ROT.md) |
 
 ---
-_Last synced: 2026-09-30_
+_Last synced: 2026-10-01_

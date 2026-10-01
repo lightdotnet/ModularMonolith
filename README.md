@@ -13,7 +13,7 @@ StarterKit.slnx
 │   ├── src/Infrastructure                  (ASP.NET Core hosting building blocks)
 │   ├── src/Persistence                     (EF Core building blocks)
 │   └── src/EventBusMassTransitRabbitMQ     (integration-event bus)
-├── /src/_host/
+├── /src/
 │   ├── src/StarterKit.WebApi               (composition root, the only deployable)
 │   ├── src/StarterKit.AppHost              (.NET Aspire app host — local orchestration, Redis/RabbitMQ containers, dashboard)
 │   └── src/StarterKit.ServiceDefaults      (.NET Aspire service defaults — telemetry, service discovery, resilience)
@@ -174,4 +174,4 @@ Database provider and schema setup, configuration, test filters, and migrations:
 MIT — see [LICENSE](LICENSE).
 
 ---
-_Last synced: 2026-09-30_
+_Last synced: 2026-10-01_

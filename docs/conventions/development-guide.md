@@ -22,7 +22,7 @@ dotnet run --project src/StarterKit.AppHost
 dotnet run --project src/StarterKit.WebApi/StarterKit.WebApi.csproj
 ```
 
-- **Under the AppHost**: starts `StarterKit.WebApi` as the resource `api`, together with Redis and RabbitMQ containers, points the API's cache and event bus at them, and opens the Aspire dashboard (logs, metrics, traces, and the resources' endpoints). The AppHost's resources, launch profiles, dashboard URLs, and what it passes to the API: [../architecture/projects/Aspire.md § Running](../architecture/projects/Aspire.md#running).
+- **Under the AppHost**: starts `StarterKit.WebApi` as the resource `api`, together with Redis and RabbitMQ containers, points the API's cache and event bus at them, starts the admin client's dev server as the resource `next-admin` (`pnpm dev` in `clients/admin`, port 3000), and opens the Aspire dashboard (logs, metrics, traces, and the resources' endpoints). The AppHost's resources, launch profiles, dashboard URLs, and what it passes to the API: [../architecture/projects/Aspire.md § Running](../architecture/projects/Aspire.md#running).
 - **On its own**: the default `http` launch profile binds plain HTTP on `http://localhost:5000`, which is the primary Development endpoint — HTTPS redirection is skipped in `Development`, so no HTTPS listener is needed for local work (this also lets a server-to-server client call the API without hitting the untrusted dev certificate). The `https` profile additionally binds `https://localhost:5001` (ASP.NET dev certificate) for anyone who wants it. Run this way, the API exports no telemetry.
 
 `src/StarterKit.WebApi` is the composition root — see [../architecture/projects/WebApi.md](../architecture/projects/WebApi.md). Its local defaults (`appsettings.json`), which apply when it runs on its own:
@@ -80,4 +80,4 @@ Which project owns what: [../architecture/architecture.md § Layering](../archit
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-30_
+_Last synced: 2026-10-01_

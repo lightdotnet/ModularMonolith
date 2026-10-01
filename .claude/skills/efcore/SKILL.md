@@ -16,7 +16,7 @@ Handle EF Core tasks for `src/Persistence`, the module contexts built on its con
 
 ## Workflow
 
-1. **Identify the scope** explicitly; don't assume a single repo-wide `DbContext`. Candidate locations: `src/Persistence` (tests in `tests/Framework.Tests/Persistence/`), a module's context such as `src/Identity/Persistence/` (tests in `tests/Identity.Tests/Persistence/`), and the migrators under `src/Migrations/*` (workflow in [migrations.md](../../../docs/conventions/migrations.md)).
+1. **Identify the scope** explicitly; don't assume a single repo-wide `DbContext`. Candidate locations: `src/Persistence` (tests in `tests/Framework.Tests/Persistence/`), a module's context such as `src/Identity/Infrastructure/Persistence/` (tests in `tests/Identity.Tests/Infrastructure/Persistence/`), and the migrators under `src/Migrations/*` (workflow in [migrations.md](../../../docs/conventions/migrations.md)).
 2. **Delegate**: invoke [efcore-specialist](../../agents/efcore-specialist.md) with the task and scope.
 3. **For migrations**: review the specific migration file(s) for destructive operations before considering them safe to apply.
 4. **For performance**: get the actual query/LINQ shape from the user or the code, not a hypothetical.
