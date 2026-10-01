@@ -75,13 +75,9 @@ public static class ConfigureExtensions
         services.AddPermissionPolicies();
         services.AddPermissionAuthorization();
 
-        services.AddEventBus(
-            configuration,
-            assemblies);
+        services.AddEventBus(configuration, assemblies);
 
-        services.AddModules<AppModule>(
-            configuration,
-            assemblies);
+        services.AddModules<AppModule>(configuration, assemblies);
 
         services.AddIdentityWeb(configuration);
         services.AddApiAuthentication(configuration);
