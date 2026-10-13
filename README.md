@@ -1,6 +1,60 @@
 # StarterKit — Modular Monolith Core for ASP.NET Core
 
-The core of the StarterKit Modular Monolith template: the reusable C#/.NET framework building blocks (built on the private "Light" framework family — `Lightsoft.*` packages), a composition-root host with a .NET Aspire app host for local development, and two business modules — Identity (the reference module) and Notifications — with their tests. Client apps are not part of the .NET solution; the repository carries one, the `clients/admin` admin console.
+The core of the StarterKit Modular Monolith template: the reusable C#/.NET framework building blocks (built on the private "Light" framework family — `Lightsoft.*` packages), a composition-root host with a .NET Aspire app host for local development, and two business modules — Identity (the reference module) and Notifications — with their tests. Client apps are not part of the .NET solution; the repository carries one, the `clients/admin` admin console. Meant to be cloned, forked, or installed as a `dotnet new` template as the starting point for new projects.
+
+## Getting Started
+
+### Backend
+
+```bash
+dotnet build StarterKit.slnx
+dotnet run --project src/StarterKit.AppHost                              # API + Redis + RabbitMQ + Aspire dashboard
+dotnet run --project src/StarterKit.WebApi/StarterKit.WebApi.csproj      # or the API on its own (in-memory cache, no-op bus)
+dotnet test --solution StarterKit.slnx
+```
+
+Database provider and schema setup, configuration, test filters, and migrations: [docs/conventions/development-guide.md](docs/conventions/development-guide.md).
+
+### Client (`clients/admin`)
+
+```bash
+cd clients/admin
+pnpm install
+cp .env.example .env.local   # then fill in the vars listed in .env.example
+pnpm dev
+```
+
+The required environment variables are described in [clients/admin/docs/conventions/development-guide.md](clients/admin/docs/conventions/development-guide.md). All env vars are server-only (never `NEXT_PUBLIC_`). The backend must be running and reachable at the configured API base URLs for auth and data pages to work, and its CORS policy must allow the admin app's origin for the SignalR notification hub to connect directly from the browser. Under the Aspire app host (`StarterKit.AppHost`), the admin client is started alongside the API.
+
+### Install as a template
+
+The repository packs into one NuGet template package, `ModularMonolith.Solution.Template`. Pack it from the repo root, install it, and generate from it:
+
+```bash
+nuget pack ModularMonolith.nuspec -NoDefaultExcludes      # -NoDefaultExcludes keeps the dot-folders (.template.config) in the package
+dotnet new install ./ModularMonolith.Solution.Template.<version>.nupkg
+
+dotnet new mm-sln -n MyApp          # a whole solution; "StarterKit" is renamed to MyApp
+dotnet new mm -n Billing            # a single-project module (Billing + Billing.Contracts)
+dotnet new ca-mm -n Billing         # a Clean Architecture module (Domain, Application, Infrastructure, Contracts)
+```
+
+Run `dotnet new mm` / `ca-mm` inside the new solution's `src/` folder so the generated project references (`..\Shared`, `..\Infrastructure`, …) resolve, then add the projects to the solution and register the module in `StarterKit.WebApi`. Uninstall with `dotnet new uninstall ModularMonolith.Solution.Template`. Pack from a clean working tree: the package contains whatever files are on disk, including local `appsettings.json` edits.
+
+## Status — what's built
+
+| Piece | Status |
+|---|---|
+| `src/Shared`, `src/Infrastructure`, `src/Persistence`, `src/EventBusMassTransitRabbitMQ` (framework building blocks) | ✅ built |
+| `src/Identity` + `src/Identity.Contracts` — users, roles, claims, self-issued JWT/refresh/session/hub tokens, Active Directory, permission catalog | ✅ built, tested |
+| `src/Identity.Web` — Razor Pages login, Microsoft Entra ID (OIDC) external login with a PKCE authorization-code relay for separate-origin clients, and admin pages for users, roles, and permissions — co-hosted in `StarterKit.WebApi` or standalone | ✅ built |
+| `src/Notifications` + `src/Notifications.Contracts` — notification storage, SignalR push, SMTP mail, welcome-mail consumer of Identity's integration event | ✅ built, tested |
+| `src/Migrations/{MSSQL,PostgreSQL,Sqlite}` — per-provider EF Core migrations and migrate-and-seed console apps | ✅ built — see [docs/conventions/migrations.md](docs/conventions/migrations.md) |
+| `src/StarterKit.WebApi` (composition-root host), `src/StarterKit.AppHost` + `src/StarterKit.ServiceDefaults` (.NET Aspire local orchestration) | ✅ built — runnable API |
+| `tests/Framework.Tests`, `tests/Identity.Tests`, `tests/Notifications.Tests` (xUnit v3) | ✅ built |
+| `clients/admin` (Next.js admin console) — real auth (password or Microsoft), permission-gated admin screens over Identity and Notifications, real-time notifications — see [clients/admin/CLAUDE.md](clients/admin/CLAUDE.md) | ✅ built |
+| `dotnet new` templates — solution (`mm-sln`) and module projects (`mm`, `ca-mm`) packed by `ModularMonolith.nuspec` | ✅ built — see [Install as a template](#install-as-a-template) |
+| Further business modules and additional `clients/*` apps | ❌ not part of this branch |
 
 ## Structure
 
@@ -154,25 +208,17 @@ Access tokens are renewed through `POST api/v1/auth/token/refresh`. The client's
 | Vendor framework | `Lightsoft.*` package family (mediator, `Result`/`Paged` contracts, domain base types, ASP.NET Core authorization/modularity helpers, caching, Serilog, event bus, Active Directory, SMTP mail) |
 | Validation / mapping | FluentValidation, Mapster |
 | Testing | xUnit v3 + Moq (via `tests/ModuleTests.props`) on Microsoft.Testing.Platform (selected by the root `global.json`) |
+| Client | `clients/admin/` — Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, pnpm. Encrypted-cookie sessions (password or Microsoft login, proactive token refresh); real-time notifications over SignalR. Currently the only client app |
 
 Package versions are managed centrally in [Directory.Packages.props](Directory.Packages.props).
-
-## Getting Started
-
-```bash
-dotnet build StarterKit.slnx
-dotnet run --project src/StarterKit.AppHost                              # API + Redis + RabbitMQ + Aspire dashboard
-dotnet run --project src/StarterKit.WebApi/StarterKit.WebApi.csproj      # or the API on its own (in-memory cache, no-op bus)
-dotnet test --solution StarterKit.slnx
-```
-
-Database provider and schema setup, configuration, test filters, and migrations: [docs/conventions/development-guide.md](docs/conventions/development-guide.md).
 
 ## Documentation
 
 - [CLAUDE.md](CLAUDE.md) — repository-wide entry point (project map, dependency direction, framework conventions, AI operating rules).
 - [docs/](docs/) — generated project documentation; start at [docs/architecture/architecture.md](docs/architecture/architecture.md) (layering, runtime flows, and links to each project's overview).
 - [docs/conventions/](docs/conventions/) — coding conventions, development guide, migrations, and local Docker infrastructure.
+- [docs/integration.md](docs/integration.md) — the backend ↔ client integration boundary.
+- [clients/admin/CLAUDE.md](clients/admin/CLAUDE.md) / [clients/admin/docs/](clients/admin/docs/) — admin client architecture and conventions.
 - [.claude/](.claude/) — reusable Claude development infrastructure (agents, skills, workflows), not project documentation.
 
 ## License
@@ -180,4 +226,4 @@ Database provider and schema setup, configuration, test filters, and migrations:
 MIT — see [LICENSE](LICENSE).
 
 ---
-_Last synced: 2026-10-01_
+_Last synced: 2026-10-13_
