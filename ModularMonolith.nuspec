@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>ModularMonolith.Solution.Template</id>
+    <title>ASP.NET Core Modular Monolith Solution Template</title>
+    <version>2.1.0</version>
+    <authors>minhvu</authors>
+    <description>
+      StarterKit modular monolith solution template for ASP.NET Core.
+    </description>
+    <language>en-US</language>
+    <license type="expression">MIT</license>
+    <projectUrl>https://github.com/minhvd/ModularMonolith</projectUrl>
+    <releaseNotes>
+      * Modules: Identity, Notifications
+      * Clients: Next.js, SignalR connection
+    </releaseNotes>
+    <packageTypes>
+      <packageType name="Template" />
+    </packageTypes>
+    <tags>StarterKit Modular Monolith Architecture ddd domain-driven-design modular-monolith-architecture modular monolith architecture minhvu SOLID aspnetcore</tags>
+    <icon>icon.png</icon>
+    <readme>README.md</readme>
+  </metadata>
+  <files>
+    <file src="README.md" />
+    <file src=".template.config\icon.png" />
+    <file src=".\**" target="content" exclude="**\bin\**;**\obj\**;**\.git\**;**\.github\**;**\.claude\**;**\*.user;**\.vs\**;**\.vscode\**;**\.gitignore;**\sample\**;**\logs\**;**\node_modules\**;**\TestResults\**;**\.next\**;**\coverage\**;**\dist\**;**\*.nupkg;**\*.snupkg;" />
+  </files>
+</package>

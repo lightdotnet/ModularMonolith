@@ -70,6 +70,7 @@ No external database or service is needed. Test conventions and coverage: [codin
 | Create/update a database schema and seed it | `dotnet run` from `src/Migrations/<Provider>` — see [migrations.md § Migration sets](migrations.md#migration-sets) |
 | Run the API with Redis and RabbitMQ | `dotnet run --project src/StarterKit.AppHost` — see [../architecture/projects/Aspire.md § Running](../architecture/projects/Aspire.md#running) |
 | Run local infra (Postgres, Redis, pgAdmin) via Docker | [docker-cli.md](docker-cli.md) |
+| Pack the repository as a `dotnet new` template | `nuget pack ModularMonolith.nuspec` from the repo root — packs the working tree (minus the nuspec's exclusions) as the solution template (`mm-sln`, root `.template.config/`) plus the module templates under `templates/` (`mm`, `ca-mm`); make sure no local `appsettings.json` edits are present first |
 
 ## Where to Look for X
 

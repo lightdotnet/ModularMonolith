@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>StarterKit.ModuleName.Application</RootNamespace>
+    <AssemblyName>StarterKit.ModuleName.Application</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ModuleName.Contracts\ModuleName.Contracts.csproj" />
+    <ProjectReference Include="..\ModuleName.Domain\ModuleName.Domain.csproj" />
+    <ProjectReference Include="..\Shared\Shared.csproj" />
+  </ItemGroup>
+
+</Project>
