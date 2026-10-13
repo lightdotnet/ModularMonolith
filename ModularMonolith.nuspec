@@ -6,14 +6,20 @@
     <version>2.1.0</version>
     <authors>minhvu</authors>
     <description>
-      StarterKit modular monolith solution template for ASP.NET Core.
+      StarterKit modular monolith template pack for ASP.NET Core on .NET 10. Contains the
+      solution template (short name mm-sln: framework building blocks, host, Identity and
+      Notifications modules, migrators, tests, and the Next.js admin client) plus two module
+      templates for adding new modules: mm (single implementation project plus Contracts) and
+      ca-mm (Clean Architecture split into Domain, Application, Infrastructure and Contracts).
     </description>
     <language>en-US</language>
     <license type="expression">MIT</license>
     <projectUrl>https://github.com/minhvd/ModularMonolith</projectUrl>
     <releaseNotes>
-      * Modules: Identity, Notifications
-      * Clients: Next.js, SignalR connection
+      * Solution template mm-sln: framework, host, Identity and Notifications modules, Next.js admin client
+      * Module templates: mm (single project + Contracts) and ca-mm (Domain/Application/Infrastructure + Contracts)
+      * Module templates now follow the real module layout: StarterKit.Modules.ModuleName namespaces, AppModule/AppModuleConsumer scaffolding, AddModuleNameServices registration
+      * Fixed the corrupted ca-mm Domain project file
     </releaseNotes>
     <packageTypes>
       <packageType name="Template" />

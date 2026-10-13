@@ -1,12 +1,12 @@
-<Project tdk="oicrosoft.NET.tdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>oodularoonolith.ooduleName.Domain</RootNamespace>
-    <AssemblyName>oodularoonolith.ooduleName.Domain</AssemblyName>
+    <RootNamespace>StarterKit.Modules.ModuleName.Domain</RootNamespace>
+    <AssemblyName>StarterKit.Modules.ModuleName.Domain</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ooduleName.Contracts\ooduleName.Contracts.csproj" />
+    <ProjectReference Include="..\ModuleName.Contracts\ModuleName.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

@@ -39,6 +39,12 @@ Outside the solution:
 ```text
 clients/
 └── admin/                                  (Next.js admin console — consumes the Identity and Notifications APIs over HTTP)
+
+.template.config/                           (`dotnet new` solution template `mm-sln` — the whole repository)
+templates/
+├── module/                                 (`dotnet new mm` — single-project module + Contracts)
+└── ca-module/                              (`dotnet new ca-mm` — Clean Architecture module: Domain, Application, Infrastructure, Contracts)
+ModularMonolith.nuspec                      (packs the above as one NuGet template package)
 ```
 
 Project responsibilities and the dependency rules are in [CLAUDE.md](CLAUDE.md#1-repository-purpose); the exact project references are in [docs/architecture/dependency-graph.md](docs/architecture/dependency-graph.md). The admin client is documented in [clients/admin/CLAUDE.md](clients/admin/CLAUDE.md), and the backend ↔ client boundary in [docs/integration.md](docs/integration.md).

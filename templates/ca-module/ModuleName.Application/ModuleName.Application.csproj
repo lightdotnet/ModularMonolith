@@ -1,9 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>StarterKit.ModuleName.Application</RootNamespace>
-    <AssemblyName>StarterKit.ModuleName.Application</AssemblyName>
+    <RootNamespace>StarterKit.Modules.ModuleName.Application</RootNamespace>
+    <AssemblyName>StarterKit.Modules.ModuleName.Application</AssemblyName>
   </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ModuleName.Tests" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ModuleName.Contracts\ModuleName.Contracts.csproj" />

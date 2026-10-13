@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>StarterKit.ModuleName.Contracts</RootNamespace>
-    <AssemblyName>StarterKit.ModuleName.Contracts</AssemblyName>
+    <RootNamespace>StarterKit.Modules.ModuleName.Contracts</RootNamespace>
+    <AssemblyName>StarterKit.Modules.ModuleName.Contracts</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

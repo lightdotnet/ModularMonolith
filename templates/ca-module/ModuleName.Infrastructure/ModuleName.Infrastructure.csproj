@@ -1,14 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>StarterKit.ModuleName.Infrastructure</RootNamespace>
-    <AssemblyName>StarterKit.ModuleName.Infrastructure</AssemblyName>
+    <RootNamespace>StarterKit.Modules.ModuleName.Infrastructure</RootNamespace>
+    <AssemblyName>StarterKit.Modules.ModuleName.Infrastructure</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="ModuleName.Tests" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EventBusMassTransitRabbitMQ\EventBusMassTransitRabbitMQ.csproj" />
+    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
     <ProjectReference Include="..\ModuleName.Application\ModuleName.Application.csproj" />
     <ProjectReference Include="..\ModuleName.Domain\ModuleName.Domain.csproj" />
-    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
     <ProjectReference Include="..\Persistence\Persistence.csproj" />
   </ItemGroup>
 
