@@ -1,8 +1,8 @@
+using StarterKit.Shared;
+using StarterKit.Modules.Identity.Application.Common;
 using Light.EventBus.Abstractions;
 using Moq;
-using StarterKit.Modules.Identity.Application.Common;
 using StarterKit.Modules.Identity.Contracts.IntegrationEvents;
-using StarterKit.Shared;
 using Xunit;
 
 namespace Identity.Tests.Application.Common;

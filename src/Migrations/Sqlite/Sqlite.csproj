@@ -20,6 +20,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="$(AspnetVersion)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="$(AspnetVersion)" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="$(AspnetVersion)" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="$(AspnetVersion)" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(AspnetVersion)" />
@@ -30,6 +32,7 @@
     <ProjectReference Include="..\..\EventBusMassTransitRabbitMQ\EventBusMassTransitRabbitMQ.csproj" />
     <ProjectReference Include="..\..\Identity\Identity.csproj" />
     <ProjectReference Include="..\..\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Notifications\Notifications.csproj" />
     <ProjectReference Include="..\..\Persistence\Persistence.csproj" />
     <ProjectReference Include="..\..\Shared\Shared.csproj" />
   </ItemGroup>

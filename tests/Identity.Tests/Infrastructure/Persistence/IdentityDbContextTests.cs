@@ -1,3 +1,5 @@
+using StarterKit.Modules.Identity.Infrastructure.Persistence;
+using StarterKit.Modules.Identity.Application.Common;
 using Identity.Tests.TestSupport;
 using Light.EventBus.Abstractions;
 using Light.Mediator;
@@ -5,10 +7,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using StarterKit.Modules.Identity.Application.Common;
 using StarterKit.Modules.Identity.Contracts.IntegrationEvents;
 using StarterKit.Modules.Identity.Domain;
-using StarterKit.Modules.Identity.Infrastructure.Persistence;
 using Xunit;
 
 namespace Identity.Tests.Infrastructure.Persistence;

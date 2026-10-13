@@ -1,3 +1,5 @@
+using StarterKit.Modules.Notifications.Application.Notifications.Queries;
+using StarterKit.Modules.Notifications.Application.Notifications.Commands;
 using Light.Contracts;
 using Light.Mediator;
 using Microsoft.AspNetCore.Http;
@@ -6,8 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using StarterKit.Modules.Notifications.Contracts.SystemNotifications;
 using StarterKit.Modules.Notifications.Endpoints;
-using StarterKit.Modules.Notifications.Application.Notifications.Commands;
-using StarterKit.Modules.Notifications.Application.Notifications.Queries;
 using StarterKit.Shared;
 using Xunit;
 

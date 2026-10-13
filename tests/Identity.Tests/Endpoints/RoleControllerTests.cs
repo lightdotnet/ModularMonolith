@@ -1,3 +1,4 @@
+using StarterKit.Modules.Identity.Application.Roles.Commands;
 using Light.Contracts;
 using Light.Mediator;
 using Microsoft.AspNetCore.Http;
@@ -5,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using StarterKit.Modules.Identity.Application.Common.Models;
-using StarterKit.Modules.Identity.Application.Roles.Commands;
 using StarterKit.Modules.Identity.Application.Roles.Services;
 using StarterKit.Modules.Identity.Endpoints;
 using Xunit;

@@ -3,6 +3,7 @@
   <PropertyGroup>
     <IsAspireSharedProject>true</IsAspireSharedProject>
 	<ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+	<RootNamespace>Microsoft.Extensions.Hosting</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

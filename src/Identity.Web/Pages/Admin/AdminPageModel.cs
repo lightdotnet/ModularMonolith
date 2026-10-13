@@ -1,4 +1,3 @@
-using IResult = Light.Contracts.IResult;
 using Light.Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,6 +6,7 @@ using StarterKit.Modules.Identity.Web.TagHelpers;
 using StarterKit.Shared;
 using StarterKit.Shared.Authorization;
 using System.Reflection;
+using IResult = Light.Contracts.IResult;
 using ValidationException = Light.Exceptions.ValidationException;
 
 namespace StarterKit.Modules.Identity.Web.Pages.Admin;

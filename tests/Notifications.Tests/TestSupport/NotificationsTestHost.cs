@@ -1,3 +1,4 @@
+using StarterKit.Modules.Notifications.Application.Common;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,7 +7,6 @@ using StarterKit.Modules.Identity.Contracts;
 using StarterKit.Modules.Notifications.Contracts.SystemNotifications;
 using StarterKit.Modules.Notifications.Domain;
 using StarterKit.Modules.Notifications.Infrastructure.Persistence;
-using StarterKit.Modules.Notifications.Application.Common;
 using StarterKit.Shared;
 
 namespace Notifications.Tests.TestSupport;

@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using MSSQL;
+using StarterKit.Modules.Identity.Infrastructure.Persistence;
+using StarterKit.Modules.Notifications.Infrastructure.Persistence;
 
 // set Environment
 //Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Live");

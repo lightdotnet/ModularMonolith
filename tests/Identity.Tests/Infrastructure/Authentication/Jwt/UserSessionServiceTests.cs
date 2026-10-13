@@ -1,9 +1,9 @@
+using StarterKit.Modules.Identity.Infrastructure.Authentication.Jwt;
 using Identity.Tests.TestSupport;
 using Light.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using StarterKit.Modules.Identity.Application.Common.Models;
 using StarterKit.Modules.Identity.Domain;
-using StarterKit.Modules.Identity.Infrastructure.Authentication.Jwt;
 using Xunit;
 
 namespace Identity.Tests.Infrastructure.Authentication.Jwt;

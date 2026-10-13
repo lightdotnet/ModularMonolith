@@ -1,3 +1,4 @@
+using StarterKit.Modules.Identity.Application.Common;
 using Identity.Tests.TestSupport;
 using Light.EventBus.Abstractions;
 using Light.Mediator;
@@ -6,7 +7,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using StarterKit.Modules.Identity.Application.Authentication.ExternalLogin;
-using StarterKit.Modules.Identity.Application.Common;
 using StarterKit.Modules.Identity.Contracts.IntegrationEvents;
 using StarterKit.Modules.Identity.Domain;
 using StarterKit.Modules.Identity.Infrastructure.Authentication.ExternalLogin;

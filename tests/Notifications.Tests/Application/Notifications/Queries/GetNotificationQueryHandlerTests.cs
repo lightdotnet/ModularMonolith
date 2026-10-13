@@ -1,6 +1,6 @@
+using StarterKit.Modules.Notifications.Application.Notifications.Queries;
 using Notifications.Tests.TestSupport;
 using StarterKit.Modules.Notifications.Contracts.SystemNotifications;
-using StarterKit.Modules.Notifications.Application.Notifications.Queries;
 using Xunit;
 
 namespace Notifications.Tests.Application.Notifications.Queries;

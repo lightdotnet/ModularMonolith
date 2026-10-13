@@ -1,7 +1,7 @@
+using StarterKit.Modules.Identity.Application.Users.Commands;
 using Identity.Tests.TestSupport;
 using Light.Contracts;
 using Moq;
-using StarterKit.Modules.Identity.Application.Users.Commands;
 using StarterKit.Modules.Identity.Application.Users.Services;
 using StarterKit.Modules.Identity.Domain;
 using StarterKit.Shared.Authorization;

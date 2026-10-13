@@ -1,4 +1,3 @@
-using StarterKit.Modules.Identity.Domain;
 using System.ComponentModel.DataAnnotations;
 
 namespace StarterKit.Modules.Identity.Application.Common.Models;

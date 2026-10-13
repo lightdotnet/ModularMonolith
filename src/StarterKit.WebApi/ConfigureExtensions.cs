@@ -3,10 +3,10 @@ using FluentValidation;
 using Light.AspNetCore.Builder;
 using Light.AspNetCore.Middlewares;
 using Light.AspNetCore.Swagger;
+using Light.File.Csv;
+using Light.File.Excel;
 using Light.Mediator;
-using Microsoft.AspNetCore.RateLimiting;
 using StarterKit.EventBusMassTransitRabbitMQ;
-using StarterKit.WebApi.Authentication;
 using StarterKit.Infrastructure;
 using StarterKit.Infrastructure.Caching;
 using StarterKit.Infrastructure.Cors;
@@ -18,6 +18,7 @@ using StarterKit.Modules.Identity.Web;
 using StarterKit.Modules.Notifications;
 using StarterKit.Shared;
 using StarterKit.Shared.Authorization;
+using StarterKit.WebApi.Authentication;
 using System.Reflection;
 using System.Threading.RateLimiting;
 
@@ -48,7 +49,8 @@ public static class ConfigureExtensions
         services.AddGlobalExceptionHandler();
         services.AddApiVersion(1);
         services.AddSwagger(configuration);
-        services.AddFileGenerator();
+        services.AddTransient<IExcelService, ExcelService>();
+        services.AddTransient<ICsvService, CsvService>();
 
         services.AddSharedInfrastructure();
         services.AddAppCache(configuration);

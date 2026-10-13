@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -42,7 +42,7 @@ namespace Sqlite.Identity
                     FirstName = table.Column<string>(type: "TEXT", nullable: true),
                     LastName = table.Column<string>(type: "TEXT", nullable: true),
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
-                    AuthProvider = table.Column<string>(type: "TEXT", nullable: true),
+                    AuthProvider = table.Column<int>(type: "INTEGER", nullable: false),
                     Created = table.Column<long>(type: "INTEGER", nullable: false),
                     CreatedBy = table.Column<string>(type: "TEXT", nullable: true),
                     LastModified = table.Column<long>(type: "INTEGER", nullable: true),
@@ -244,6 +244,12 @@ namespace Sqlite.Identity
                 schema: "identity",
                 table: "Users",
                 column: "NormalizedEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_Created",
+                schema: "identity",
+                table: "Users",
+                column: "Created");
 
             migrationBuilder.CreateIndex(
                 name: "UserNameIndex",

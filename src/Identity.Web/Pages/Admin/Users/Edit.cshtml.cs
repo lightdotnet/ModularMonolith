@@ -6,7 +6,6 @@ using StarterKit.Modules.Identity.Application.Roles.Services;
 using StarterKit.Modules.Identity.Application.Users.Commands;
 using StarterKit.Modules.Identity.Application.Users.Services;
 using StarterKit.Modules.Identity.Contracts.Authorization;
-using StarterKit.Modules.Identity.Domain;
 using StarterKit.Modules.Identity.Web.Admin;
 using System.ComponentModel.DataAnnotations;
 

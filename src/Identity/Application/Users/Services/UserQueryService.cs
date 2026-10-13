@@ -1,7 +1,6 @@
 using Light.Extensions.Caching;
 using StarterKit.Modules.Identity.Application.Common.Models;
 using StarterKit.Modules.Identity.Contracts;
-using StarterKit.Modules.Identity.Domain;
 using StarterKit.Shared;
 
 namespace StarterKit.Modules.Identity.Application.Users.Services;

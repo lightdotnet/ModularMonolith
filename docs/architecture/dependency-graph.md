@@ -51,10 +51,10 @@ graph TD
     Pers --> Shared
     MigMs & MigPg & MigSl --> Bus
     MigMs & MigPg & MigSl --> Id
+    MigMs & MigPg & MigSl --> Not
     MigMs & MigPg & MigSl --> Infra
     MigMs & MigPg & MigSl --> Pers
     MigMs & MigPg & MigSl --> Shared
-    MigMs & MigPg --> Not
     FT --> Shared
     FT --> Infra
     FT --> Pers
@@ -66,7 +66,7 @@ graph TD
     NT --> Shared
 ```
 
-The three migration projects share the same references, except that `Migrations/Sqlite` does not reference `Notifications`. The dependency rules these edges are checked against are in [CLAUDE.md § 1](../../CLAUDE.md#1-repository-purpose).
+The three migration projects share the same references. The dependency rules these edges are checked against are in [CLAUDE.md § 1](../../CLAUDE.md#1-repository-purpose).
 
 ## Package References
 
@@ -86,7 +86,7 @@ Versions live in `Directory.Packages.props` (central package management), except
 | `StarterKit.WebApi` | `Lightsoft.AspNetCore.Extensions`, `Lightsoft.AspNetCore.Swagger`, `Microsoft.AspNetCore.Authentication.JwtBearer`, `FluentValidation.DependencyInjectionExtensions`, `AspNetCore.HealthChecks.UI.Client`, `Spectre.Console`, `Microsoft.VisualStudio.Azure.Containers.Tools.Targets` | Host helpers, Swagger, hub Bearer scheme, validator registration, health-check output, startup banner, container tooling |
 | `StarterKit.ServiceDefaults` | `Microsoft.Extensions.Http.Resilience`, `Microsoft.Extensions.ServiceDiscovery`, `OpenTelemetry.Extensions.Hosting`, `OpenTelemetry.Exporter.OpenTelemetryProtocol`, `OpenTelemetry.Instrumentation.AspNetCore`, `OpenTelemetry.Instrumentation.Http`, `OpenTelemetry.Instrumentation.Runtime` | Aspire service defaults: HttpClient resilience, service discovery, telemetry |
 | `StarterKit.AppHost` | `Aspire.Hosting.Redis`, `Aspire.Hosting.RabbitMQ` (project SDK `Aspire.AppHost.Sdk`) | Aspire orchestration and dashboard, Redis and RabbitMQ resources |
-| `src/Migrations/*` | `Microsoft.EntityFrameworkCore.Design`, `Microsoft.EntityFrameworkCore.Tools`, `Microsoft.Extensions.Configuration(.Abstractions)`, `Microsoft.Extensions.Hosting(.Abstractions)`; plus `Microsoft.EntityFrameworkCore.SqlServer` (MSSQL) and `Microsoft.EntityFrameworkCore`/`Microsoft.EntityFrameworkCore.Relational` (PostgreSQL) | Design-time EF tooling and the console host for migrate-and-seed |
+| `src/Migrations/*` | `Microsoft.EntityFrameworkCore.Design`, `Microsoft.EntityFrameworkCore.Tools`, `Microsoft.Extensions.Configuration(.Abstractions)`, `Microsoft.Extensions.Hosting(.Abstractions)`; plus `Microsoft.EntityFrameworkCore.SqlServer` (MSSQL) and `Microsoft.EntityFrameworkCore`/`Microsoft.EntityFrameworkCore.Relational` (PostgreSQL, Sqlite) | Design-time EF tooling and the console host for migrate-and-seed |
 | `tests/*` | `xunit.v3`, `xunit.runner.visualstudio`, `Microsoft.NET.Test.Sdk`, `Moq` (from `tests/ModuleTests.props`) | Test stack |
 
 ## Circular References
@@ -109,7 +109,7 @@ None found:
 - `Identity.Contracts` and `Notifications.Contracts` reference only `Shared`.
 - `Identity` references its own `.Contracts` and framework projects only; `Identity.Web` references its own module (intra-module), `Infrastructure`, and `EventBusMassTransitRabbitMQ` (its standalone host registers the bus).
 - `Notifications` references its own `.Contracts`, framework projects, and another module only through its seam (`Identity.Contracts`, for the integration event it consumes and the `IIdentityModuleApi` it calls).
-- Nothing references a migration project. Outside each module's own projects and tests, `StarterKit.WebApi` references `Identity`, `Identity.Web`, and `Notifications`, and the migration projects reference `Identity` (all three) and `Notifications` (MSSQL and PostgreSQL) — all composition roots, not modules.
+- Nothing references a migration project. Outside each module's own projects and tests, `StarterKit.WebApi` references `Identity`, `Identity.Web`, and `Notifications`, and the migration projects reference `Identity` and `Notifications` — all composition roots, not modules.
 - Only `StarterKit.AppHost` references `StarterKit.WebApi`, and nothing references `StarterKit.AppHost`. `StarterKit.ServiceDefaults` references no solution project, and only `StarterKit.WebApi` references it.
 
 ## Notes
@@ -117,4 +117,4 @@ None found:
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-30_
+_Last synced: 2026-10-13_

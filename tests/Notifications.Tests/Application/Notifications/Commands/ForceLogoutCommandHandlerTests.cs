@@ -1,7 +1,7 @@
+using StarterKit.Modules.Notifications.Application.Common;
+using StarterKit.Modules.Notifications.Application.Notifications.Commands;
 using Moq;
 using StarterKit.Modules.Notifications.Contracts.SystemNotifications;
-using StarterKit.Modules.Notifications.Application.Notifications.Commands;
-using StarterKit.Modules.Notifications.Application.Common;
 using Xunit;
 
 namespace Notifications.Tests.Application.Notifications.Commands;

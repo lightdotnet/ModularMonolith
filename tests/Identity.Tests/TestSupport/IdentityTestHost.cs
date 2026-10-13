@@ -1,3 +1,4 @@
+using StarterKit.Modules.Identity.Application.Authorization;
 using Light.EventBus.Abstractions;
 using Light.Extensions.Caching;
 using Light.Mediator;
@@ -7,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using StarterKit.Modules.Identity.Application.Authorization;
 using StarterKit.Modules.Identity.Application.Common;
 using StarterKit.Modules.Identity.Application.Common.Models;
 using StarterKit.Modules.Identity.Application.Users.Services;

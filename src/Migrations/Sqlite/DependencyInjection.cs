@@ -3,10 +3,15 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StarterKit.EventBusMassTransitRabbitMQ;
 using StarterKit.Infrastructure;
+using StarterKit.Infrastructure.Caching;
 using StarterKit.Modules.Identity;
+using StarterKit.Modules.Identity.Application.Authorization;
 using StarterKit.Modules.Identity.Application.Common;
+using StarterKit.Modules.Identity.Application.Roles.Services;
+using StarterKit.Modules.Identity.Application.Users.Services;
 using StarterKit.Modules.Identity.Domain;
-using StarterKit.Persistence;
+using StarterKit.Modules.Identity.Infrastructure.Persistence;
+using StarterKit.Modules.Notifications.Infrastructure.Persistence;
 using StarterKit.Persistence.MigrationSupport;
 using System.Reflection;
 
@@ -20,12 +25,35 @@ public static class DependencyInjection
     {
         services.AddSharedInfrastructure();
 
+        services.AddAppCache(configuration);
+
         services.AddMigrationsServices(typeof(IdentityModule).Assembly);
 
         // No RabbitMQ section in the migrator's configuration, so this registers the no-op bus.
         services.AddEventBus(configuration);
 
         services.AddIdentity(configuration);
+
+        services.AddNotifications(configuration);
+
+        return services;
+    }
+
+    private static IServiceCollection AddNotifications(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString(DbConnectionNames.Default);
+
+        services.AddDbContext<NotificationDbContext>(options =>
+            options
+                .UseSqlite(connectionString, o =>
+                {
+                    o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName);
+                })
+                .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
+
+        services.AddScoped<NotificationContextInitialiser>();
 
         return services;
     }
@@ -65,6 +93,11 @@ public static class DependencyInjection
             })
             .AddRoles<Role>()
             .AddEntityFrameworkStores<IdentityDbContext>();
+
+        services.AddTransient<IUserService, UserService>();
+        services.AddScoped<IUserQueryService, UserQueryService>();
+        services.AddTransient<IRoleService, RoleService>();
+        services.AddScoped<PermissionGrantGuard>();
 
         // IdentityDbContext buffers integration events per scope and publishes them after a save.
         services.AddScoped<IntegrationEventCollector>();

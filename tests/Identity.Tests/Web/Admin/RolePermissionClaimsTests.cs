@@ -1,5 +1,5 @@
-using StarterKit.Modules.Identity.Application.Common.Models;
 using StarterKit.Modules.Identity.Web.Admin;
+using StarterKit.Modules.Identity.Application.Common.Models;
 using StarterKit.Shared.Constants;
 using Xunit;
 

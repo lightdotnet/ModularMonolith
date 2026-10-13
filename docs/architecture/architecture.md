@@ -113,7 +113,6 @@ The host logs through Serilog and applies the Aspire service defaults, which add
 |---|---|---|
 | No transactional outbox for integration events | Medium | Accepted — see [Identity § Design Notes](projects/Identity.md#design-notes) |
 | Hard-coded super user | Medium | See [Shared § Design Notes](projects/Shared.md#design-notes) |
-| Notifications schema not on Sqlite | Medium | The Sqlite migrator does not carry the Notifications migrations, so a host on Sqlite has no `system` schema for notifications — see [migrations.md § Migration sets](../conventions/migrations.md#migration-sets) |
 | Save path wired per context | Low | `BaseDbContext` does not audit or dispatch; each module context must call the helpers itself — see [Persistence § Design Notes](projects/Persistence.md#design-notes) |
 
 ## Notes
@@ -121,4 +120,4 @@ The host logs through Serilog and applies the Aspire service defaults, which add
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-30_
+_Last synced: 2026-10-13_

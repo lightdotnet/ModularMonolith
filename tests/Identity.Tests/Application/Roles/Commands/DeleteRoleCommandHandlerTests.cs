@@ -1,6 +1,6 @@
+using StarterKit.Modules.Identity.Application.Roles.Commands;
 using Identity.Tests.TestSupport;
 using Moq;
-using StarterKit.Modules.Identity.Application.Roles.Commands;
 using StarterKit.Modules.Identity.Application.Roles.Services;
 using StarterKit.Modules.Identity.Domain;
 using StarterKit.Shared.Constants;

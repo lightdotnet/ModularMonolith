@@ -1,6 +1,6 @@
+using StarterKit.Modules.Identity.Application.Roles.Services;
 using Identity.Tests.TestSupport;
 using StarterKit.Modules.Identity.Application.Common.Models;
-using StarterKit.Modules.Identity.Application.Roles.Services;
 using StarterKit.Modules.Identity.Domain;
 using System.Security.Claims;
 using Xunit;

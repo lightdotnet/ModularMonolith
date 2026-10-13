@@ -9,8 +9,8 @@ using StarterKit.Modules.Identity.Application.Common;
 using StarterKit.Modules.Identity.Application.Roles.Services;
 using StarterKit.Modules.Identity.Application.Users.Services;
 using StarterKit.Modules.Identity.Domain;
+using StarterKit.Modules.Identity.Infrastructure.Persistence;
 using StarterKit.Modules.Notifications.Infrastructure.Persistence;
-using StarterKit.Persistence;
 using StarterKit.Persistence.MigrationSupport;
 using System.Reflection;
 

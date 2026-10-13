@@ -1,6 +1,6 @@
+using StarterKit.Modules.Identity.Api;
 using Identity.Tests.TestSupport;
 using Moq;
-using StarterKit.Modules.Identity.Api;
 using StarterKit.Modules.Identity.Contracts.IntegrationEvents;
 using StarterKit.Modules.Identity.Domain;
 using StarterKit.Shared;

@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using StarterKit.Modules.Identity.Application.Common.Models;
 using StarterKit.Modules.Identity.Application.Users.Commands;
 using StarterKit.Modules.Identity.Contracts.Authorization;
-using StarterKit.Modules.Identity.Domain;
 using System.ComponentModel.DataAnnotations;
 
 namespace StarterKit.Modules.Identity.Web.Pages.Admin.Users;

@@ -5,7 +5,6 @@ using StarterKit.Modules.Identity.Application.Common.Models;
 using StarterKit.Modules.Identity.Application.Users.Commands;
 using StarterKit.Modules.Identity.Application.Users.Queries;
 using StarterKit.Modules.Identity.Application.Users.Services;
-using StarterKit.Modules.Identity.Domain;
 using StarterKit.Shared;
 
 namespace StarterKit.Modules.Identity.Endpoints;

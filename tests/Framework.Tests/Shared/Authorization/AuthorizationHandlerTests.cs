@@ -1,7 +1,7 @@
+using StarterKit.Shared.Authorization.Internal;
 using Light.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using StarterKit.Shared.Authorization;
-using StarterKit.Shared.Authorization.Internal;
 using StarterKit.Shared.Constants;
 using System.Security.Claims;
 using Xunit;

@@ -1,6 +1,6 @@
+using StarterKit.Modules.Identity.Application.Users.Queries;
 using Identity.Tests.TestSupport;
 using StarterKit.Modules.Identity.Application.Common.Models;
-using StarterKit.Modules.Identity.Application.Users.Queries;
 using StarterKit.Modules.Identity.Domain;
 using Xunit;
 

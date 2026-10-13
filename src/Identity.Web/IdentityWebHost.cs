@@ -1,8 +1,6 @@
 using FluentValidation;
 using Light.AspNetCore.Authorization;
 using Light.Mediator;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using StarterKit.EventBusMassTransitRabbitMQ;
 using StarterKit.Infrastructure;
 using StarterKit.Infrastructure.Caching;

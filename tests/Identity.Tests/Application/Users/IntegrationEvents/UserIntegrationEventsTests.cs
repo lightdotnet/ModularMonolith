@@ -1,5 +1,5 @@
-using Identity.Tests.TestSupport;
 using StarterKit.Modules.Identity.Application.Users.IntegrationEvents;
+using Identity.Tests.TestSupport;
 using StarterKit.Modules.Identity.Contracts.IntegrationEvents;
 using StarterKit.Modules.Identity.Domain;
 using StarterKit.Shared;

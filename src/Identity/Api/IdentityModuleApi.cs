@@ -4,7 +4,6 @@ using StarterKit.Modules.Identity.Application.Users.Services;
 using StarterKit.Modules.Identity.Contracts;
 using StarterKit.Modules.Identity.Domain;
 using StarterKit.Modules.Identity.Infrastructure.Persistence;
-using StarterKit.Shared;
 using StarterKit.Shared.Constants;
 
 namespace StarterKit.Modules.Identity.Api;

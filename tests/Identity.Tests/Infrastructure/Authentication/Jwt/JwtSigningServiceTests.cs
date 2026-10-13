@@ -1,6 +1,6 @@
+using StarterKit.Modules.Identity.Infrastructure.Authentication.Jwt;
 using Identity.Tests.TestSupport;
 using Microsoft.IdentityModel.Tokens;
-using StarterKit.Modules.Identity.Infrastructure.Authentication.Jwt;
 using System.Security.Claims;
 using Xunit;
 

@@ -1,3 +1,5 @@
+using StarterKit.Modules.Identity.Infrastructure.Authentication.Jwt;
+using StarterKit.Modules.Identity.Infrastructure.Authentication.ExternalLogin;
 using Light.Contracts;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -6,8 +8,6 @@ using StarterKit.Modules.Identity.Application.Authentication;
 using StarterKit.Modules.Identity.Application.Authentication.ExternalLogin;
 using StarterKit.Modules.Identity.Application.Common.Models;
 using StarterKit.Modules.Identity.Endpoints;
-using StarterKit.Modules.Identity.Infrastructure.Authentication.ExternalLogin;
-using StarterKit.Modules.Identity.Infrastructure.Authentication.Jwt;
 using StarterKit.Shared;
 using Xunit;
 

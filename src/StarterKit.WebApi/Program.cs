@@ -1,8 +1,8 @@
 using Light.Serilog;
 using Serilog;
 using Spectre.Console;
-using StarterKit.WebApi;
 using StarterKit.Infrastructure;
+using StarterKit.WebApi;
 
 AnsiConsole.Write(new FigletText("Starter API").Color(Color.Blue));
 

@@ -1,5 +1,5 @@
-using Identity.Tests.TestSupport;
 using StarterKit.Modules.Identity.Infrastructure.Authentication.Jwt;
+using Identity.Tests.TestSupport;
 using StarterKit.Shared.Constants;
 using System.Security.Claims;
 using Xunit;

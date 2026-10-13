@@ -1,3 +1,5 @@
+using StarterKit.Modules.Identity.Infrastructure.Persistence;
+using StarterKit.Modules.Notifications.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Sqlite;
 
@@ -16,3 +18,8 @@ var identityInitialiser = serviceProvider.GetRequiredService<IdentityContextInit
 await identityInitialiser.InitialiseAsync();
 
 await identityInitialiser.TrySeedAsync();
+
+// Notifications module
+var notificationInitialiser = serviceProvider.GetRequiredService<NotificationContextInitialiser>();
+
+await notificationInitialiser.InitialiseAsync();

@@ -43,14 +43,14 @@ Each provider directory under `src/Migrations/` is a console app holding one fol
 
 | Modules | MSSQL | PostgreSQL | Sqlite |
 |---|---|---|---|
-| `Identity` | one `CreateIdentitySchema` baseline | one `CreateIdentitySchema` baseline | baseline plus `AddUserCreatedIndex` |
-| `Notifications` | one `CreateNotificationSchema` baseline | one `CreateNotificationSchema` baseline | not carried |
+| `Identity` | one `CreateIdentitySchema` baseline | one `CreateIdentitySchema` baseline | one `CreateIdentitySchema` baseline |
+| `Notifications` | one `CreateNotificationSchema` baseline | one `CreateNotificationSchema` baseline | one `CreateNotificationSchema` baseline |
 
 A baseline is generated from the module's current model, so its model snapshot is the source of truth for that module and provider.
 
-`Notifications` is wired into the MSSQL and PostgreSQL migrators. The Sqlite project does not reference the module or register its context (it holds only the module's `InternalsVisibleTo` grant), so a host running on Sqlite has no `system` schema for notifications.
+All three migrators reference both modules and register both contexts, so a host on any provider gets both modules' tables from its migrator.
 
-For `Identity`, `dotnet ef migrations has-pending-model-changes` reports no pending changes for MSSQL and PostgreSQL and pending changes for Sqlite: its snapshot stores `User.AuthProvider` as a string, while the model maps it as an `int` enum. Sqlite is regenerated only on the user's explicit command.
+`dotnet ef migrations has-pending-model-changes` reports no pending changes for `Identity` and `Notifications` on every provider.
 
 ## Provider-aware filtered indexes
 
@@ -67,9 +67,9 @@ entity.HasIndex(x => x.IsBase)
 
 ## Resetting a developer database
 
-A database migrated on a different migration chain than the one now in the repository has different migration ids in `__EFMigrationsHistory` and cannot be updated in place. Drop and recreate it, or reset its `__EFMigrationsHistory` rows manually, before running the current baselines. This applies to an MSSQL database whose `Identity` history holds any migration other than `20260908114120_CreateIdentitySchema`, and to a PostgreSQL database whose history holds any migration other than `20260930163058_CreateIdentitySchema` and `20260930163129_CreateNotificationSchema`.
+A database migrated on a different migration chain than the one now in the repository has different migration ids in `__EFMigrationsHistory` and cannot be updated in place. Drop and recreate it, or reset its `__EFMigrationsHistory` rows manually, before running the current baselines. This applies to an MSSQL database whose `Identity` history holds any migration other than `20260908114120_CreateIdentitySchema`, to a PostgreSQL database whose history holds any migration other than `20260930163058_CreateIdentitySchema` and `20260930163129_CreateNotificationSchema`, and to a Sqlite database whose history holds any migration other than `20261013064849_CreateIdentitySchema` and `20261013064902_CreateNotificationSchema`.
 
-`__EFMigrationsHistory` is not placed in a module's schema: every module context on a database shares one history table in the connection's default schema (`public` on PostgreSQL). When a history table is reset, the module schemas (`identity`, `system`) must be dropped with it — otherwise the baselines fail on tables that already exist.
+`__EFMigrationsHistory` is not placed in a module's schema: every module context on a database shares one history table in the connection's default schema (`public` on PostgreSQL). When a history table is reset, the module schemas (`identity`, `system`; on Sqlite, the module tables) must be dropped with it — otherwise the baselines fail on tables that already exist.
 
 ---
-_Last synced: 2026-09-30_
+_Last synced: 2026-10-13_

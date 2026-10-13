@@ -1,9 +1,9 @@
+using StarterKit.Modules.Notifications.Application.Notifications.Commands;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Notifications.Tests.TestSupport;
 using StarterKit.Modules.Identity.Contracts;
 using StarterKit.Modules.Notifications.Contracts.SystemNotifications;
-using StarterKit.Modules.Notifications.Application.Notifications.Commands;
 using Xunit;
 
 namespace Notifications.Tests.Application.Notifications.Commands;

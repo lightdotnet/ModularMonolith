@@ -1,7 +1,7 @@
+using StarterKit.Modules.Notifications.Application.Users.IntegrationEvents.Consumers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using StarterKit.Modules.Identity.Contracts.IntegrationEvents;
-using StarterKit.Modules.Notifications.Application.Users.IntegrationEvents.Consumers;
 using StarterKit.Modules.Notifications.Contracts;
 using Xunit;
 

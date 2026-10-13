@@ -1,6 +1,6 @@
+using StarterKit.Modules.Identity.Infrastructure.Authentication.Jwt;
 using Identity.Tests.TestSupport;
 using StarterKit.Modules.Identity.Domain;
-using StarterKit.Modules.Identity.Infrastructure.Authentication.Jwt;
 using StarterKit.Shared.Constants;
 using Xunit;
 

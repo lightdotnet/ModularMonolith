@@ -1,5 +1,3 @@
-using StarterKit.Modules.Identity.Domain;
-
 namespace StarterKit.Modules.Identity.Application.Common.Models;
 
 public class UserDto

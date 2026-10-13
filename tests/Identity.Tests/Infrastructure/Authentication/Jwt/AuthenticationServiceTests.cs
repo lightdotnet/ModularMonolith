@@ -1,3 +1,4 @@
+using StarterKit.Modules.Identity.Infrastructure.Authentication.Jwt;
 using Identity.Tests.TestSupport;
 using Light.ActiveDirectory.Interfaces;
 using Microsoft.AspNetCore.Identity;
@@ -5,7 +6,6 @@ using Moq;
 using StarterKit.Modules.Identity.Application.Authentication;
 using StarterKit.Modules.Identity.Application.Common.Models;
 using StarterKit.Modules.Identity.Domain;
-using StarterKit.Modules.Identity.Infrastructure.Authentication.Jwt;
 using StarterKit.Shared;
 using System.Security.Claims;
 using Xunit;
