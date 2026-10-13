@@ -307,7 +307,6 @@ exists. `pnpm-workspace.yaml` only configures build-script approval, not a multi
 | Localized timestamps use the hydration-safe `LocalDateTime` only in `notifications` | Low | Other client-rendered `toLocaleString()` sites (`session-lifecycle.tsx`, `object-viewer/utils.ts`) still use the bare form. |
 | Backend list endpoints never populate `Roles`/`Claims` on the DTO | Low (worked around) | Only get-by-id populates them. Both edit dialogs re-fetch on open; any future list-reading feature would silently get empty arrays if it forgot to. |
 | No `not-found.tsx` anywhere under `app/` | Low (cosmetic) | An unmatched route renders Next's default 404 in the root layout only, unmounting the whole `(dashboard)` subtree (and any open SignalR connection). |
-| `prettier` + `prettier-plugin-tailwindcss` installed, no config file / `format` script | Low | Unknown whether formatting is enforced anywhere. |
 | No automated test suite | Low (by design at this stage) | No test runner in `package.json`. Notable given the `SessionGate`/`ensureFreshSessionAction` state machine, the `deployment-recovery.ts` loop, and every CRUD flow are untested. |
 | `components/ui/{button,tabs,dialog}.tsx` hand-modified beyond shadcn CLI output | Low | Re-running the CLI would silently drop the customizations (`button` `loading` prop + `cursor-pointer`, `tabs` `cursor-pointer`, `dialog` `max-h`/`overflow-y-auto` + portal-container). |
 | `DataTable`'s `onExport` prop, `components/shared/object-viewer/*`, `CommandPaletteProvider`, `NumberInput` — all unused | Low / Trivial | Dead capability until a consumer needs it. |
@@ -318,4 +317,4 @@ exists. `pnpm-workspace.yaml` only configures build-script approval, not a multi
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-30_
+_Last synced: 2026-10-13_

@@ -10,7 +10,7 @@ The full dependency/devDependency list with exact versions lives in `clients/adm
 - **Feature-specific**: `qrcode` (QR code on `/user-profile`), `@microsoft/signalr` (real-time push client, used only by `modules/notifications/hooks/use-notifications.ts`).
 - **Positioning/virtualization**: `@floating-ui/react` (the Command Palette — reachable in the app via the topbar `SearchBox` — plus `components/foundation/{use-listbox,floating-overlay}`), `@tanstack/react-virtual` (headless list virtualization behind `components/foundation/use-virtual-list.ts`, used by the DataTable's `"virtualized"`/`"infinite"` modes and the Command Palette's result list).
 - **Server-only guard**: `server-only` — compile-time marker forcing a build error if a `lib/server/*` module is ever imported into a Client Component; every file under `lib/server/` (including `http-handlers/`) starts with `import "server-only"`.
-- **Styling toolchain** (devDependencies): `tailwindcss` + `@tailwindcss/postcss` (Tailwind v4), `shadcn` (CLI that generated `components/ui/*`; also imported at runtime for `shadcn/tailwind.css`), `prettier` + `prettier-plugin-tailwindcss` (no config file/`format` script found — see [coding-conventions.md](../conventions/coding-conventions.md)).
+- **Styling toolchain** (devDependencies): `tailwindcss` + `@tailwindcss/postcss` (Tailwind v4), `shadcn` (CLI that generated `components/ui/*`; also imported at runtime for `shadcn/tailwind.css`).
 - **Tooling** (devDependencies): `eslint` + `eslint-config-next` (pinned to match `next`'s version), `typescript`, `@types/*`.
 
 Package manager: pnpm (`pnpm-lock.yaml`). `pnpm-workspace.yaml` exists but only holds build-script approval (`sharp`, `unrs-resolver`), dependency `overrides`, and minimum-release-age exclusions — not a multi-package workspace. Node is pinned via `.nvmrc` + `package.json` `engines` (`node >=26.8.2`). `package.json` is the source of truth for exact versions.
@@ -66,4 +66,4 @@ Not applicable — this is a client-app dependency graph, not backend. The backe
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-30_
+_Last synced: 2026-10-13_

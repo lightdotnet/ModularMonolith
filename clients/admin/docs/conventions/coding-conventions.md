@@ -25,8 +25,8 @@ write code that matches" companion, not a second architecture doc.
   `src/components/{foundation,select,command}/**` — `@floating-ui/react`'s `context`/`refs` objects
   are read during render by design. The `select` glob segment matches nothing (stale — see
   [architecture.md § Known Risks](../architecture/architecture.md#known-architectural-risks--debt)).
-- **Formatting**: `prettier` + `prettier-plugin-tailwindcss` are devDependencies, but no config file
-  and no `format` script exist — whether formatting is enforced is unknown.
+- **Formatting**: no formatter is installed and there is no `format` script; formatting is not
+  enforced by tooling.
 - **File naming**: kebab-case filenames, one primary export per file matching a PascalCase
   component/function name.
 - **`"use client"`**: put it on files that use hooks, state, effects, or browser APIs; everything
@@ -127,4 +127,4 @@ baseline for a future second app, not yet a cross-repo norm.
 <!-- manual: content below this line is human-authored and must be preserved verbatim during sync -->
 
 ---
-_Last synced: 2026-09-30_
+_Last synced: 2026-10-13_
