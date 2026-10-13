@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>StarterKit.ModuleName.Infrastructure</RootNamespace>
+    <AssemblyName>StarterKit.ModuleName.Infrastructure</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ModuleName.Application\ModuleName.Application.csproj" />
+    <ProjectReference Include="..\ModuleName.Domain\ModuleName.Domain.csproj" />
+    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\Persistence\Persistence.csproj" />
+  </ItemGroup>
+
+</Project>

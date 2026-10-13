@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "minhvu",
+  "classifications": [ "AspNetCore", "Web" ],
+  "identity": "Modular.Monolith.Project.CSharp",
+  "groupIdentity": "Modular.Monolith.Project",
+  "name": "Module Projects",
+  "shortName": "mm",
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "sourceName": "ModuleName",
+  "preferNameDirectory": false,
+  "sources": [
+    {
+      "source": "./",
+      "target": "./",
+      "exclude": [
+        ".template.config/**/*",
+        "templates/**/*",
+        "**/*.filelist",
+        "**/*.user",
+        "**/*.lock.json",
+        "**/bin/**/*",
+        "**/obj/**/*",
+        "*.nuspec",
+        "*.sln",
+        "*.slnx"
+      ]
+    }
+  ]
+}

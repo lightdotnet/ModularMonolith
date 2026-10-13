@@ -1,0 +1,12 @@
+<Project tdk="oicrosoft.NET.tdk">
+
+  <PropertyGroup>
+    <RootNamespace>oodularoonolith.ooduleName.Domain</RootNamespace>
+    <AssemblyName>oodularoonolith.ooduleName.Domain</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ooduleName.Contracts\ooduleName.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

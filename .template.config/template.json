@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "minhvu",
+  "classifications": [ "AspNetCore", "Web" ],
+  "identity": "Modular.Monolith.Solution.CSharp",
+  "groupIdentity": "Modular.Monolith.Solution",
+  "name": "Modular Monolith Solution",
+  "shortName": "mm-sln",
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "sourceName": "StarterKit",
+  "preferNameDirectory": true,
+  "sources": [
+    {
+      "source": "./",
+      "target": "./",
+      "exclude": [
+        ".template.config/**/*",
+        "templates/**/*",
+        "**/*.filelist",
+        "**/*.user",
+        "**/*.lock.json",
+        "**/bin/**/*",
+        "**/obj/**/*",
+        ".git/**/*",
+        ".github/**/*",
+        ".claude/**/*",
+        ".vs/**/*",
+        ".vscode/**/*",
+        "TestResults/**/*",
+        "*.nuspec",
+        "*.nupkg",
+        "*.snupkg",
+        "README.md"
+      ]
+    }
+  ]
+}
