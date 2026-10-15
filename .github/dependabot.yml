@@ -1,0 +1,32 @@
+version: 2
+updates:
+  # .NET: central package management via Directory.Packages.props
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      microsoft:
+        patterns:
+          - "Microsoft.*"
+          - "System.*"
+      opentelemetry:
+        patterns:
+          - "OpenTelemetry*"
+      testing:
+        patterns:
+          - "xunit*"
+          - "Moq"
+          - "Microsoft.NET.Test.Sdk"
+    commit-message:
+      prefix: "chore(deps)"
+
+  # Admin console (Next.js, pnpm)
+  - package-ecosystem: "npm"
+    directory: "/clients/admin"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(admin-deps)"
