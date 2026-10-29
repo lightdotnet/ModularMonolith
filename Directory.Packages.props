@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
-    <AspnetVersion>10.0.13</AspnetVersion>
+    <AspnetVersion>10.0.14</AspnetVersion>
     <LightVersion>2.0.2</LightVersion>
   </PropertyGroup>
   <ItemGroup>

@@ -16,6 +16,7 @@
 	<PackageReference Include="Lightsoft.Caching" />
 	<PackageReference Include="Lightsoft.FileGenerator" />
 	<PackageReference Include="Lightsoft.Serilog" />
+	<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" VersionOverride="10.0.14" />
   </ItemGroup>
 
   <ItemGroup>
