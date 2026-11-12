@@ -39,7 +39,7 @@
     "eslint": "10.14.0",
     "eslint-config-next": "16.4.3",
     "shadcn": "^4.23.0",
-    "tailwindcss": "^4.3.3",
+    "tailwindcss": "^4.3.5",
     "typescript": "^5.9.3"
   }
 }
